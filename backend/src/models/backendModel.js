@@ -1,10 +1,12 @@
 const pool = require('../config/db');
 
 async function createBackend(data) {
+  console.log('backendModel.createBackend called with', data);
   const res = await pool.query(
     'INSERT INTO backends (name, target_host, target_port, target_protocol) VALUES ($1,$2,$3,$4) RETURNING id, name, target_host, target_port, target_protocol',
     [data.name, data.targetHost, data.targetPort, data.targetProtocol || 'http']
   );
+  console.log('backendModel.createBackend result rows:', res.rows);
   return res.rows[0];
 }
 

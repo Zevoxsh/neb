@@ -19,13 +19,33 @@
     editingProxyId: null,
     editingBackendId: null
   };
+  // Smoothed metrics used for rendering to avoid per-second jumps
+  state.metricsSmoothed = null;
 
+  // Canvas API polyfills / safety helpers
+  if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+      if (typeof r === 'number') r = { tl: r, tr: r, br: r, bl: r };
+      this.beginPath();
+      this.moveTo(x + r.tl, y);
+      this.lineTo(x + w - r.tr, y);
+      this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+      this.lineTo(x + w, y + h - r.br);
+      this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+      this.lineTo(x + r.bl, y + h);
+      this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+      this.lineTo(x, y + r.tl);
+      this.quadraticCurveTo(x, y, x + r.tl, y);
+      this.closePath();
+    };
+  }
   const els = {};
 
   // --- Initialization ---
   document.addEventListener('DOMContentLoaded', () => {
     cacheElements();
     bindEvents();
+    try { if (window.metrics && typeof window.metrics.init === 'function') window.metrics.init(state, els); } catch (e) {}
     bootstrap();
   });
 
@@ -62,8 +82,11 @@
     document.body.addEventListener('click', e => {
       const link = e.target.matches('[data-link]') ? e.target : e.target.closest('[data-link]');
       if (link) {
+        const href = link.getAttribute('href') || '';
+        // If this link targets a standalone HTML page, allow normal navigation (full reload).
+        if (href.endsWith('.html')) return;
         e.preventDefault();
-        navigateTo(link.getAttribute('href'));
+        navigateTo(href);
       }
     });
     window.addEventListener('popstate', router);
@@ -129,11 +152,19 @@
   }
 
   async function router() {
-    const path = window.location.pathname;
+    let rawPath = window.location.pathname || '/';
+    // Normalize .html suffix (support direct links to .html files)
+    if (rawPath.endsWith('.html')) rawPath = rawPath.replace(/\.html$/, '');
+    const path = rawPath;
 
-    // Update Nav
+    // Determine view name (e.g., '/proxies' -> 'proxies')
+    const viewName = path === '/' ? 'dashboard' : path.replace(/^\//, '');
+
+    // Update Nav by data-view attribute when available
     els.navItems.forEach(el => {
-      el.classList.toggle('active', el.getAttribute('href') === path);
+      const dv = el.dataset && el.dataset.view ? el.dataset.view : null;
+      if (dv) el.classList.toggle('active', dv === viewName);
+      else el.classList.toggle('active', el.getAttribute('href') === path || el.getAttribute('href') === path + '.html');
     });
 
     // Route Matching
@@ -176,10 +207,13 @@
     updateViewBtn(els.btnViewRealtime, isRealtime);
     updateViewBtn(els.btnView24h, !isRealtime);
 
-    if (isRealtime) startAnimation();
-    else stopAnimation();
+    if (isRealtime) {
+      if (window.metrics && typeof window.metrics.startAnimation === 'function') window.metrics.startAnimation(); else startAnimation();
+    } else {
+      if (window.metrics && typeof window.metrics.stopAnimation === 'function') window.metrics.stopAnimation(); else stopAnimation();
+    }
 
-    loadMetrics();
+    if (window.metrics && typeof window.metrics.loadMetrics === 'function') window.metrics.loadMetrics(); else loadMetrics();
   }
 
   function updateViewBtn(btn, isActive) {
@@ -195,13 +229,15 @@
       renderProxies();
       renderBackends();
       renderDomains();
-      await loadMetrics();
+      await (window.metrics && typeof window.metrics.loadMetrics === 'function' ? window.metrics.loadMetrics() : loadMetrics());
 
       setInterval(() => {
-        if (state.viewMode === 'realtime') loadMetrics();
+        if (state.viewMode === 'realtime') {
+          if (window.metrics && typeof window.metrics.loadMetrics === 'function') window.metrics.loadMetrics(); else loadMetrics();
+        }
       }, 1000);
 
-      startAnimation();
+      if (window.metrics && typeof window.metrics.startAnimation === 'function') window.metrics.startAnimation(); else startAnimation();
       router();
     } catch (err) {
       if (isNetworkError(err)) {
@@ -258,7 +294,25 @@
 
       const res = await requestJson(url);
       if (res && res.metrics) {
-        state.metricsData = res.metrics.map(m => ({
+        try { console.debug('loadMetrics: metrics count', Array.isArray(res.metrics) ? res.metrics.length : 'not-array', res.metrics && res.metrics.slice ? res.metrics.slice(0,3) : res.metrics); } catch(e) {}
+
+        // If backend returned per-proxy rows (contains proxy_id), aggregate by bucket
+        let metricsRows = res.metrics;
+        if (Array.isArray(metricsRows) && metricsRows.length && metricsRows[0].hasOwnProperty('proxy_id')) {
+          const map = new Map();
+          for (const r of metricsRows) {
+            const key = new Date(r.bucket).toISOString();
+            if (!map.has(key)) map.set(key, { bucket: key, bytes_in: 0, bytes_out: 0, requests: 0 });
+            const cur = map.get(key);
+            cur.bytes_in += Number(r.bytes_in) || 0;
+            cur.bytes_out += Number(r.bytes_out) || 0;
+            cur.requests += Number(r.requests) || 0;
+          }
+          metricsRows = Array.from(map.values()).sort((a, b) => new Date(a.bucket) - new Date(b.bucket));
+          try { console.debug('loadMetrics: aggregated per-proxy into', metricsRows.length, 'buckets'); } catch (e) {}
+        }
+
+        const incoming = metricsRows.map(m => ({
           bucket: m.bucket,
           timestamp: m.bucket,
           requests_per_second: Number(m.requests),
@@ -266,11 +320,71 @@
           traffic_out: Number(m.bytes_out)
         }));
 
+        // Apply exponential smoothing to reduce visible jumps between 1s samples
+        const alpha = 0.25; // smoothing factor (0..1) higher = less smoothing
+        if (!state.metricsSmoothed || state.metricsSmoothed.length === 0) {
+          // first time: initialize smoothed = incoming
+          state.metricsSmoothed = incoming.map(d => Object.assign({}, d));
+        } else {
+          // Merge by timestamp: keep previous smoothed, update with incoming values smoothed
+          const prevMap = new Map(state.metricsSmoothed.map(d => [new Date(d.bucket).getTime(), d]));
+          const next = [];
+          for (const inc of incoming) {
+            const t = new Date(inc.bucket).getTime();
+            if (prevMap.has(t)) {
+              const prev = prevMap.get(t);
+              next.push({
+                bucket: inc.bucket,
+                timestamp: inc.timestamp,
+                requests_per_second: prev.requests_per_second * (1 - alpha) + inc.requests_per_second * alpha,
+                traffic_in: prev.traffic_in * (1 - alpha) + inc.traffic_in * alpha,
+                traffic_out: prev.traffic_out * (1 - alpha) + inc.traffic_out * alpha
+              });
+            } else {
+              // New bucket: smooth from the last known value if available
+              const keys = Array.from(prevMap.keys()).sort((a,b)=>a-b);
+              const lastKey = keys.length ? keys[keys.length-1] : null;
+              if (lastKey) {
+                const prev = prevMap.get(lastKey);
+                next.push({
+                  bucket: inc.bucket,
+                  timestamp: inc.timestamp,
+                  requests_per_second: prev.requests_per_second * (1 - alpha) + inc.requests_per_second * alpha,
+                  traffic_in: prev.traffic_in * (1 - alpha) + inc.traffic_in * alpha,
+                  traffic_out: prev.traffic_out * (1 - alpha) + inc.traffic_out * alpha
+                });
+              } else {
+                next.push(Object.assign({}, inc));
+              }
+            }
+          }
+          state.metricsSmoothed = next;
+        }
+        // Also keep raw
+        state.metricsData = incoming;
+
         if (state.viewMode === 'realtime' && res.serverTime && state.serverTimeOffset === 0) {
           state.serverTimeOffset = new Date(res.serverTime).getTime() - Date.now();
         } else if (state.viewMode !== 'realtime') {
-          render24hChart();
+          // Draw the 24h chart once (no animation). Prepare canvas like updateChart does.
+          try {
+            const canvas = els.trafficChart;
+            if (canvas) {
+              const ctx = canvas.getContext('2d');
+              const dpr = window.devicePixelRatio || 1;
+              const rect = canvas.getBoundingClientRect();
+              canvas.width = rect.width * dpr;
+              canvas.height = rect.height * dpr;
+              ctx.scale(dpr, dpr);
+              render24hChart(ctx, rect.width, rect.height);
+            }
+          } catch (e) {
+            console.error('Error drawing 24h chart once', e);
+          }
         }
+      }
+      else {
+        try { console.debug('loadMetrics: no metrics in response', res); } catch (e) {}
       }
     } catch (e) {
       if (isNetworkError(e)) console.log('Metrics connection lost, retrying...');
@@ -338,9 +452,16 @@
   }
 
   function renderTable(table, emptyMsg, data, rowHtmlFn, clickHandler) {
-    const tbody = table.querySelector('tbody');
+    // If the current page does not include this table (split pages), skip rendering.
+    if (!table || !emptyMsg) {
+      try { console.debug('renderTable: table or emptyMsg missing, skipping render'); } catch (e) {}
+      return;
+    }
+
+    const tbody = table && typeof table.querySelector === 'function' ? table.querySelector('tbody') : null;
+    if (!tbody) return;
     tbody.innerHTML = '';
-    if (data.length === 0) {
+    if (!Array.isArray(data) || data.length === 0) {
       table.style.display = 'none';
       emptyMsg.style.display = 'block';
       return;
@@ -386,8 +507,10 @@
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
 
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+    canvas.width = Math.max(1, rect.width * dpr);
+    canvas.height = Math.max(1, rect.height * dpr);
+    // Ensure transform is reset then apply DPR scaling once per frame
+    try { ctx.setTransform(1, 0, 0, 1, 0, 0); } catch (e) {}
     ctx.scale(dpr, dpr);
 
     const width = rect.width;
@@ -395,12 +518,24 @@
 
     ctx.clearRect(0, 0, width, height);
 
-    if (state.viewMode === 'realtime') renderRealtimeChart(ctx, width, height);
-    else render24hChart(ctx, width, height);
+    try {
+      if (state.viewMode === 'realtime') renderRealtimeChart(ctx, width, height);
+      else render24hChart(ctx, width, height);
+    } catch (err) {
+      console.error('Chart render error:', err);
+      // Draw an unobtrusive error message so the user knows why nothing shows
+      try {
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '12px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('Chart render error (see console)', width / 2, height / 2);
+      } catch (e) {}
+    }
   }
 
   function renderRealtimeChart(ctx, width, height) {
-    if (!state.metricsData) return;
+    const dataSrc = state.metricsSmoothed && state.metricsSmoothed.length ? state.metricsSmoothed : state.metricsData;
+    if (!dataSrc || dataSrc.length === 0) return;
 
     const now = Date.now() + state.serverTimeOffset;
     const timeWindow = 60 * 1000;
@@ -412,7 +547,7 @@
     const endAligned = Math.floor(now / 1000) * 1000;
 
     for (let t = startAligned; t <= endAligned; t += 1000) {
-      const m = state.metricsData.find(d => new Date(d.bucket).getTime() === t);
+      const m = dataSrc.find(d => new Date(d.bucket).getTime() === t);
       dataPoints.push({
         x: ((t - startTime) / timeWindow) * width,
         trafficIn: m ? Number(m.traffic_in) : 0,
@@ -568,7 +703,8 @@
   }
 
   function render24hChart(ctx, width, height) {
-    if (!state.metricsData || state.metricsData.length === 0) {
+    const dataSrc = state.metricsSmoothed && state.metricsSmoothed.length ? state.metricsSmoothed : state.metricsData;
+    if (!dataSrc || dataSrc.length === 0) {
       ctx.fillStyle = '#94a3b8';
       ctx.font = '14px Inter';
       ctx.textAlign = 'center';
@@ -582,7 +718,7 @@
     const startTime = now - timeWindow;
 
     // Filter data within window
-    const validData = state.metricsData.filter(d => {
+    const validData = dataSrc.filter(d => {
       const t = new Date(d.bucket).getTime();
       return t >= startTime && t <= now;
     });
@@ -782,20 +918,49 @@
     switchView('domain-details');
   }
 
-  function showProxyDetails(proxy) {
+  async function showProxyDetails(proxy) {
     state.editingProxyId = proxy.id;
-    els.editProxyName.value = proxy.name;
-    els.editProxyListenHost.value = proxy.listen_host;
-    els.editProxyListenPort.value = proxy.listen_port;
-    els.editProxyProtocol.value = proxy.protocol || 'tcp';
-    populateBackendSelect(els.editProxyBackendSelect);
+    // Helper to wait for an element to exist in DOM (useful when views are loaded dynamically)
+    function waitForEl(id, timeout = 2000) {
+      const start = Date.now();
+      return new Promise(resolve => {
+        (function poll(){
+          const el = document.getElementById(id);
+          if (el) return resolve(el);
+          if (Date.now() - start > timeout) return resolve(null);
+          setTimeout(poll, 50);
+        })();
+      });
+    }
+
+    // Ensure the proxy-details view elements are present (in case page was loaded without them)
+    const nameEl = els.editProxyName || await waitForEl('editProxyName');
+    const listenHostEl = els.editProxyListenHost || await waitForEl('editProxyListenHost');
+    const listenPortEl = els.editProxyListenPort || await waitForEl('editProxyListenPort');
+    const protocolEl = els.editProxyProtocol || await waitForEl('editProxyProtocol');
+    const backendSelectEl = els.editProxyBackendSelect || await waitForEl('editProxyBackendSelect');
+
+    if (!nameEl || !listenHostEl || !listenPortEl || !protocolEl || !backendSelectEl) {
+      // Fallback: navigate to proxies list so user can access details from there
+      try { navigateTo('/proxies'); } catch (e) {}
+      notify('Proxy details view not available right now. Open Proxies and select the item.', 'error');
+      return;
+    }
+
+    state.editingProxyId = proxy.id;
+    try { nameEl.value = proxy.name; } catch (e) {}
+    try { listenHostEl.value = proxy.listen_host; } catch (e) {}
+    try { listenPortEl.value = proxy.listen_port; } catch (e) {}
+    try { protocolEl.value = proxy.protocol || 'tcp'; } catch (e) {}
+    // Populate backend select then set value
+    populateBackendSelect(backendSelectEl);
 
     const backend = state.backends.find(b =>
       b.target_host === proxy.target_host &&
       b.target_port === proxy.target_port &&
       (b.target_protocol || 'http') === (proxy.target_protocol || 'http')
     );
-    els.editProxyBackendSelect.value = backend ? backend.id : "";
+    try { backendSelectEl.value = backend ? backend.id : ""; } catch (e) {}
     switchView('proxy-details');
   }
 
@@ -811,19 +976,20 @@
   async function handleDomainUpdate(e) {
     e.preventDefault();
     if (!state.editingDomainId) return;
+    const payload = {
+      hostname: els.editDomainHostname.value,
+      proxyId: els.editDomainProxySelect.value,
+      backendId: els.editDomainBackendSelect.value
+    };
+    console.debug('handleDomainUpdate: payload', payload);
     try {
-      await requestJson(`/api/domains/${state.editingDomainId}`, {
-        method: 'PUT',
-        body: {
-          hostname: els.editDomainHostname.value,
-          proxyId: els.editDomainProxySelect.value,
-          backendId: els.editDomainBackendSelect.value
-        }
-      });
+      const res = await requestJson(`/api/domains/${state.editingDomainId}`, { method: 'PUT', body: payload });
+      console.debug('handleDomainUpdate: response', res);
+      if (!res) { notify('Not authenticated or network error', 'error'); return; }
       notify('Domain updated');
       await loadData('domains');
       navigateTo('/domains');
-    } catch (err) { notify('Error updating domain', 'error'); }
+    } catch (err) { console.error('handleDomainUpdate error', err); notify('Error updating domain: ' + (err && err.message ? err.message : 'unknown'), 'error'); }
   }
 
   async function handleProxyUpdate(e) {
@@ -851,31 +1017,35 @@
       payload.target_protocol = 'http';
     }
 
+    console.debug('handleProxyUpdate: payload', payload);
     try {
-      await requestJson(`/api/proxies/${state.editingProxyId}`, { method: 'PUT', body: payload });
+      const res = await requestJson(`/api/proxies/${state.editingProxyId}`, { method: 'PUT', body: payload });
+      console.debug('handleProxyUpdate: response', res);
+      if (!res) { notify('Not authenticated or network error', 'error'); return; }
       notify('Proxy updated');
       await loadData('proxies');
       navigateTo('/proxies');
-    } catch (err) { notify('Error updating proxy', 'error'); }
+    } catch (err) { console.error('handleProxyUpdate error', err); notify('Error updating proxy: ' + (err && err.message ? err.message : 'unknown'), 'error'); }
   }
 
   async function handleBackendUpdate(e) {
     e.preventDefault();
     if (!state.editingBackendId) return;
+    const payload = {
+      name: els.editBackendName.value,
+      targetHost: els.editBackendTargetHost.value,
+      targetPort: Number(els.editBackendTargetPort.value),
+      targetProtocol: els.editBackendTargetProtocol.value
+    };
+    console.debug('handleBackendUpdate: payload', payload);
     try {
-      await requestJson(`/api/backends/${state.editingBackendId}`, {
-        method: 'PUT',
-        body: {
-          name: els.editBackendName.value,
-          targetHost: els.editBackendTargetHost.value,
-          targetPort: Number(els.editBackendTargetPort.value),
-          targetProtocol: els.editBackendTargetProtocol.value
-        }
-      });
+      const res = await requestJson(`/api/backends/${state.editingBackendId}`, { method: 'PUT', body: payload });
+      console.debug('handleBackendUpdate: response', res);
+      if (!res) { notify('Not authenticated or network error', 'error'); return; }
       notify('Backend updated');
       await loadData('backends');
       navigateTo('/backends');
-    } catch (err) { notify('Error updating backend', 'error'); }
+    } catch (err) { console.error('handleBackendUpdate error', err); notify('Error updating backend: ' + (err && err.message ? err.message : 'unknown'), 'error'); }
   }
 
   async function deleteDomain() {
@@ -944,21 +1114,31 @@
 
   async function handleBackendSubmit(e) {
     e.preventDefault();
+    const payload = {
+      name: document.getElementById('backendName').value,
+      targetHost: document.getElementById('backendTargetHost').value,
+      targetPort: Number(document.getElementById('backendTargetPort').value),
+      targetProtocol: document.getElementById('backendTargetProtocol').value
+    };
+    console.debug('handleBackendSubmit: start', payload);
     try {
-      await requestJson('/api/backends', {
-        method: 'POST',
-        body: {
-          name: document.getElementById('backendName').value,
-          targetHost: document.getElementById('backendTargetHost').value,
-          targetPort: Number(document.getElementById('backendTargetPort').value),
-          targetProtocol: document.getElementById('backendTargetProtocol').value
-        }
-      });
+      const res = await requestJson('/api/backends', { method: 'POST', body: payload });
+      console.debug('handleBackendSubmit: response', res);
+      if (!res) {
+        console.error('handleBackendSubmit: no response (possible 401 or network error)');
+        notify('Not authenticated or network error', 'error');
+        return;
+      }
       notify('Backend created');
       closeModal('backendModal');
-      e.target.reset();
-      loadData('backends');
-    } catch (err) { notify('Error creating backend', 'error'); }
+      try { e.target.reset(); } catch(e) {}
+      try { await loadData('backends'); } catch (e) { console.error('loadData after create failed', e); }
+      // Ensure navigation back to list view (clear querystring if any)
+      try { const base = window.location.pathname.replace(/\?.*$/, '') || '/backends.html'; window.history.replaceState(null,'', base); navigateTo('/backends'); } catch (e) { console.error('navigation after create failed', e); }
+    } catch (err) {
+      console.error('handleBackendSubmit: error', err);
+      notify('Error creating backend: ' + (err && err.message ? err.message : String(err)), 'error');
+    }
   }
 
   async function handleDomainSubmit(e) {
@@ -998,12 +1178,15 @@
   };
 
   // --- Utils ---
+  // Prefer the centralized API helper if available (adds credentials and better logging)
   async function requestJson(url, options = {}) {
+    if (window.api && typeof window.api.requestJson === 'function') {
+      return window.api.requestJson(url, options);
+    }
     const headers = { 'Content-Type': 'application/json' };
     if (options.body) options.body = JSON.stringify(options.body);
-    const res = await fetch(url, { headers, ...options });
+    const res = await fetch(url, { headers, credentials: 'same-origin', ...options });
     if (res.status === 401) {
-      window.location.href = '/login.html';
       return null;
     }
     if (!res.ok) {
@@ -1011,7 +1194,7 @@
       throw new Error(text || res.statusText);
     }
     if (res.status === 204) return null;
-    return res.json();
+    try { return await res.json(); } catch (e) { return null; }
   }
 
   function isNetworkError(err) {
@@ -1075,5 +1258,19 @@
     const modal = document.getElementById(id);
     if (modal) modal.classList.remove('open');
   }
+
+  // Expose a small debug helper to force reload data from the console
+  window.__NEB = window.__NEB || {};
+  window.__NEB.reloadAll = async function () {
+    try {
+      console.debug('__NEB.reloadAll: fetching proxies/backends/domains');
+      await loadData('proxies');
+      await loadData('backends');
+      await loadData('domains');
+      console.debug('__NEB.reloadAll: done');
+    } catch (e) { console.error('__NEB.reloadAll error', e); }
+  };
+  // Expose internal state for debugging
+  try { window.__NEB._state = state; } catch (e) { /* non-fatal */ }
 
 })();

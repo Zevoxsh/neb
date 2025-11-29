@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Nebula · Proxies</title>
+  <link rel="stylesheet" href="/public/styles.css">
+  <script src="/public/js/api.js" defer></script>
+  <script src="/public/js/include-partials.js" defer></script>
+  <script src="/public/js/app.js" defer></script>
+</head>
+<body>
+  <div id="sidebar-placeholder"></div>
+  <main class="main">
+    <div class="container">
+      <div class="card">
+        <h3>Proxies</h3>
+        <form id="createProxyForm" class="form-inline">
+          <input name="name" placeholder="Name" required>
+          <input name="listen_host" placeholder="Listen host" value="0.0.0.0" required>
+          <input name="listen_port" placeholder="Listen port" value="80" required type="number">
+          <input name="target_host" placeholder="Target host" required>
+          <input name="target_port" placeholder="Target port" required type="number">
+          <select name="protocol"><option value="tcp">tcp</option><option value="http">http</option><option value="https">https</option></select>
+          <button class="btn primary" type="submit">Create</button>
+        </form>
+
+        <table id="proxiesTable"><thead><tr><th>Name</th><th>Listen</th><th>Target</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
+
+      <div id="proxyEditor" class="card hidden">
+        <h3>Proxy Details</h3>
+        <form id="editProxyForm">
+          <div class="form-row"><div class="field"><label>Name</label><input id="editProxyName" name="name"></div><div class="field"><label>Port</label><input id="editProxyListenPort" name="listen_port" type="number"></div></div>
+          <div class="form-row"><div class="field"><label>Host</label><input id="editProxyListenHost" name="listen_host"></div><div class="field"><label>Protocol</label><select id="editProxyProtocol" name="protocol"><option value="tcp">tcp</option><option value="http">http</option><option value="https">https</option></select></div></div>
+          <div class="form-row"><div class="field"><label>Target Host</label><input id="editProxyTargetHost" name="target_host"></div><div class="field"><label>Target Port</label><input id="editProxyTargetPort" name="target_port" type="number"></div></div>
+          <div class="actions"><button id="btnDeleteProxy" type="button" class="btn danger">Delete</button><button id="btnSaveProxy" class="btn primary" type="submit">Save</button></div>
+        </form>
+      </div>
+    </div>
+  </main>
+  <div id="footer-placeholder"></div>
+</body>
+</html>

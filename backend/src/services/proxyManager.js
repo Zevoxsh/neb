@@ -64,10 +64,16 @@ class ProxyManager {
       if (samples.length) {
         // emit samples to any listeners (SSE/WebSocket) before/after DB write
         try { this.emitter.emit('flush', samples); } catch (e) { }
-        await metricsModel.insertSamplesBatch(samples);
+        try {
+          console.log(`flushMetrics: writing ${samples.length} sample(s) for bucket ${bucket.toISOString()}`);
+          await metricsModel.insertSamplesBatch(samples);
+          console.log('flushMetrics: write successful');
+        } catch (dbErr) {
+          console.error('flushMetrics: insertSamplesBatch failed', dbErr && dbErr.message ? dbErr.message : dbErr);
+        }
       }
     } catch (e) {
-      console.error('flushMetrics error', e);
+      console.error('flushMetrics error', e && e.message ? e.message : e);
     }
     const pm = this;
   }
@@ -165,6 +171,9 @@ class ProxyManager {
       const http = require('http');
       const server = http.createServer((req, res) => {
         try {
+          // Record a request for metrics (this listener primarily redirects to HTTPS)
+          try { pm.addMetrics(id, 0, 0, 1); } catch (e) { }
+
           const hostHeader = req.headers && req.headers.host ? req.headers.host.split(':')[0] : entry.meta.listenHost;
           const portSuffix = '';// default HTTPS port 443, do not include
           const location = `https://${hostHeader}${portSuffix}${req.url}`;
@@ -193,6 +202,8 @@ class ProxyManager {
 
       const handleRequest = async (req, res) => {
         try {
+          // Count this request for metrics (ACME + redirect listener)
+          try { pm.addMetrics(id, 0, 0, 1); } catch (e) { }
           if (req.url && req.url.startsWith('/.well-known/acme-challenge/')) {
             const prefix = '/.well-known/acme-challenge/';
             const rest = req.url.slice(prefix.length);
@@ -319,6 +330,8 @@ class ProxyManager {
 
       const forwardRequest = (req, res) => {
         try {
+          // Count incoming request immediately so we record it even if upstream fails
+          try { pm.addMetrics(id, 0, 0, 1); } catch (e) { }
           const incomingHostHeader = req.headers && req.headers.host ? req.headers.host : null;
           const headers = Object.assign({}, req.headers);
           // Preserve the original Host header when forwarding to upstream when possible

@@ -13,12 +13,14 @@ async function list(req, res) {
 
 async function create(req, res) {
   const { name, protocol, listen_protocol, target_protocol, listen_host, listen_port, target_host, target_port, enabled, vhosts } = req.body;
+  console.log('proxyController.create called with body:', req.body);
   if (!name || !listen_host || !listen_port || !target_host || !target_port) return res.status(400).send('Missing fields');
   const proto = (protocol || 'tcp').toLowerCase();
   const listenProto = (listen_protocol || proto).toLowerCase();
   const targetProto = (target_protocol || proto).toLowerCase();
   try {
     const result = await proxyModel.createProxy({ name, protocol: proto, listen_protocol: listenProto, target_protocol: targetProto, listen_host, listen_port: parseInt(listen_port,10), target_host, target_port: parseInt(target_port,10), vhosts: vhosts || null, enabled: enabled === true });
+    console.log('proxyController.create inserted:', result);
     const id = result.id;
     try { proxyManager.startProxy(id, listenProto, listen_host, parseInt(listen_port,10), targetProto, target_host, parseInt(target_port,10), vhosts || null); } catch (e) { console.error('Start proxy failed', e.message); }
     res.json({ id });
@@ -44,6 +46,7 @@ async function remove(req, res) {
 async function update(req, res) {
   const id = parseInt(req.params.id, 10);
   const { name, protocol, listen_protocol, target_protocol, listen_host, listen_port, target_host, target_port, enabled, vhosts } = req.body;
+  console.log('proxyController.update called id=', id, 'body=', req.body);
   if (!id || !name || !listen_host || !listen_port || !target_host || !target_port) return res.status(400).send('Missing fields');
   const proto = (protocol || 'tcp').toLowerCase();
   const listenProto = (listen_protocol || proto).toLowerCase();
@@ -51,6 +54,7 @@ async function update(req, res) {
   try {
     proxyManager.stopProxy(id); // stop current
     const updated = await proxyModel.updateProxy(id, { name, protocol: proto, listen_protocol: listenProto, target_protocol: targetProto, listen_host, listen_port: parseInt(listen_port,10), target_host, target_port: parseInt(target_port,10), vhosts: vhosts || null, enabled: enabled === true });
+    console.log('proxyController.update result:', updated);
     if (updated.enabled) {
       try { proxyManager.startProxy(updated.id, updated.listen_protocol || updated.protocol || 'tcp', updated.listen_host, updated.listen_port, updated.target_protocol || updated.protocol || 'tcp', updated.target_host, updated.target_port, updated.vhosts || null); } catch (e) { console.error('Start proxy failed', e.message); }
     }

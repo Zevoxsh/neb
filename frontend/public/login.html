@@ -1,81 +1,27 @@
-﻿<!DOCTYPE html>
-<html lang="en">
-
+﻿<!doctype html>
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>
-    NEBULA · Login</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="icon" type="image/png" href="/public/image.png" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/public/styles.css" />
-  <style>
-    .login-container {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: radial-gradient(circle at top, #1a1a1a, #050505);
-    }
-
-    .login-box {
-      width: 100%;
-      max-width: 400px;
-      padding: 40px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-    }
-
-    .login-header {
-      text-align: center;
-      margin-bottom: 32px;
-    }
-
-    .login-logo {
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--text-main);
-      margin-bottom: 8px;
-      display: block;
-    }
-
-    .login-subtitle {
-      color: var(--text-muted);
-      font-size: 13px;
-    }
-  </style>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Nebula · Login</title>
+  <link rel="stylesheet" href="/public/styles.css">
+  <script src="/public/js/api.js" defer></script>
+  <script src="/public/js/app.js" defer></script>
 </head>
-
 <body>
-  <div class="login-container">
-    <div class="login-box">
-      <div class="login-header">
-        <span class="login-logo">⬢ NEBULA
-        </span>
-        <span class="login-subtitle">Sign in to your control plane</span>
-      </div>
-
-      <form method="POST" action="/login">
-        <div class="form-group">
-          <label for="username">Username</label>
-          <input type="text" id="username" name="username" placeholder="admin" required autofocus />
-        </div>
-
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" placeholder="••••••••" required />
-        </div>
-
-        <div class="form-actions" style="margin-top: 32px;">
-          <button class="btn btn-primary" type="submit" style="width: 100%;">Sign In</button>
-        </div>
-      </form>
+  <div class="container">
+    <div class="card" style="max-width:420px;margin:60px auto">
+      <h3>Sign in</h3>
+      <div><label>Username</label><input id="loginUser" value="admin"></div>
+      <div style="margin-top:8px"><label>Password</label><input id="loginPass" type="password"></div>
+      <div class="actions" style="margin-top:12px"><button id="btnLogin" class="btn primary">Sign in</button></div>
     </div>
   </div>
+  <script>
+    document.getElementById('btnLogin').addEventListener('click', async ()=>{
+      const u=document.getElementById('loginUser').value; const p=document.getElementById('loginPass').value;
+      const res = await window.api.requestJson('/api/login',{method:'POST', body:{username:u,password:p}});
+      if (res && res.status===200) { location.href='/proxies.html'; } else alert('Login failed');
+    });
+  </script>
 </body>
-
 </html>

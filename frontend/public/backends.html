@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Nebula · Backends</title>
+  <link rel="stylesheet" href="/public/styles.css">
+  <script src="/public/js/api.js" defer></script>
+  <script src="/public/js/include-partials.js" defer></script>
+  <script src="/public/js/app.js" defer></script>
+</head>
+<body>
+  <div id="sidebar-placeholder"></div>
+  <main class="main">
+    <div class="container">
+      <div class="card">
+        <h3>Backends</h3>
+        <form id="createBackendForm" class="form-inline">
+          <input name="name" placeholder="Name" required>
+          <input name="targetHost" placeholder="Target host" required>
+          <input name="targetPort" placeholder="Target port" required type="number">
+          <select name="targetProtocol"><option value="http">http</option><option value="tcp">tcp</option></select>
+          <button class="btn primary" type="submit">Create</button>
+        </form>
+
+        <table id="backendsTable"><thead><tr><th>Name</th><th>Target</th><th>Proto</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </main>
+  <div id="footer-placeholder"></div>
+</body>
+</html>

@@ -34,7 +34,11 @@ async function apiLogin(req, res) {
   if (!match) return res.status(401).json({ error: 'Invalid credentials' });
   const payload = { id: user.id, username: user.username };
   const token = jwt.sign(payload, process.env.JWT_SECRET || 'changeme', { expiresIn: '1h' });
-  return res.json({ token });
+  // Also set the auth cookie for API clients that use fetch with credentials
+  try {
+    res.cookie('token', token, cookieOptions());
+  } catch (e) { /* ignore cookie set errors */ }
+  return res.json({ ok: true });
 }
 
 function logout(req, res) {

@@ -17,6 +17,23 @@ function createApp() {
   app.use(express.json());
   app.use(cookieParser());
 
+  // Simple request logger middleware for debugging
+  app.use((req, res, next) => {
+    try {
+      const info = {
+        method: req.method,
+        originalUrl: req.originalUrl,
+        path: req.path,
+        ip: req.ip,
+        hasBody: !!(req.body && Object.keys(req.body).length),
+        cookies: req.cookies && Object.keys(req.cookies).length ? Object.keys(req.cookies) : []
+      };
+      if (req.method === 'GET') console.log('[REQ]', info.method, info.originalUrl, 'ip=', info.ip);
+      else console.log('[REQ]', info.method, info.originalUrl, 'ip=', info.ip, 'hasBody=', info.hasBody, 'cookies=', info.cookies);
+    } catch (e) { /* ignore logging errors */ }
+    next();
+  });
+
 
 
   // Static files middleware - CRITICAL for serving app.js and styles.css
@@ -45,22 +62,48 @@ function createApp() {
     res.json({ ok: true });
   });
 
-  // Serve specific HTML pages
-  app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'index.html')));
-  app.get('/add.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'add.html')));
+  // Serve specific HTML pages (multi-page frontend)
+  app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'dashboard.html')));
+  app.get('/dashboard.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'dashboard.html')));
+  app.get('/proxies.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'proxies.html')));
   app.get('/backends.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'backends.html')));
   app.get('/domains.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'domains.html')));
-  app.get('/metrics.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'metrics.html')));
+  app.get('/certificates.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'certificates.html')));
+  app.get('/settings.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'settings.html')));
   app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'login.html')));
   app.get('/login', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'login.html')));
 
-  // SPA Fallback: Serve index.html for any other route
+  // SPA Fallback: serve the correct top-level page for known client routes so
+  // direct links / refresh on deep routes work (e.g. /proxies/3 -> proxies.html)
   app.get('*', (req, res) => {
-    // Don't serve index.html for API requests that 404
+    // Don't serve dashboard for API requests that 404
     if (req.path.startsWith('/api/')) {
       return res.status(404).json({ error: 'Not found' });
     }
-    res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'index.html'));
+
+    // If the request targets a specific proxy detail (e.g. /proxies/3), serve the dedicated proxy page
+    if (/^\/proxies\/\d+$/.test(req.path)) {
+      return res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'proxy.html'));
+    }
+
+    // Map URL prefixes to page files
+    const prefixMap = [
+      { prefix: '/proxies', file: 'proxies.html' },
+      { prefix: '/backends', file: 'backends.html' },
+      { prefix: '/domains', file: 'domains.html' },
+      { prefix: '/certificates', file: 'certificates.html' },
+      { prefix: '/settings', file: 'settings.html' },
+      { prefix: '/login', file: 'login.html' }
+    ];
+
+    for (const m of prefixMap) {
+      if (req.path === m.prefix || req.path.startsWith(m.prefix + '/')) {
+        return res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', m.file));
+      }
+    }
+
+    // Default to dashboard
+    res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'dashboard.html'));
   });
 
   return app;

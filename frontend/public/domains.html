@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NEBULA · Domains</title>
+  <link rel="icon" type="image/png" href="/public/image.png" />
+  <link rel="stylesheet" href="/public/styles.css" />
+  <script src="/public/js/api.js" defer></script>
+  <script src="/public/js/include-partials.js" defer></script>
+  <script src="/public/js/app.js" defer></script>
+</head>
+<body>
+  <div id="sidebar-placeholder"></div>
+  <main class="main">
+    <div class="container">
+      <div class="card">
+        <h3>Domains</h3>
+        <form id="createDomainForm" class="form-inline">
+          <input name="hostname" placeholder="example.local" required>
+          <select name="proxyId" id="createDomainProxySelect" required></select>
+          <select name="backendId" id="createDomainBackendSelect"><option value="">(select backend)</option></select>
+          <label class="inline"><input type="checkbox" name="useProxyTarget" value="1"> Use proxy target as backend</label>
+          <button class="btn primary" type="submit">Create</button>
+        </form>
+
+        <table id="domainsTable"><thead><tr><th>Hostname</th><th>Proxy</th><th>Backend</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </main>
+  <div id="footer-placeholder"></div>
+</body>
+</html>

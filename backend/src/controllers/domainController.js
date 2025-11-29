@@ -22,6 +22,7 @@ async function listForProxy(req, res) {
 
 async function create(req, res) {
   const { hostname, proxyId, backendId, useProxyTarget } = req.body;
+  console.log('domainController.create called with body:', req.body);
   if (!hostname || !proxyId) return res.status(400).send('Missing fields');
   try {
     let finalBackendId = null;
@@ -31,10 +32,13 @@ async function create(req, res) {
       if (!proxy) return res.status(400).send('Proxy not found');
       const th = proxy.target_host;
       const tp = proxy.target_port;
+      console.log('domainController.create: useProxyTarget -> proxy target', th, tp);
       let b = await backendModel.findBackendByHostPort(th, tp);
       if (!b) {
         // create a backend entry named after proxy
+        console.log('domainController.create: creating backend for proxy target');
         b = await backendModel.createBackend({ name: `from-proxy-${proxy.id}`, targetHost: th, targetPort: tp, targetProtocol: proxy.target_protocol || proxy.protocol || 'tcp' });
+        console.log('domainController.create: created backend', b);
       }
       finalBackendId = b.id;
     } else {
@@ -57,6 +61,7 @@ async function create(req, res) {
 async function update(req, res) {
   const id = parseInt(req.params.id, 10);
   const { hostname, proxyId, backendId, useProxyTarget } = req.body;
+  console.log('domainController.update called id=', id, 'body=', req.body);
   if (!id || !hostname || !proxyId) return res.status(400).send('Missing fields');
 
   try {
@@ -79,6 +84,7 @@ async function update(req, res) {
     }
 
     const m = await domainModel.updateDomainMapping(id, { hostname, proxyId: parseInt(proxyId, 10), backendId: finalBackendId });
+    console.log('domainController.update result:', m);
     if (!m) return res.status(404).send('Domain not found');
     res.json(m);
 
