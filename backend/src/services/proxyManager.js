@@ -399,7 +399,17 @@ class ProxyManager {
             pres.pipe(res);
           });
 
-          upstream.on('error', (e) => { console.error(`Proxy ${id} - upstream error`, e); try { res.writeHead(502); res.end('Bad gateway'); } catch (err) { } });
+          upstream.on('error', (e) => {
+            try {
+              const targetInfo = `${useTargetHost2}:${useTargetPort2}`;
+              const protoInfo = useHttpsUpstream ? 'https' : 'http';
+              console.error(`Proxy ${id} - upstream error -> ${targetInfo} (${protoInfo})`, e && e.message ? e.message : e);
+              if (e && e.stack) console.error(e.stack);
+            } catch (logErr) {
+              console.error(`Proxy ${id} - upstream error (logging failed)`, logErr);
+            }
+            try { res.writeHead(502); res.end('Bad gateway'); } catch (err) { }
+          });
           req.pipe(upstream);
         } catch (e) {
           console.error(`Proxy ${id} - forward exception`, e);
