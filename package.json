@@ -1,0 +1,21 @@
+{
+  "name": "express-jwt-mysql-auth",
+  "version": "1.0.0",
+  "description": "Simple Express backend with JWT auth and MySQL for a web login page",
+  "main": "backend/src/index.js",
+  "scripts": {
+    "start": "node backend/src/index.js",
+    "create-user": "node backend/create-user.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.0",
+    "certbot": "^5.0.3",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "node-mocks-http": "^1.17.2",
+    "pg": "^8.11.0",
+    "selfsigned": "^2.4.1"
+  }
+}

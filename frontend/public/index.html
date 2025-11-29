@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEBULA · Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/public/styles.css" />
+  <script src="/public/app.js?v=4" defer></script>
+</head>
+
+<body>
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <span>⬢</span> NEBULA
+      </div>
+      <nav class="nav-menu">
+        <a href="/dashboard" class="nav-item active" data-link>
+          <span>Dashboard</span>
+        </a>
+        <a href="/proxies" class="nav-item" data-link>
+          <span>Frontend</span>
+        </a>
+        <a href="/backends" class="nav-item" data-link>
+          <span>Backends</span>
+        </a>
+        <a href="/domains" class="nav-item" data-link>
+          <span>Domains</span>
+        </a>
+        <a href="/certificates" class="nav-item" data-link>
+          <span>Certificates</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-menu">
+          <span>zevox</span>
+          <small>▼</small>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- Dashboard View -->
+      <div id="view-dashboard" class="view-section">
+        <header class="page-header">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h1 class="page-title">Dashboard</h1>
+              <p class="page-subtitle">Real-time traffic overview</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-primary" id="btnViewRealtime">Realtime</button>
+              <button class="btn btn-ghost" id="btnView24h">24h</button>
+            </div>
+          </div>
+        </header>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">□</div>
+            <div class="stat-content">
+              <span class="stat-label">Total Requests</span>
+              <span class="stat-value" id="stat-requests">0</span>
+              <div class="stat-chart-line"></div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">●</div>
+            <div class="stat-content">
+              <span class="stat-label">Requests / Sec</span>
+              <span class="stat-value" id="stat-rps">0</span>
+              <div class="stat-chart-line" style="background: var(--success);"></div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">↓</div>
+            <div class="stat-content">
+              <span class="stat-label">Traffic In</span>
+              <span class="stat-value" id="stat-traffic-in">0 B/s</span>
+              <div class="stat-chart-line" style="background: var(--warning);"></div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">↑</div>
+            <div class="stat-content">
+              <span class="stat-label">Traffic Out</span>
+              <span class="stat-value" id="stat-traffic-out">0 B/s</span>
+              <div class="stat-chart-line" style="background: var(--danger);"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Traffic Overview</h3>
+          </div>
+          <div class="chart-container" id="chartWrapper">
+            <canvas id="trafficChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Proxies View -->
+      <div id="view-proxies" class="view-section" style="display: none;">
+        <header class="page-header">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h1 class="page-title">Proxies</h1>
+              <p class="page-subtitle">Manage entry points and listeners</p>
+            </div>
+            <button class="btn btn-primary" id="btnAddProxy">+ Add Proxy</button>
+          </div>
+        </header>
+
+        <div class="card">
+          <div class="table-container">
+            <table id="proxiesTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Listen</th>
+                  <th>Target</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div id="proxiesEmpty" class="text-muted" style="text-align: center; padding: 40px; display: none;">
+            No proxies configured
+          </div>
+        </div>
+      </div>
+
+      <!-- Backends View -->
+      <div id="view-backends" class="view-section" style="display: none;">
+        <header class="page-header">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h1 class="page-title">Backends</h1>
+              <p class="page-subtitle">Manage upstream servers</p>
+            </div>
+            <button class="btn btn-primary" id="btnAddBackend">+ Add Backend</button>
+          </div>
+        </header>
+
+        <div class="card">
+          <div class="table-container">
+            <table id="backendsTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Target</th>
+                  <th>Protocol</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div id="backendsEmpty" class="text-muted" style="text-align: center; padding: 40px; display: none;">
+            No backends configured
+          </div>
+        </div>
+      </div>
+
+      <!-- Domains View -->
+      <div id="view-domains" class="view-section" style="display: none;">
+        <header class="page-header">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h1 class="page-title">Domains</h1>
+              <p class="page-subtitle">Configure protected domains</p>
+            </div>
+            <button class="btn btn-primary" id="btnAddDomain">+ Add Domain</button>
+          </div>
+        </header>
+
+        <div class="card">
+          <div class="table-container">
+            <table id="domainsTable">
+              <thead>
+                <tr>
+                  <th>Domain</th>
+                  <th>Proxy</th>
+                  <th>Backend</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+          <div id="domainsEmpty" class="text-muted" style="text-align: center; padding: 40px; display: none;">
+            No domains configured
+          </div>
+        </div>
+      </div>
+
+      <!-- Certificates View -->
+      <div id="view-certificates" class="view-section" style="display: none;">
+        <header class="page-header">
+          <div>
+            <h1 class="page-title">Certificates</h1>
+            <p class="page-subtitle">Manage SSL/TLS certificates</p>
+          </div>
+        </header>
+
+        <div class="card">
+          <div class="table-container">
+            <table id="certsTable">
+              <thead>
+                <tr>
+                  <th>Domain</th>
+                  <th>Status</th>
+                  <th>Valid Until</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div id="certsEmpty" class="text-muted" style="text-align: center; padding: 40px; display: none;">
+            No domains configured
+          </div>
+        </div>
+      </div>
+
+      <!-- Domain Details View -->
+      <div id="view-domain-details" class="view-section" style="display: none;">
+        <div class="details-container">
+          <header class="details-header">
+            <a href="/domains" class="btn-back" data-link>← Back to Domains</a>
+            <div class="details-title-wrapper">
+              <h1 class="page-title">Domain Settings</h1>
+              <p class="page-subtitle">Manage configuration for this domain</p>
+            </div>
+          </header>
+
+          <div class="card details-card">
+            <form id="domainDetailsForm">
+              <div class="form-section">
+                <h3 class="section-title">General Information</h3>
+                <div class="form-group">
+                  <label>Domain Name</label>
+                  <input type="text" id="editDomainHostname" name="hostname" required
+                    placeholder="e.g. app.example.com">
+                  <small class="form-hint">The hostname that clients will use to access this service.</small>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3 class="section-title">Routing</h3>
+                <div class="form-group">
+                  <label>Proxy Entry Point</label>
+                  <select id="editDomainProxySelect" name="proxyId" required></select>
+                  <small class="form-hint">The proxy that listens for incoming connections.</small>
+                </div>
+                <div class="form-group">
+                  <label>Target Backend</label>
+                  <select id="editDomainBackendSelect" name="backendId" required></select>
+                  <small class="form-hint">Where traffic should be forwarded to.</small>
+                </div>
+              </div>
+
+              <div class="form-actions-footer">
+                <button type="button" class="btn btn-ghost btn-danger" id="btnDeleteDomain">Delete Domain</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Proxy Details View -->
+      <div id="view-proxy-details" class="view-section" style="display: none;">
+        <div class="details-container">
+          <header class="details-header">
+            <a href="/proxies" class="btn-back" data-link>← Back to Proxies</a>
+            <div class="details-title-wrapper">
+              <h1 class="page-title">Proxy Settings</h1>
+              <p class="page-subtitle">Manage entry point configuration</p>
+            </div>
+          </header>
+
+          <div class="card details-card">
+            <form id="proxyDetailsForm">
+              <div class="form-section">
+                <h3 class="section-title">General Information</h3>
+                <div class="form-group">
+                  <label>Name</label>
+                  <input type="text" id="editProxyName" name="name" required placeholder="web-proxy">
+                </div>
+                <div class="form-group">
+                  <label>Protocol</label>
+                  <select id="editProxyProtocol" name="protocol">
+                    <option value="tcp">TCP</option>
+                    <option value="http">HTTP</option>
+                    <option value="https">HTTPS</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3 class="section-title">Listener Configuration</h3>
+                <div class="form-group" style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+                  <div>
+                    <label>Listen Host</label>
+                    <input type="text" id="editProxyListenHost" name="listenHost" required placeholder="0.0.0.0">
+                  </div>
+                  <div>
+                    <label>Port</label>
+                    <input type="number" id="editProxyListenPort" name="listenPort" required placeholder="80">
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3 class="section-title">Default Target</h3>
+                <div class="form-group">
+                  <label>Default Backend (Optional)</label>
+                  <select id="editProxyBackendSelect" name="backendId">
+                    <option value="">None</option>
+                  </select>
+                  <small class="form-hint">Traffic not matched by a domain will be sent here.</small>
+                </div>
+              </div>
+
+              <div class="form-actions-footer">
+                <button type="button" class="btn btn-ghost btn-danger" id="btnDeleteProxy">Delete Proxy</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Backend Details View -->
+      <div id="view-backend-details" class="view-section" style="display: none;">
+        <div class="details-container">
+          <header class="details-header">
+            <a href="/backends" class="btn-back" data-link>← Back to Backends</a>
+            <div class="details-title-wrapper">
+              <h1 class="page-title">Backend Settings</h1>
+              <p class="page-subtitle">Manage upstream server configuration</p>
+            </div>
+          </header>
+
+          <div class="card details-card">
+            <form id="backendDetailsForm">
+              <div class="form-section">
+                <h3 class="section-title">General Information</h3>
+                <div class="form-group">
+                  <label>Name</label>
+                  <input type="text" id="editBackendName" name="name" required placeholder="app-server">
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3 class="section-title">Target Configuration</h3>
+                <div class="form-group">
+                  <label>Target Host</label>
+                  <input type="text" id="editBackendTargetHost" name="targetHost" required placeholder="10.0.0.5">
+                </div>
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div>
+                    <label>Target Port</label>
+                    <input type="number" id="editBackendTargetPort" name="targetPort" required placeholder="8080">
+                  </div>
+                  <div>
+                    <label>Protocol</label>
+                    <select id="editBackendTargetProtocol" name="targetProtocol">
+                      <option value="http">HTTP</option>
+                      <option value="https">HTTPS</option>
+                      <option value="tcp">TCP</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-actions-footer">
+                <button type="button" class="btn btn-ghost btn-danger" id="btnDeleteBackend">Delete Backend</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-stack" id="toastStack"></div>
+
+  <!-- Add Proxy Modal -->
+  <div class="modal-overlay" id="proxyModal">
+    <div class="modal-content">
+      <h2 class="card-title" style="margin-bottom: 24px;">Add New Proxy</h2>
+      <form id="proxyForm">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="proxyName" name="name" placeholder="web-proxy" required>
+        </div>
+        <div class="form-group" style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+          <div>
+            <label>Listen Host</label>
+            <input type="text" id="proxyListenHost" name="listenHost" placeholder="0.0.0.0" required>
+          </div>
+          <div>
+            <label>Port</label>
+            <input type="number" id="proxyListenPort" name="listenPort" placeholder="80" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Protocol</label>
+          <select id="proxyProtocol" name="protocol">
+            <option value="tcp">TCP</option>
+            <option value="http">HTTP</option>
+            <option value="https">HTTPS</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Default Backend (Optional)</label>
+          <select id="proxyBackendSelect" name="backendId">
+            <option value="">None</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" id="btnCancelProxy">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Proxy</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Backend Modal -->
+  <div class="modal-overlay" id="backendModal">
+    <div class="modal-content">
+      <h2 class="card-title" style="margin-bottom: 24px;">Add New Backend</h2>
+      <form id="backendForm">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="backendName" name="name" placeholder="app-server" required>
+        </div>
+        <div class="form-group">
+          <label>Target Host</label>
+          <input type="text" id="backendTargetHost" name="targetHost" placeholder="10.0.0.5" required>
+        </div>
+        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label>Target Port</label>
+            <input type="number" id="backendTargetPort" name="targetPort" placeholder="8080" required>
+          </div>
+          <div>
+            <label>Protocol</label>
+            <select id="backendTargetProtocol" name="targetProtocol">
+              <option value="http">HTTP</option>
+              <option value="https">HTTPS</option>
+              <option value="tcp">TCP</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" id="btnCancelBackend">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Backend</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Domain Modal -->
+  <div class="modal-overlay" id="domainModal">
+    <div class="modal-content">
+      <h2 class="card-title" style="margin-bottom: 24px;">Add New Domain</h2>
+      <form id="domainForm">
+        <div class="form-group">
+          <label>Domain Name</label>
+          <input type="text" id="domainHostname" name="hostname" placeholder="example.com" required>
+        </div>
+        <div class="form-group">
+          <label>Proxy</label>
+          <select id="domainProxySelect" name="proxyId" required></select>
+        </div>
+        <div class="form-group">
+          <label>Backend</label>
+          <select id="domainBackendSelect" name="backendId" required></select>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" id="btnCancelDomain">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Domain</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  </main>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-stack" id="toastStack"></div>
+
+</body>
+
+</html>
