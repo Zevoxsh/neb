@@ -8,6 +8,7 @@ const backendRoutes = require('./routes/backendRoutes');
 const domainRoutes = require('./routes/domainRoutes');
 const metricsRoutes = require('./routes/metricsRoutes');
 const certRoutes = require('./routes/certRoutes');
+const settingsRoutes = require('./routes/settingsRoutes');
 
 function createApp() {
   const app = express();
@@ -30,6 +31,7 @@ function createApp() {
   app.use(domainRoutes);
   app.use(metricsRoutes);
   app.use(certRoutes);
+  app.use(settingsRoutes);
 
   // Simple profile route
   app.get('/profile', (req, res) => {

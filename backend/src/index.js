@@ -20,6 +20,8 @@ const pool = require('./config/db');
 const bcrypt = require('bcrypt');
 const proxyModel = require('./models/proxyModel');
 const proxyManager = require('./services/proxyManager');
+const acmeManager = require('./services/acmeManager');
+const settingsModel = require('./models/settingsModel');
 
 const app = createApp();
 const PORT = process.env.PORT || 3000;
@@ -75,6 +77,12 @@ async function initDbAndStart() {
       requests INT DEFAULT 0
     );`);
 
+    // Settings table for key/value config (e.g., local_tlds)
+    await pool.query(`CREATE TABLE IF NOT EXISTS settings (
+      key VARCHAR(191) PRIMARY KEY,
+      value TEXT
+    );`);
+
     // Ensure existing tables have the protocol/listen/target protocol columns (safe to run every start)
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS protocol VARCHAR(10) NOT NULL DEFAULT 'tcp';");
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS listen_protocol VARCHAR(10) NOT NULL DEFAULT 'tcp';");
@@ -127,6 +135,18 @@ async function initDbAndStart() {
         proxyManager.startProxy(p.id, p.listen_protocol || p.protocol || 'tcp', p.listen_host, p.listen_port, p.target_protocol || p.protocol || 'tcp', p.target_host, p.target_port, Object.keys(finalVhosts).length ? finalVhosts : null);
       } catch (e) { console.error('Start proxy failed', e.message); }
     }
+
+    // Load settings from DB (e.g., local_tlds) and apply to acmeManager
+    try {
+      const raw = await settingsModel.getSetting('local_tlds');
+      if (raw) {
+        const list = raw.split(',').map(s => s.trim()).filter(Boolean);
+        if (list.length) {
+          acmeManager.setLocalTlds(list);
+          console.log('Loaded LOCAL_TLDS from DB:', list.join(','));
+        }
+      }
+    } catch (e) { console.error('Failed to load settings', e); }
 
     app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
   } catch (err) {

@@ -35,6 +35,9 @@
         <a href="/certificates" class="nav-item" data-link>
           <span>Certificates</span>
         </a>
+        <a href="/settings" class="nav-item" data-link>
+          <span>Settings</span>
+        </a>
       </nav>
       <div class="sidebar-footer">
         <div class="user-menu">
@@ -229,6 +232,34 @@
           <div id="certsEmpty" class="text-muted" style="text-align: center; padding: 40px; display: none;">
             No domains configured
           </div>
+        </div>
+      </div>
+
+      <!-- Settings View -->
+      <div id="view-settings" class="view-section" style="display: none;">
+        <header class="page-header">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h1 class="page-title">Settings</h1>
+              <p class="page-subtitle">Manage application configuration</p>
+            </div>
+          </div>
+        </header>
+
+        <div class="card">
+          <form id="settingsForm">
+            <div class="form-section">
+              <h3 class="section-title">Local TLDs</h3>
+              <div class="form-group">
+                <label>Local TLDs (comma-separated)</label>
+                <textarea id="localTldsTextarea" rows="5" placeholder="e.g. local,lan,home"></textarea>
+                <small class="form-hint">Domains matching these suffixes (or single-label hosts) will be considered local and skipped for ACME issuance.</small>
+              </div>
+            </div>
+            <div class="form-actions-footer">
+              <button type="submit" class="btn btn-primary">Save Settings</button>
+            </div>
+          </form>
         </div>
       </div>
 

@@ -22,6 +22,47 @@ function isIpAddress(host) {
   return false;
 }
 
+// Build default local TLDs (can be overridden by LOCAL_TLDS env var, comma-separated)
+const DEFAULT_LOCAL_TLDS = [
+  'local', 'localhost', 'lan', 'localdomain', 'home', 'home.arpa', 'intranet', 'internal', 'private', 'localnet', 'office', 'corp', 'test', 'example', 'invalid', 'localbox', 'box'
+];
+
+// Parse env var once at module load (can be overridden at runtime via setter)
+const rawLocalTlds = (process.env.LOCAL_TLDS || '').split(',').map(s => s.trim()).filter(Boolean);
+let LOCAL_TLDS = (rawLocalTlds.length ? rawLocalTlds : DEFAULT_LOCAL_TLDS).map(t => t.toLowerCase());
+
+function setLocalTlds(list) {
+  if (!list) return;
+  if (typeof list === 'string') {
+    LOCAL_TLDS = list.split(',').map(s => s.trim()).filter(Boolean).map(t => t.toLowerCase());
+  } else if (Array.isArray(list)) {
+    LOCAL_TLDS = list.map(s => String(s).trim()).filter(Boolean).map(t => t.toLowerCase());
+  }
+}
+
+function getLocalTlds() {
+  return Array.from(LOCAL_TLDS);
+}
+
+function isLocalDomain(host) {
+  if (!host || typeof host !== 'string') return false;
+  const h = host.toLowerCase().trim();
+  // Single-label hostnames (no dot) are typically local (e.g., 'mybox')
+  if (!h.includes('.')) return true;
+
+  // Check against configured local TLDs. Accept entries with or without leading dot.
+  for (const t of LOCAL_TLDS) {
+    if (!t) continue;
+    // If t contains a dot (like 'home.arpa' or 'co.uk'), treat as suffix without forcing a leading dot
+    if (h === t) return true;
+    if (h.endsWith('.' + t)) return true;
+    // Also allow entries that were provided with a leading dot (defensive)
+    if (t.startsWith('.') && h.endsWith(t)) return true;
+  }
+
+  return false;
+}
+
 function certFilesExist(domain) {
   const dir = path.join(CERT_DIR, domain);
   return fs.existsSync(path.join(dir, 'fullchain.pem')) && fs.existsSync(path.join(dir, 'privkey.pem'));
@@ -69,6 +110,10 @@ async function ensureCert(domain) {
   if (!domain || typeof domain !== 'string') return;
   if (isIpAddress(domain)) {
     console.log(`acmeManager: skipping certificate request for IP address ${domain}`);
+    return;
+  }
+  if (isLocalDomain(domain)) {
+    console.log(`acmeManager: skipping certificate request for local domain ${domain}`);
     return;
   }
   if (running.has(domain)) return;
@@ -159,3 +204,6 @@ function getCertContent(domain) {
 }
 
 module.exports = { ensureCert, certFilesExist, getCertStatus, getCertContent };
+// Export helpers to allow runtime update of local TLDs from settings API
+module.exports.setLocalTlds = setLocalTlds;
+module.exports.getLocalTlds = getLocalTlds;

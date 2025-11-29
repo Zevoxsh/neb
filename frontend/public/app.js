@@ -48,6 +48,7 @@
       'view-proxy-details', 'proxyDetailsForm', 'editProxyName', 'editProxyProtocol', 'editProxyListenHost', 'editProxyListenPort', 'editProxyBackendSelect', 'btnDeleteProxy',
       'view-backend-details', 'backendDetailsForm', 'editBackendName', 'editBackendTargetHost', 'editBackendTargetPort', 'editBackendTargetProtocol', 'btnDeleteBackend',
       'view-certificates', 'certsTable', 'certsEmpty',
+      'view-settings', 'settingsForm', 'localTldsTextarea',
       'certModal', 'certDomain', 'certContent', 'certKey', 'btnCloseCert'
     ];
     ids.forEach(id => els[id] = document.getElementById(id));
@@ -81,6 +82,7 @@
     if (els.domainDetailsForm) els.domainDetailsForm.addEventListener('submit', handleDomainUpdate);
     if (els.proxyDetailsForm) els.proxyDetailsForm.addEventListener('submit', handleProxyUpdate);
     if (els.backendDetailsForm) els.backendDetailsForm.addEventListener('submit', handleBackendUpdate);
+    if (els.settingsForm) els.settingsForm.addEventListener('submit', handleSettingsSubmit);
 
     // Delete Actions
     if (els.btnDeleteDomain) els.btnDeleteDomain.addEventListener('click', deleteDomain);
@@ -140,6 +142,10 @@
     else if (path === '/backends') switchView('backends');
     else if (path === '/domains') switchView('domains');
     else if (path === '/certificates') switchView('certificates');
+    else if (path === '/settings') {
+      switchView('settings');
+      await loadSettings();
+    }
     else if (path.match(/^\/domains\/\d+$/)) await handleDetailRoute(path, 'domains', showDomainDetails);
     else if (path.match(/^\/proxies\/\d+$/)) await handleDetailRoute(path, 'proxies', showProxyDetails);
     else if (path.match(/^\/backends\/\d+$/)) await handleDetailRoute(path, 'backends', showBackendDetails);
@@ -215,6 +221,33 @@
     if (type === 'backends') renderBackends();
     if (type === 'domains') renderDomains();
     if (type === 'certificates') renderCertificates();
+  }
+
+  // --- Settings ---
+  async function loadSettings() {
+    try {
+      const res = await requestJson('/api/settings/local_tlds');
+      if (res && Array.isArray(res.localTlds)) {
+        els.localTldsTextarea.value = res.localTlds.join(',');
+      } else {
+        els.localTldsTextarea.value = '';
+      }
+    } catch (e) {
+      notify('Failed to load settings', 'error');
+    }
+  }
+
+  async function handleSettingsSubmit(e) {
+    e.preventDefault();
+    const raw = (els.localTldsTextarea.value || '').trim();
+    const list = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [];
+    try {
+      await requestJson('/api/settings/local_tlds', { method: 'PUT', body: { localTlds: list } });
+      notify('Settings saved');
+      await loadSettings();
+    } catch (err) {
+      notify('Failed to save settings: ' + err.message, 'error');
+    }
   }
 
   async function loadMetrics() {
