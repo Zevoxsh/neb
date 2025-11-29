@@ -1,6 +1,7 @@
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const fs = require('fs');
 
 const authRoutes = require('./routes/authRoutes');
 const proxyRoutes = require('./routes/proxyRoutes');
@@ -21,8 +22,12 @@ function createApp() {
   // Static files middleware - CRITICAL for serving app.js and styles.css
   app.use('/public', express.static(path.join(__dirname, '..', '..', 'frontend', 'public')));
 
-  // Serve favicon if browser requests it (avoid 404 noise)
-  app.get('/favicon.ico', (req, res) => res.sendStatus(204));
+  // Serve favicon if browser requests it (serve the public image if present)
+  const faviconPath = path.join(__dirname, '..', '..', 'frontend', 'public', 'image.png');
+  app.get('/favicon.ico', (req, res) => {
+    if (fs.existsSync(faviconPath)) return res.sendFile(faviconPath);
+    return res.sendStatus(204);
+  });
 
   // API Routes
   app.use(authRoutes);
