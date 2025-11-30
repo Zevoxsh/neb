@@ -10,10 +10,12 @@ async function list(req, res) {
         const mappings = await domainModel.listDomainMappings();
 
         const results = mappings.map(m => {
-            const status = acmeManager.getCertStatus(m.hostname);
+            const s = acmeManager.getCertStatus(m.hostname);
+            const status = s && s.exists ? (s.expiresSoon ? 'pending' : 'valid') : 'missing';
             return {
                 hostname: m.hostname,
-                ...status
+                status,
+                valid_until: s && s.validTo ? (s.validTo instanceof Date ? s.validTo.toISOString() : new Date(s.validTo).toISOString()) : null
             };
         });
 
@@ -40,10 +42,11 @@ async function generate(req, res) {
         await acmeManager.ensureCert(domain);
 
         // Return new status
-        const status = acmeManager.getCertStatus(domain);
+        const s = acmeManager.getCertStatus(domain);
         res.json({
             hostname: domain,
-            ...status
+            status: s && s.exists ? (s.expiresSoon ? 'pending' : 'valid') : 'missing',
+            valid_until: s && s.validTo ? (s.validTo instanceof Date ? s.validTo.toISOString() : new Date(s.validTo).toISOString()) : null
         });
     } catch (e) {
         console.error('certController generate error', e);
@@ -70,8 +73,8 @@ async function uploadManual(req, res) {
     if (!domain || !certificate || !privateKey) return res.status(400).send('Domain, certificate and key required');
     try {
         await acmeManager.saveManualCert(domain.trim(), certificate, privateKey);
-        const status = acmeManager.getCertStatus(domain.trim());
-        res.json({ hostname: domain.trim(), ...status });
+        const s = acmeManager.getCertStatus(domain.trim());
+        res.json({ hostname: domain.trim(), status: s && s.exists ? (s.expiresSoon ? 'pending' : 'valid') : 'missing', valid_until: s && s.validTo ? (s.validTo instanceof Date ? s.validTo.toISOString() : new Date(s.validTo).toISOString()) : null });
     } catch (e) {
         console.error('certController uploadManual error', e);
         res.status(500).send('Upload failed');

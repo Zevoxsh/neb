@@ -298,12 +298,17 @@ class ProxyManager {
         // Before redirecting, if this Host is new we trigger ACME issuance in background
         try {
           const hostHeader = req.headers && req.headers.host ? req.headers.host.split(':')[0] : listenHost;
+          // debug: log resolved host header and raw headers to help diagnose ACME triggers
+          try {
+            console.log(`Proxy ${id} - HTTP ACME redirect incoming host resolution: hostHeader=${hostHeader}, rawHost=${req.headers && req.headers.host}, remote=${req.connection ? req.connection.remoteAddress : req.socket ? req.socket.remoteAddress : 'unknown'}`);
+          } catch (e) { }
           if (hostHeader && !isIpAddress(hostHeader)) {
             const certDir = `/etc/letsencrypt/live/${hostHeader}`;
             const privkey = path.join(certDir, 'privkey.pem');
             if (!fs.existsSync(privkey)) {
               try {
                 const exists = await domainModel.domainExists(hostHeader);
+                try { console.log(`Proxy ${id} - domainExists(${hostHeader}) => ${exists}`); } catch (e) { }
                 if (!exists) {
                   console.log(`Proxy ${id} - host ${hostHeader} not in domain_mappings; skipping ACME issuance`);
                 } else {
@@ -554,6 +559,7 @@ class ProxyManager {
             })();
           } else {
             if (isIpAddress(servername)) console.log(`Proxy ${id} - skipping ACME for SNI IP address ${servername}`);
+            try { console.log(`Proxy ${id} - getContextForServername checked SNI: ${servername}`); } catch (e) { }
           }
         } catch (e) {
           // ignore and fall back to default
