@@ -1,33 +1,87 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NEBULA · Domains</title>
-  <link rel="icon" type="image/png" href="/public/image.png" />
-  <link rel="stylesheet" href="/public/styles.css" />
-  <script src="/public/js/api.js" defer></script>
-  <script src="/public/js/include-partials.js" defer></script>
-  <script src="/public/js/app.js" defer></script>
-</head>
-<body>
-  <div id="sidebar-placeholder"></div>
-  <main class="main">
-    <div class="container">
-      <div class="card">
-        <h3>Domains</h3>
-        <form id="createDomainForm" class="form-inline">
-          <input name="hostname" placeholder="example.local" required>
-          <select name="proxyId" id="createDomainProxySelect" required></select>
-          <select name="backendId" id="createDomainBackendSelect"><option value="">(select backend)</option></select>
-          <label class="inline"><input type="checkbox" name="useProxyTarget" value="1"> Use proxy target as backend</label>
-          <button class="btn primary" type="submit">Create</button>
-        </form>
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Nebula Console - Domains</title>
+    <link rel="stylesheet" href="/public/styles.css">
+    <script src="/public/js/api.js" defer></script>
+    <script src="/public/js/include-partials.js" defer></script>
+    <script src="/public/js/app.js" defer></script>
+  </head>
+  <body data-page="domains">
+    <div class="app-shell">
+      <div id="sidebar-placeholder"></div>
+      <div class="app-main">
+        <header class="topbar">
+          <div class="page-heading">
+            <p class="eyebrow">Routing</p>
+            <h1>Domains</h1>
+            <p class="muted">Associate a hostname with a proxy and backend target.</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn primary" data-panel-target="domainFormPanel" data-panel-focus="#domainHostname">Ajouter un domaine</button>
+          </div>
+        </header>
+        <section class="page-content">
+          <article class="card table-card">
+            <header>
+              <p class="eyebrow">Inventaire</p>
+              <h2>Domains actifs</h2>
+            </header>
+            <section>
+              <table id="domainsTable" class="data-table">
+                <thead>
+                  <tr>
+                    <th>Hostname</th>
+                    <th>Proxy</th>
+                    <th>Backend</th>
+                    <th aria-label="actions"></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <div id="domainsEmpty" class="empty-state" hidden>Aucun domaine configure.</div>
+            </section>
+          </article>
 
-        <table id="domainsTable"><thead><tr><th>Hostname</th><th>Proxy</th><th>Backend</th><th></th></tr></thead><tbody></tbody></table>
+        </section>
+        <div id="footer-placeholder"></div>
+        <div class="panel-overlay" id="domainFormPanel" hidden>
+          <div class="panel-card">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Mapping</p>
+                <h2>Ajouter un domaine</h2>
+              </div>
+              <button class="btn ghost small" type="button" data-panel-close="domainFormPanel">Fermer</button>
+            </div>
+            <form id="createDomainForm">
+              <div class="form-grid">
+                <div class="form-field">
+                  <label for="domainHostname">Nom d'hote</label>
+                  <input id="domainHostname" name="hostname" placeholder="app.example.com" required>
+                </div>
+                <div class="form-field">
+                  <label for="createDomainProxySelect">Proxy</label>
+                  <select id="createDomainProxySelect" name="proxyId" required></select>
+                </div>
+                <div class="form-field">
+                  <label for="createDomainBackendSelect">Backend</label>
+                  <select id="createDomainBackendSelect" name="backendId" required>
+                    <option value="">Selectionner</option>
+                  </select>
+                  <p class="form-hint">La selection d'un backend est obligatoire.</p>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn ghost" type="button" data-panel-close="domainFormPanel">Annuler</button>
+                <button class="btn primary" type="submit">Creer le domaine</button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
-  </main>
-  <div id="footer-placeholder"></div>
-</body>
+  </body>
 </html>

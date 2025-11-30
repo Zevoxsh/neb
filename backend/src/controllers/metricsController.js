@@ -78,7 +78,31 @@ async function combined(req, res) {
   }
 }
 
-module.exports = { aggregated, allAggregated, combined };
+async function domainInsights(req, res) {
+  try {
+    const { from, to, interval, last } = req.query;
+    let toTs = to ? new Date(to) : new Date();
+    let fromTs = from ? new Date(from) : new Date(toTs.getTime() - 24 * 3600 * 1000);
+
+    if (last) {
+      const sec = parseInt(last, 10) || 20;
+      toTs = new Date();
+      fromTs = new Date(toTs.getTime() - sec * 1000);
+    }
+
+    const intervalSec = parseInt(interval, 10) || 300;
+    const rows = await metricsModel.queryAggregatedPerDomain(fromTs.toISOString(), toTs.toISOString(), intervalSec);
+    res.json({
+      metrics: rows,
+      window: { from: fromTs.toISOString(), to: toTs.toISOString() }
+    });
+  } catch (e) {
+    console.error('metrics domainInsights error', e);
+    res.status(500).json({ error: 'Internal error' });
+  }
+}
+
+module.exports = { aggregated, allAggregated, combined, domainInsights };
 
 // SSE stream for real-time metrics flush events
 function streamMetrics(req, res) {

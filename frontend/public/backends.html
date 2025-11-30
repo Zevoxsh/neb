@@ -1,32 +1,92 @@
-<!DOCTYPE html>
 <!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Nebula · Backends</title>
-  <link rel="stylesheet" href="/public/styles.css">
-  <script src="/public/js/api.js" defer></script>
-  <script src="/public/js/include-partials.js" defer></script>
-  <script src="/public/js/app.js" defer></script>
-</head>
-<body>
-  <div id="sidebar-placeholder"></div>
-  <main class="main">
-    <div class="container">
-      <div class="card">
-        <h3>Backends</h3>
-        <form id="createBackendForm" class="form-inline">
-          <input name="name" placeholder="Name" required>
-          <input name="targetHost" placeholder="Target host" required>
-          <input name="targetPort" placeholder="Target port" required type="number">
-          <select name="targetProtocol"><option value="http">http</option><option value="tcp">tcp</option></select>
-          <button class="btn primary" type="submit">Create</button>
-        </form>
-
-        <table id="backendsTable"><thead><tr><th>Name</th><th>Target</th><th>Proto</th><th></th></tr></thead><tbody></tbody></table>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Nebula Console - Backends</title>
+    <link rel="stylesheet" href="/public/styles.css">
+    <script src="/public/js/api.js" defer></script>
+    <script src="/public/js/include-partials.js" defer></script>
+    <script src="/public/js/app.js" defer></script>
+  </head>
+  <body data-page="backends">
+    <div class="app-shell">
+      <div id="sidebar-placeholder"></div>
+      <div class="app-main">
+        <header class="topbar">
+          <div class="page-heading">
+            <p class="eyebrow">Origines</p>
+            <h1>Backends</h1>
+            <p class="muted">Declare les services internes a exposer via vos proxies.</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn primary" data-panel-target="backendFormPanel" data-panel-focus="#backendName">Ajouter un backend</button>
+          </div>
+        </header>
+        <section class="page-content">
+          <article class="card table-card">
+            <header>
+              <p class="eyebrow">Inventaire</p>
+              <h2>Backends enregistres</h2>
+            </header>
+            <section>
+              <table id="backendsTable" class="data-table">
+                <thead>
+                  <tr>
+                    <th>Nom</th>
+                    <th>Cible</th>
+                    <th>Protocole</th>
+                    <th aria-label="actions"></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <div id="backendsEmpty" class="empty-state" hidden>Aucun backend.</div>
+            </section>
+          </article>
+        </section>
+        <div id="footer-placeholder"></div>
+        <div class="panel-overlay" id="backendFormPanel" hidden>
+          <div class="panel-card">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Provisioning</p>
+                <h2 id="backendFormTitle">Ajouter un backend</h2>
+              </div>
+              <button class="btn ghost small" type="button" data-panel-close="backendFormPanel">Fermer</button>
+            </div>
+            <form id="createBackendForm">
+              <input type="hidden" name="id" id="backendId">
+              <div class="form-grid">
+                <div class="form-field">
+                  <label for="backendName">Nom</label>
+                  <input id="backendName" name="name" placeholder="api-cluster" required>
+                </div>
+                <div class="form-field">
+                  <label for="backendHost">Hote cible</label>
+                  <input id="backendHost" name="targetHost" placeholder="10.2.0.5" required>
+                </div>
+                <div class="form-field">
+                  <label for="backendPort">Port cible</label>
+                  <input id="backendPort" type="number" name="targetPort" value="8080" required>
+                </div>
+                <div class="form-field">
+                  <label for="backendProtocol">Protocole</label>
+                  <select id="backendProtocol" name="targetProtocol">
+                    <option value="http">HTTP</option>
+                    <option value="https">HTTPS</option>
+                    <option value="tcp">TCP</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn ghost" type="button" data-panel-close="backendFormPanel">Annuler</button>
+                <button class="btn primary" type="submit">Creer le backend</button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
-  </main>
-  <div id="footer-placeholder"></div>
-</body>
+  </body>
 </html>

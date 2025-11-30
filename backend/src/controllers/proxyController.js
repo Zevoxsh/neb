@@ -22,7 +22,7 @@ async function create(req, res) {
     const result = await proxyModel.createProxy({ name, protocol: proto, listen_protocol: listenProto, target_protocol: targetProto, listen_host, listen_port: parseInt(listen_port,10), target_host, target_port: parseInt(target_port,10), vhosts: vhosts || null, enabled: enabled === true });
     console.log('proxyController.create inserted:', result);
     const id = result.id;
-    try { proxyManager.startProxy(id, listenProto, listen_host, parseInt(listen_port,10), targetProto, target_host, parseInt(target_port,10), vhosts || null); } catch (e) { console.error('Start proxy failed', e.message); }
+    try { proxyManager.startProxy(id, listenProto, listen_host, parseInt(listen_port,10), targetProto, target_host, parseInt(target_port,10), vhosts || null, null); } catch (e) { console.error('Start proxy failed', e.message); }
     res.json({ id });
   } catch (err) {
     console.error(err);
@@ -56,7 +56,19 @@ async function update(req, res) {
     const updated = await proxyModel.updateProxy(id, { name, protocol: proto, listen_protocol: listenProto, target_protocol: targetProto, listen_host, listen_port: parseInt(listen_port,10), target_host, target_port: parseInt(target_port,10), vhosts: vhosts || null, enabled: enabled === true });
     console.log('proxyController.update result:', updated);
     if (updated.enabled) {
-      try { proxyManager.startProxy(updated.id, updated.listen_protocol || updated.protocol || 'tcp', updated.listen_host, updated.listen_port, updated.target_protocol || updated.protocol || 'tcp', updated.target_host, updated.target_port, updated.vhosts || null); } catch (e) { console.error('Start proxy failed', e.message); }
+      try {
+        proxyManager.startProxy(
+          updated.id,
+          updated.listen_protocol || updated.protocol || 'tcp',
+          updated.listen_host,
+          updated.listen_port,
+          updated.target_protocol || updated.protocol || 'tcp',
+          updated.target_host,
+          updated.target_port,
+          updated.vhosts || null,
+          updated.error_page_html || null
+        );
+      } catch (e) { console.error('Start proxy failed', e.message); }
     }
     res.json(updated);
   } catch (err) {
@@ -65,4 +77,31 @@ async function update(req, res) {
   }
 }
 
-module.exports = { list, create, remove, update };
+async function getErrorPage(req, res) {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).send('Invalid id');
+  try {
+    const html = await proxyModel.getErrorPage(id);
+    res.json({ html: html || '' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+}
+
+async function updateErrorPage(req, res) {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).send('Invalid id');
+  const { html } = req.body || {};
+  if (html !== undefined && typeof html !== 'string') return res.status(400).send('Invalid html');
+  try {
+    const normalized = typeof html === 'string' ? html : null;
+    const stored = await proxyModel.updateErrorPage(id, normalized);
+    res.json({ html: stored || '' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+}
+
+module.exports = { list, create, remove, update, getErrorPage, updateErrorPage };

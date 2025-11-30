@@ -1,43 +1,121 @@
 <!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Nebula · Proxies</title>
-  <link rel="stylesheet" href="/public/styles.css">
-  <script src="/public/js/api.js" defer></script>
-  <script src="/public/js/include-partials.js" defer></script>
-  <script src="/public/js/app.js" defer></script>
-</head>
-<body>
-  <div id="sidebar-placeholder"></div>
-  <main class="main">
-    <div class="container">
-      <div class="card">
-        <h3>Proxies</h3>
-        <form id="createProxyForm" class="form-inline">
-          <input name="name" placeholder="Name" required>
-          <input name="listen_host" placeholder="Listen host" value="0.0.0.0" required>
-          <input name="listen_port" placeholder="Listen port" value="80" required type="number">
-          <input name="target_host" placeholder="Target host" required>
-          <input name="target_port" placeholder="Target port" required type="number">
-          <select name="protocol"><option value="tcp">tcp</option><option value="http">http</option><option value="https">https</option></select>
-          <button class="btn primary" type="submit">Create</button>
-        </form>
-
-        <table id="proxiesTable"><thead><tr><th>Name</th><th>Listen</th><th>Target</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
-      </div>
-
-      <div id="proxyEditor" class="card hidden">
-        <h3>Proxy Details</h3>
-        <form id="editProxyForm">
-          <div class="form-row"><div class="field"><label>Name</label><input id="editProxyName" name="name"></div><div class="field"><label>Port</label><input id="editProxyListenPort" name="listen_port" type="number"></div></div>
-          <div class="form-row"><div class="field"><label>Host</label><input id="editProxyListenHost" name="listen_host"></div><div class="field"><label>Protocol</label><select id="editProxyProtocol" name="protocol"><option value="tcp">tcp</option><option value="http">http</option><option value="https">https</option></select></div></div>
-          <div class="form-row"><div class="field"><label>Target Host</label><input id="editProxyTargetHost" name="target_host"></div><div class="field"><label>Target Port</label><input id="editProxyTargetPort" name="target_port" type="number"></div></div>
-          <div class="actions"><button id="btnDeleteProxy" type="button" class="btn danger">Delete</button><button id="btnSaveProxy" class="btn primary" type="submit">Save</button></div>
-        </form>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Nebula Console - Proxies</title>
+    <link rel="stylesheet" href="/public/styles.css">
+    <script src="/public/js/api.js" defer></script>
+    <script src="/public/js/include-partials.js" defer></script>
+    <script src="/public/js/app.js" defer></script>
+  </head>
+  <body data-page="proxies">
+    <div class="app-shell">
+      <div id="sidebar-placeholder"></div>
+      <div class="app-main">
+        <header class="topbar">
+          <div class="page-heading">
+            <p class="eyebrow">Reseau</p>
+            <h1>Proxies</h1>
+            <p class="muted">Pilotez les frontends TCP/HTTP, routez le trafic et exposez vos services.</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn primary" data-panel-target="proxyFormPanel" data-panel-focus="#proxyName">Ajouter un proxy</button>
+          </div>
+        </header>
+        <section class="page-content">
+          <article class="card table-card">
+            <header>
+              <p class="eyebrow">Inventaire</p>
+              <h2>Proxies actifs</h2>
+            </header>
+            <section>
+              <table id="proxiesTable" class="data-table">
+                <thead>
+                  <tr>
+                    <th>Nom</th>
+                    <th>Ecoute</th>
+                    <th>Cible</th>
+                    <th>Statut</th>
+                    <th aria-label="actions"></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <div id="proxiesEmpty" class="empty-state" hidden>Aucun proxy defini pour l'instant.</div>
+            </section>
+          </article>
+        </section>
+        <div id="footer-placeholder"></div>
+        <div class="panel-overlay" id="proxyFormPanel" hidden>
+          <div class="panel-card">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Provisioning</p>
+                <h2>Ajouter un proxy</h2>
+              </div>
+              <button class="btn ghost small" type="button" data-panel-close="proxyFormPanel">Fermer</button>
+            </div>
+            <form id="createProxyForm">
+              <div class="form-grid">
+                <div class="form-field"><label for="proxyName">Nom</label><input id="proxyName" name="name" placeholder="web-frontend" required></div>
+                <div class="form-field"><label for="proxyBackendSelect">Backend</label><select id="proxyBackendSelect" name="backendId" required></select><p class="form-hint">Selectionnez un backend. Les champs cibles seront bloques.</p></div>
+                <div class="form-field"><label for="listenHost">Hote d'ecoute</label><input id="listenHost" name="listen_host" value="0.0.0.0" required></div>
+                <div class="form-field"><label for="listenPort">Port d'ecoute</label><input id="listenPort" type="number" name="listen_port" value="80" required></div>
+                <div class="form-field"><label for="targetHost">Cible (hote)</label><input id="targetHost" name="target_host" readonly class="input-locked"></div>
+                <div class="form-field"><label for="targetPort">Cible (port)</label><input id="targetPort" type="number" name="target_port" readonly class="input-locked"></div>
+                <div class="form-field"><label for="proxyProtocol">Protocole</label><select id="proxyProtocol" name="protocol"><option value="tcp">TCP</option><option value="http">HTTP</option><option value="https">HTTPS</option></select></div>
+              </div>
+              <div id="proxyBackendEmpty" class="inline-callout" hidden>
+                <p>Aucun backend n'est encore disponible.</p>
+                <button class="btn ghost small" type="button" id="btnShowInlineBackend">Creer un backend</button>
+              </div>
+              <div class="inline-panel" id="inlineBackendPanel" hidden>
+                <div class="form-grid">
+                  <div class="form-field"><label for="inlineBackendName">Nom</label><input id="inlineBackendName" placeholder="api-cluster"></div>
+                  <div class="form-field"><label for="inlineBackendHost">Hote cible</label><input id="inlineBackendHost" placeholder="10.2.0.5"></div>
+                  <div class="form-field"><label for="inlineBackendPort">Port cible</label><input id="inlineBackendPort" type="number" value="8080"></div>
+                  <div class="form-field"><label for="inlineBackendProtocol">Protocole</label><select id="inlineBackendProtocol"><option value="http">HTTP</option><option value="https">HTTPS</option><option value="tcp">TCP</option></select></div>
+                </div>
+                <div class="form-actions">
+                  <button class="btn ghost" type="button" id="btnCancelInlineBackend">Annuler</button>
+                  <button class="btn primary" type="button" id="btnSubmitInlineBackend">Valider le backend</button>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn ghost" type="button" data-panel-close="proxyFormPanel">Fermer</button>
+                <button class="btn primary" type="submit">Enregistrer le proxy</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="panel-overlay" id="errorPagePanel" hidden>
+          <div class="panel-card">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Personnalisation</p>
+                <h2 id="errorPageTitle">Page d'erreur</h2>
+              </div>
+              <button class="btn ghost small" type="button" data-panel-close="errorPagePanel">Fermer</button>
+            </div>
+            <div class="form-field">
+              <label for="errorPageTextarea">Contenu HTML</label>
+              <textarea id="errorPageTextarea" rows="10" placeholder="<h1>Service indisponible</h1>"></textarea>
+              <p class="form-hint">Ce contenu s'affichera pour les erreurs 4xx/5xx generiques.</p>
+            </div>
+            <div class="inline-panel" style="max-height:250px;overflow:auto;margin-top:16px;">
+              <div class="form-field">
+                <label>Preview</label>
+                <div id="errorPagePreview" style="min-height:120px;border:1px solid var(--border);border-radius:8px;padding:12px;background:rgba(255,255,255,0.01);"></div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn ghost" type="button" id="btnResetErrorPage">Reinitialiser</button>
+              <button class="btn primary" type="button" id="btnSaveErrorPage">Enregistrer</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  </main>
-  <div id="footer-placeholder"></div>
-</body>
+  </body>
 </html>

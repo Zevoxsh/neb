@@ -8,6 +8,9 @@ const tls = require('tls');
 const acmeManager = require('./acmeManager');
 const domainModel = require('../models/domainModel');
 const proxyModel = require('../models/proxyModel');
+const blockedIpModel = require('../models/blockedIpModel');
+const trustedIpModel = require('../models/trustedIpModel');
+const alertService = require('./alertService');
 
 // simple helper to detect IP addresses (IPv4 or IPv6 heuristics)
 function isIpAddress(host) {
@@ -17,6 +20,13 @@ function isIpAddress(host) {
   // IPv6 (heuristic: contains ':' or is bracketed)
   if (host.includes(':') || host.startsWith('[') && host.endsWith(']')) return true;
   return false;
+}
+
+function normalizeIp(raw) {
+  if (!raw) return '';
+  if (raw.startsWith('::ffff:')) return raw.replace('::ffff:', '');
+  if (raw === '::1') return '127.0.0.1';
+  return raw;
 }
 
 class ProxyManager {
@@ -30,6 +40,20 @@ class ProxyManager {
     this.pendingAcme = new Set();
     // reload in progress flag
     this._reloading = false;
+    this.blockedIps = new Set();
+    this.trustedIps = new Set();
+    this.ipActivity = new Map();
+    this.domainActivity = new Map();
+    this.alertLastSent = { ip: new Map(), domain: new Map() };
+    this.securityConfig = {
+      autoBlockIps: true,
+      autoAlertDomains: true,
+      ipBytesThreshold: 50 * 1024 * 1024,
+      ipRequestsThreshold: 1000,
+      domainBytesThreshold: 100 * 1024 * 1024,
+      domainRequestsThreshold: 5000,
+      cooldown: Number(process.env.ALERT_COOLDOWN_MS) || 15 * 60 * 1000
+    };
   }
 
   // in-memory metrics buffer and periodic flush
@@ -68,6 +92,7 @@ class ProxyManager {
           console.log(`flushMetrics: writing ${samples.length} sample(s) for bucket ${bucket.toISOString()}`);
           await metricsModel.insertSamplesBatch(samples);
           console.log('flushMetrics: write successful');
+          try { await this.evaluateAlerts(); } catch (alertErr) { console.error('flushMetrics alerts failed', alertErr); }
         } catch (dbErr) {
           console.error('flushMetrics: insertSamplesBatch failed', dbErr && dbErr.message ? dbErr.message : dbErr);
         }
@@ -78,7 +103,16 @@ class ProxyManager {
     const pm = this;
   }
 
-  startProxy(id, listenProtocol, listenHost, listenPort, targetProtocol, targetHost, targetPort, vhosts) {
+  updateSecurityConfig(config = {}) {
+    try {
+      this.securityConfig = Object.assign({}, this.securityConfig, config);
+      console.log('ProxyManager: security config updated');
+    } catch (e) {
+      console.error('ProxyManager: failed to update security config', e);
+    }
+  }
+
+  startProxy(id, listenProtocol, listenHost, listenPort, targetProtocol, targetHost, targetPort, vhosts, errorPageHtml = null) {
     if (this.servers.has(id)) throw new Error('Proxy already running');
     const pm = this;
     listenProtocol = (listenProtocol || 'tcp').toLowerCase();
@@ -97,24 +131,37 @@ class ProxyManager {
     const entry = {
       id, type: listenProtocol, server: null, meta: {
         listenProtocol, listenHost, listenPort, targetProtocol, targetHost, targetPort, vhostMap: parsedVhosts || null,
-        secureContextCache: new Map(), cert: null, key: null
+        secureContextCache: new Map(), cert: null, key: null, errorPageHtml: errorPageHtml || null
       }
     };
     if (listenProtocol === 'tcp') {
       // plain TCP passthrough
       const server = net.createServer((clientSocket) => {
         clientSocket.on('error', (err) => console.error(`Proxy ${id} - client socket error (tcp)`, err));
+        const remoteIp = normalizeIp(clientSocket.remoteAddress || '');
+        if (pm.isIpBlocked(remoteIp)) {
+          console.warn(`Proxy ${id} - blocked TCP connection from ${remoteIp}`);
+          try { clientSocket.destroy(); } catch (e) { }
+          return;
+        }
 
         // Record connection immediately
         try { pm.addMetrics(id, 0, 0, 1); } catch (e) { }
+        pm.trackIpTraffic(remoteIp, 0, 1);
 
         const targetSocket = net.connect({ host: entry.meta.targetHost, port: entry.meta.targetPort }, () => {
           clientSocket.pipe(targetSocket);
           targetSocket.pipe(clientSocket);
         });
 
-        clientSocket.on('data', (c) => { try { pm.addMetrics(id, c ? c.length : 0, 0, 0); } catch (e) { } });
-        targetSocket.on('data', (c) => { try { pm.addMetrics(id, 0, c ? c.length : 0, 0); } catch (e) { } });
+        clientSocket.on('data', (c) => {
+          const len = c ? c.length : 0;
+          try { pm.addMetrics(id, len, 0, 0); } catch (e) { }
+          pm.trackIpTraffic(remoteIp, len, 0);
+        });
+        targetSocket.on('data', (c) => {
+          try { pm.addMetrics(id, 0, c ? c.length : 0, 0); } catch (e) { }
+        });
 
         targetSocket.on('error', () => { try { clientSocket.destroy(); } catch (e) { } });
         clientSocket.on('error', () => { try { targetSocket.destroy(); } catch (e) { } });
@@ -541,7 +588,17 @@ class ProxyManager {
       // just forward raw bytes between client and target so TLS and HTTP remain intact.
       const server = net.createServer((clientSocket) => {
         clientSocket.on('error', (err) => console.error(`Proxy ${id} - client socket error (pre-connect)`, err));
-        const clientAddr = `${clientSocket.remoteAddress || 'unknown'}:${clientSocket.remotePort || 'unknown'}`;
+        const remoteIp = normalizeIp(clientSocket.remoteAddress || 'unknown');
+        const clientAddr = `${remoteIp || 'unknown'}:${clientSocket.remotePort || 'unknown'}`;
+        if (pm.isIpBlocked(remoteIp)) {
+          console.warn(`Proxy ${id} - blocked HTTP/S connection from ${clientAddr}`);
+          if (!sendBlockedResponse(clientSocket)) {
+            try { clientSocket.destroy(); } catch (e) { }
+          }
+          return;
+        }
+        pm.trackIpTraffic(remoteIp, 0, 1);
+        let resolvedDomain = null;
         console.log(`Proxy ${id} - client connected from ${clientAddr} -> default target ${entry.meta.targetHost}:${entry.meta.targetPort} (listen=${listenProtocol}, target=${entry.meta.targetProtocol})`);
 
         // Record connection immediately
@@ -575,6 +632,7 @@ class ProxyManager {
             // try to parse SNI
             const sni = parseSNI(chunk);
             if (sni && entry.meta.vhostMap && entry.meta.vhostMap[sni]) {
+              resolvedDomain = sni;
               const m = entry.meta.vhostMap[sni];
               selectedHost = m.targetHost || selectedHost;
               selectedPort = m.targetPort || selectedPort;
@@ -590,6 +648,7 @@ class ProxyManager {
               const m = s.match(/\r?\nHost:\s*([^:\r\n]+)/i);
               if (m && m[1] && entry.meta.vhostMap && entry.meta.vhostMap[m[1]]) {
                 const map = entry.meta.vhostMap[m[1]];
+                resolvedDomain = m[1];
                 selectedHost = map.targetHost || selectedHost;
                 selectedPort = map.targetPort || selectedPort;
                 selectedProto = (map.targetProtocol || selectedProto).toLowerCase();
@@ -611,14 +670,16 @@ class ProxyManager {
           // Record prebuffer bytes
           if (prebuffer && prebuffer.length) {
             try { pm.addMetrics(id, prebuffer.length, 0, 0); } catch (e) { }
+            pm.trackIpTraffic(remoteIp, prebuffer.length, 1);
+            if (resolvedDomain) pm.trackDomainTraffic(resolvedDomain, prebuffer.length, 1);
           }
 
-          const targetSocket = net.connect({ host: selHost, port: selPort }, () => {
-            try {
-              if (prebuffer && prebuffer.length) targetSocket.write(prebuffer);
-              clientSocket.resume();
-              clientSocket.pipe(targetSocket);
-              targetSocket.pipe(clientSocket);
+        const targetSocket = net.connect({ host: selHost, port: selPort }, () => {
+          try {
+            if (prebuffer && prebuffer.length) targetSocket.write(prebuffer);
+            clientSocket.resume();
+            clientSocket.pipe(targetSocket);
+            targetSocket.pipe(clientSocket);
             } catch (e) {
               console.error(`Proxy ${id} - error during piping setup`, e);
               try { clientSocket.destroy(); } catch (err) { }
@@ -627,17 +688,58 @@ class ProxyManager {
           });
 
           // Metrics listeners - stream bytes immediately
-          clientSocket.on('data', (c) => { try { pm.addMetrics(id, c ? c.length : 0, 0, 0); } catch (e) { } });
+          clientSocket.on('data', (c) => {
+            const len = c ? c.length : 0;
+            try { pm.addMetrics(id, len, 0, 0); } catch (e) { }
+            pm.trackIpTraffic(remoteIp, len, 0);
+            if (resolvedDomain) pm.trackDomainTraffic(resolvedDomain, len, 0);
+          });
           targetSocket.on('data', (c) => { try { pm.addMetrics(id, 0, c ? c.length : 0, 0); } catch (e) { } });
 
           targetSocket.on('error', (err) => {
             console.error(`Proxy ${id} - target TCP error connecting to ${selHost}:${selPort}`, err);
-            try { clientSocket.destroy(); } catch (e) { }
+            if (!sendCustomErrorPage(clientSocket)) {
+              try { clientSocket.destroy(); } catch (e) { }
+            }
           });
           clientSocket.on('error', (err) => {
             console.error(`Proxy ${id} - client TCP error`, err);
             try { targetSocket.destroy(); } catch (e) { }
           });
+        }
+
+        function sendCustomErrorPage(socket) {
+          if (!entry.meta.errorPageHtml) return false;
+          try {
+            const html = entry.meta.errorPageHtml;
+            let payload = html;
+            if (!html.startsWith('HTTP/')) {
+              const body = Buffer.from(html, 'utf8');
+              payload = `HTTP/1.1 503 Service Unavailable\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: ${body.length}\r\nConnection: close\r\n\r\n`;
+              socket.write(payload);
+              socket.write(body);
+              socket.end();
+              return true;
+            }
+            socket.write(payload);
+            socket.end();
+            return true;
+          } catch (e) {
+            return false;
+          }
+        }
+
+        function sendBlockedResponse(socket) {
+          try {
+            const body = Buffer.from('<h1>IP bannie</h1><p>Contactez l\'administrateur pour etre debloque.</p>', 'utf8');
+            const headers = `HTTP/1.1 403 Forbidden\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: ${body.length}\r\nConnection: close\r\n\r\n`;
+            socket.write(headers);
+            socket.write(body);
+            socket.end();
+            return true;
+          } catch (e) {
+            return false;
+          }
         }
       });
       server.on('error', (err) => console.error('Transparent proxy server error', err));
@@ -715,6 +817,7 @@ class ProxyManager {
               entry.meta.listenHost = p.listen_host || entry.meta.listenHost;
               entry.meta.listenPort = p.listen_port || entry.meta.listenPort;
               entry.meta.listenProtocol = p.listen_protocol || p.protocol || entry.meta.listenProtocol;
+              entry.meta.errorPageHtml = p.error_page_html || entry.meta.errorPageHtml;
               console.log(`ProxyManager: updated proxy ${p.id} metadata in-place`);
               continue;
             }
@@ -728,7 +831,17 @@ class ProxyManager {
             continue;
           }
 
-          this.startProxy(p.id, p.listen_protocol || p.protocol || 'tcp', p.listen_host, p.listen_port, p.target_protocol || p.protocol || 'tcp', p.target_host, p.target_port, Object.keys(finalVhosts).length ? finalVhosts : null);
+          this.startProxy(
+            p.id,
+            p.listen_protocol || p.protocol || 'tcp',
+            p.listen_host,
+            p.listen_port,
+            p.target_protocol || p.protocol || 'tcp',
+            p.target_host,
+            p.target_port,
+            Object.keys(finalVhosts).length ? finalVhosts : null,
+            p.error_page_html || null
+          );
           startedBindings.add(bindKey);
         } catch (e) { console.error('ProxyManager: start proxy failed during reload', e && e.message ? e.message : e); }
       }
@@ -792,6 +905,113 @@ class ProxyManager {
     }
     try { if (this.flushTimer) clearInterval(this.flushTimer); } catch (e) { }
     await Promise.all(promises);
+  }
+
+  setBlockedIps(list) {
+    try {
+      this.blockedIps = new Set(Array.isArray(list) ? list.map(normalizeIp) : []);
+      console.log('ProxyManager: blocked IPs updated ->', this.blockedIps.size);
+    } catch (e) {
+      console.error('ProxyManager: failed to set blocked IPs', e);
+    }
+  }
+
+  setTrustedIps(list) {
+    try {
+      this.trustedIps = new Set(Array.isArray(list) ? list.map(normalizeIp) : []);
+      console.log('ProxyManager: trusted IPs updated ->', this.trustedIps.size);
+    } catch (e) {
+      console.error('ProxyManager: failed to set trusted IPs', e);
+    }
+  }
+
+  isTrustedIp(ip) {
+    if (!ip) return false;
+    return this.trustedIps.has(normalizeIp(ip));
+  }
+
+  isIpBlocked(ip) {
+    if (!ip) return false;
+    const normalized = normalizeIp(ip);
+    if (this.isTrustedIp(normalized)) return false;
+    return this.blockedIps.has(normalized);
+  }
+
+  trackIpTraffic(ip, bytes = 0, requests = 0) {
+    if (!ip) return;
+    const key = normalizeIp(ip);
+    const stat = this.ipActivity.get(key) || { bytes: 0, events: 0 };
+    stat.bytes += Number(bytes || 0);
+    stat.events += Number(requests || 0);
+    this.ipActivity.set(key, stat);
+  }
+
+  trackDomainTraffic(domain, bytes = 0, requests = 0) {
+    if (!domain) return;
+    const key = domain.toLowerCase();
+    const stat = this.domainActivity.get(key) || { bytes: 0, requests: 0 };
+    stat.bytes += Number(bytes || 0);
+    stat.requests += Number(requests || 0);
+    this.domainActivity.set(key, stat);
+  }
+
+  async evaluateAlerts() {
+    const now = Date.now();
+    const pending = [];
+    const cfg = this.securityConfig || {};
+    const ipBytesThreshold = Number(cfg.ipBytesThreshold) || 0;
+    const ipReqThreshold = Number(cfg.ipRequestsThreshold) || 0;
+    const domainBytesThreshold = Number(cfg.domainBytesThreshold) || 0;
+    const domainReqThreshold = Number(cfg.domainRequestsThreshold) || 0;
+    const autoBlockIps = !!cfg.autoBlockIps;
+    const autoAlertDomains = cfg.autoAlertDomains !== false;
+
+    for (const [ip, stat] of this.ipActivity.entries()) {
+      const bytesBreached = ipBytesThreshold && stat.bytes >= ipBytesThreshold;
+      const reqBreached = ipReqThreshold && stat.events >= ipReqThreshold;
+      if (bytesBreached && this._cooldownOk('ip', ip, now)) {
+        pending.push(alertService.sendTrafficAlert(
+          `Alerte trafic IP ${ip}`,
+          `L'adresse ${ip} a genere ${formatBytes(stat.bytes)} de trafic recemment.`
+        ));
+        this.alertLastSent.ip.set(ip, now);
+      }
+      if (autoBlockIps && !this.isTrustedIp(ip) && (bytesBreached || reqBreached)) {
+        pending.push(this.autoBlockIp(ip, 'Autoblocage automatique'));
+      }
+    }
+    for (const [domain, stat] of this.domainActivity.entries()) {
+      const bytesBreached = domainBytesThreshold && stat.bytes >= domainBytesThreshold;
+      const reqBreached = domainReqThreshold && stat.requests >= domainReqThreshold;
+      if (autoAlertDomains && (bytesBreached || reqBreached) && this._cooldownOk('domain', domain, now)) {
+        pending.push(alertService.sendTrafficAlert(
+          `Alerte trafic domaine ${domain}`,
+          `Le domaine ${domain} a genere ${formatBytes(stat.bytes)} (${formatNumber(stat.requests)} requetes).`
+        ));
+        this.alertLastSent.domain.set(domain, now);
+      }
+    }
+    this.ipActivity.clear();
+    this.domainActivity.clear();
+    try { await Promise.all(pending); } catch (e) { console.error('ProxyManager alerts error', e); }
+  }
+
+  _cooldownOk(type, key, now) {
+    const map = type === 'ip' ? this.alertLastSent.ip : this.alertLastSent.domain;
+    const last = map.get(key) || 0;
+    const cooldown = Number(this.securityConfig && this.securityConfig.cooldown) || 15 * 60 * 1000;
+    return now - last > cooldown;
+  }
+
+  async autoBlockIp(ip, reason) {
+    try {
+      await blockedIpModel.blockIp(ip, reason || 'Autoblocage');
+      const list = await blockedIpModel.listIpsOnly();
+      this.setBlockedIps(list);
+      console.log(`ProxyManager: auto-blocked IP ${ip}`);
+    } catch (e) {
+      console.error('ProxyManager autoBlockIp error', e);
+    }
   }
 }
 
@@ -859,4 +1079,21 @@ function parseSNI(buffer) {
     return null;
   }
   return null;
+}
+
+function formatBytes(num) {
+  let value = Number(num) || 0;
+  if (value <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let idx = 0;
+  while (value >= 1024 && idx < units.length - 1) {
+    value /= 1024;
+    idx++;
+  }
+  const display = idx === 0 ? Math.round(value) : value.toFixed(1);
+  return `${display} ${units[idx]}`;
+}
+
+function formatNumber(num) {
+  return Number(num || 0).toLocaleString('fr-FR');
 }

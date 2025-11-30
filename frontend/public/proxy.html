@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Nebula Console - Proxy</title>
+    <link rel="stylesheet" href="/public/styles.css">
+    <script src="/public/js/api.js" defer></script>
+    <script src="/public/js/include-partials.js" defer></script>
+    <script src="/public/js/app.js" defer></script>
+  </head>
+  <body data-page="proxy-detail">
+    <div class="app-shell">
+      <div id="sidebar-placeholder"></div>
+      <div class="app-main">
+        <header class="topbar">
+          <div class="page-heading">
+            <p class="eyebrow">Proxies</p>
+            <h1>Details du proxy</h1>
+            <p class="muted">Modifier les parametres d'ecoute et de cible, ou supprimer le proxy.</p>
+          </div>
+          <div class="topbar-actions">
+            <a class="btn ghost" href="/proxies.html">Retour</a>
+          </div>
+        </header>
+        <section class="page-content">
+          <article class="card">
+            <form id="editProxyForm">
+              <div class="form-grid">
+                <div class="form-field">
+                  <label for="editProxyName">Nom</label>
+                  <input id="editProxyName" name="name" required>
+                </div>
+                <div class="form-field">
+                  <label for="editProxyListenHost">Hote d'ecoute</label>
+                  <input id="editProxyListenHost" name="listen_host" required>
+                </div>
+                <div class="form-field">
+                  <label for="editProxyListenPort">Port d'ecoute</label>
+                  <input id="editProxyListenPort" name="listen_port" type="number" required>
+                </div>
+                <div class="form-field">
+                  <label for="editProxyProtocol">Protocole</label>
+                  <select id="editProxyProtocol" name="protocol">
+                    <option value="tcp">TCP</option>
+                    <option value="http">HTTP</option>
+                    <option value="https">HTTPS</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn ghost" type="button" id="btnDeleteProxy">Supprimer</button>
+                <button class="btn primary" type="button" id="btnSaveProxy">Enregistrer</button>
+              </div>
+            </form>
+          </article>
+        </section>
+        <div id="footer-placeholder"></div>
+      </div>
+    </div>
+  </body>
+</html>

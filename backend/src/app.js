@@ -10,6 +10,7 @@ const domainRoutes = require('./routes/domainRoutes');
 const metricsRoutes = require('./routes/metricsRoutes');
 const certRoutes = require('./routes/certRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
+const securityRoutes = require('./routes/securityRoutes');
 
 function createApp() {
   const app = express();
@@ -54,6 +55,7 @@ function createApp() {
   app.use(metricsRoutes);
   app.use(certRoutes);
   app.use(settingsRoutes);
+  app.use(securityRoutes);
 
   // Simple profile route
   app.get('/profile', (req, res) => {
@@ -68,6 +70,7 @@ function createApp() {
   app.get('/proxies.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'proxies.html')));
   app.get('/backends.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'backends.html')));
   app.get('/domains.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'domains.html')));
+  app.get('/security.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'security.html')));
   app.get('/certificates.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'certificates.html')));
   app.get('/settings.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'settings.html')));
   app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'login.html')));
@@ -91,6 +94,7 @@ function createApp() {
       { prefix: '/proxies', file: 'proxies.html' },
       { prefix: '/backends', file: 'backends.html' },
       { prefix: '/domains', file: 'domains.html' },
+      { prefix: '/security', file: 'security.html' },
       { prefix: '/certificates', file: 'certificates.html' },
       { prefix: '/settings', file: 'settings.html' },
       { prefix: '/login', file: 'login.html' }

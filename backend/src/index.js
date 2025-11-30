@@ -20,8 +20,12 @@ const pool = require('./config/db');
 const bcrypt = require('bcrypt');
 const proxyModel = require('./models/proxyModel');
 const proxyManager = require('./services/proxyManager');
+const alertService = require('./services/alertService');
 const acmeManager = require('./services/acmeManager');
 const settingsModel = require('./models/settingsModel');
+const blockedIpModel = require('./models/blockedIpModel');
+const trustedIpModel = require('./models/trustedIpModel');
+const { normalizeSecurityConfig, DEFAULT_SECURITY_CONFIG } = require('./utils/securityConfig');
 
 const app = createApp();
 const PORT = process.env.PORT || 3000;
@@ -82,12 +86,25 @@ async function initDbAndStart() {
       key VARCHAR(191) PRIMARY KEY,
       value TEXT
     );`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS blocked_ips (
+      id SERIAL PRIMARY KEY,
+      ip VARCHAR(191) NOT NULL UNIQUE,
+      reason TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    );`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS trusted_ips (
+      id SERIAL PRIMARY KEY,
+      ip VARCHAR(191) NOT NULL UNIQUE,
+      label TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    );`);
 
     // Ensure existing tables have the protocol/listen/target protocol columns (safe to run every start)
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS protocol VARCHAR(10) NOT NULL DEFAULT 'tcp';");
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS listen_protocol VARCHAR(10) NOT NULL DEFAULT 'tcp';");
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS target_protocol VARCHAR(10) NOT NULL DEFAULT 'tcp';");
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS vhosts JSONB;");
+    await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS error_page_html TEXT;");
 
     const adminUser = process.env.DEFAULT_ADMIN_USER || 'admin';
     const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
@@ -132,8 +149,44 @@ async function initDbAndStart() {
         }
         const mapped = vhostsByProxy[p.id] || null;
         const finalVhosts = Object.assign({}, merged || {}, mapped || {});
-        proxyManager.startProxy(p.id, p.listen_protocol || p.protocol || 'tcp', p.listen_host, p.listen_port, p.target_protocol || p.protocol || 'tcp', p.target_host, p.target_port, Object.keys(finalVhosts).length ? finalVhosts : null);
+        proxyManager.startProxy(
+          p.id,
+          p.listen_protocol || p.protocol || 'tcp',
+          p.listen_host,
+          p.listen_port,
+          p.target_protocol || p.protocol || 'tcp',
+          p.target_host,
+          p.target_port,
+          Object.keys(finalVhosts).length ? finalVhosts : null,
+          p.error_page_html || null
+        );
       } catch (e) { console.error('Start proxy failed', e.message); }
+    }
+
+    try {
+      const blocked = await blockedIpModel.listIpsOnly();
+      proxyManager.setBlockedIps(blocked);
+      console.log('Loaded blocked IPs:', blocked.length);
+    } catch (e) {
+      console.error('Failed to load blocked IPs', e);
+    }
+
+    try {
+      const trusted = await trustedIpModel.listIpsOnly();
+      proxyManager.setTrustedIps(trusted);
+      console.log('Loaded trusted IPs:', trusted.length);
+    } catch (e) {
+      console.error('Failed to load trusted IPs', e);
+    }
+
+    try {
+      const rawConfig = await settingsModel.getSetting('security_config');
+      const securityConfig = normalizeSecurityConfig(rawConfig || DEFAULT_SECURITY_CONFIG);
+      proxyManager.updateSecurityConfig(securityConfig);
+      alertService.configure(securityConfig.smtp);
+      console.log('Loaded security config');
+    } catch (e) {
+      console.error('Failed to load security config', e);
     }
 
     // Load settings from DB (e.g., local_tlds) and apply to acmeManager

@@ -43,6 +43,26 @@ async function queryAggregatedPerProxy(fromTs, toTs, intervalSec) {
   return res.rows;
 }
 
+async function queryAggregatedPerDomain(fromTs, toTs, intervalSec) {
+  const sql = `
+    SELECT dm.id AS domain_id,
+           dm.hostname,
+           dm.proxy_id,
+           to_timestamp(floor(extract(epoch from m.ts)/$3)*$3) AS bucket,
+           sum(m.bytes_in)::bigint AS bytes_in,
+           sum(m.bytes_out)::bigint AS bytes_out,
+           sum(m.requests)::bigint AS requests
+    FROM domain_mappings dm
+    JOIN metrics m ON m.proxy_id = dm.proxy_id
+    WHERE m.ts >= $1
+      AND m.ts <= $2
+    GROUP BY dm.id, dm.hostname, dm.proxy_id, bucket
+    ORDER BY dm.id, bucket;
+  `;
+  const res = await pool.query(sql, [fromTs, toTs, intervalSec]);
+  return res.rows;
+}
+
 // Insert multiple samples in a single batch insert. samples: [{ proxy_id, ts, bytes_in, bytes_out, requests }, ...]
 async function insertSamplesBatch(samples) {
   if (!samples || !samples.length) return;
@@ -57,4 +77,4 @@ async function insertSamplesBatch(samples) {
   await pool.query(sql, params);
 }
 
-module.exports = { insertSample, queryAggregated, queryAggregatedPerProxy, insertSamplesBatch };
+module.exports = { insertSample, queryAggregated, queryAggregatedPerProxy, queryAggregatedPerDomain, insertSamplesBatch };

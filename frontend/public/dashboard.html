@@ -1,33 +1,94 @@
 <!doctype html>
-<html>
+<html lang="fr">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Nebula · Dashboard</title>
+    <title>Nebula Console - Dashboard</title>
     <link rel="stylesheet" href="/public/styles.css">
     <script src="/public/js/api.js" defer></script>
     <script src="/public/js/include-partials.js" defer></script>
     <script src="/public/js/app.js" defer></script>
   </head>
-  <body>
-    <div id="sidebar-placeholder"></div>
-    <main class="main">
-      <div class="container">
-        <div class="card">
-          <h3>Dashboard</h3>
-          <p class="muted">Welcome. Use the left menu to manage proxies, backends and domains.</p>
-        </div>
-
-        <div class="card">
-          <div class="stats-row">
-            <div class="stat-card"><div class="stat-icon">↓</div><div class="stat-content"><span class="stat-label">Traffic In</span><span class="stat-value" id="stat-traffic-in">0 B/s</span></div></div>
-            <div class="stat-card"><div class="stat-icon">↑</div><div class="stat-content"><span class="stat-label">Traffic Out</span><span class="stat-value" id="stat-traffic-out">0 B/s</span></div></div>
+  <body data-page="dashboard">
+    <div class="app-shell">
+      <div id="sidebar-placeholder"></div>
+      <div class="app-main">
+        <header class="topbar">
+          <div class="page-heading">
+            <p class="eyebrow">Monitoring</p>
+            <h1>Dashboard</h1>
+            <p class="muted">Vue globale de la passerelle et des metriques en temps reel.</p>
           </div>
-        </div>
+          <div class="topbar-actions">
+            <a class="btn ghost" href="/settings.html">Parametres</a>
+          </div>
+        </header>
+        <section class="page-content">
+          <div class="stat-grid">
+            <article class="stat-card">
+              <p class="stat-label">Requetes</p>
+              <p class="stat-value" id="stat-requests">0</p>
+              <span class="stat-subtitle">Total observe</span>
+            </article>
+            <article class="stat-card">
+              <p class="stat-label">Req / sec</p>
+              <p class="stat-value" id="stat-rps">0</p>
+              <span class="stat-subtitle">Derniere minute</span>
+            </article>
+            <article class="stat-card">
+              <p class="stat-label">Trafic entrant</p>
+              <p class="stat-value" id="stat-traffic-in">0 B/s</p>
+              <span class="stat-subtitle">Agrege</span>
+            </article>
+            <article class="stat-card">
+              <p class="stat-label">Trafic sortant</p>
+              <p class="stat-value" id="stat-traffic-out">0 B/s</p>
+              <span class="stat-subtitle">Agrege</span>
+            </article>
+          </div>
 
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Trafic</p>
+                <h2>Charge globale</h2>
+              </div>
+              <div class="chip-group" role="group" aria-label="Bascules periode">
+                <button id="btnViewRealtime" class="chip active" type="button">Temps reel</button>
+                <button id="btnView24h" class="chip" type="button">24 h</button>
+              </div>
+            </div>
+            <div id="chartWrapper" class="chart-shell">
+              <canvas id="trafficChart"></canvas>
+              <div id="chartPlaceholder" class="chart-placeholder">
+                Les metriques apparaitront des qu'un proxy publiera du trafic.
+              </div>
+            </div>
+          </article>
+
+          <article class="card table-card">
+            <header>
+              <p class="eyebrow">Monitoring</p>
+              <h2>Top domaines (24h)</h2>
+            </header>
+            <section>
+              <table id="dashboardDomainStats" class="data-table">
+                <thead>
+                  <tr>
+                    <th>Domaine</th>
+                    <th>Requetes</th>
+                    <th>Trafic</th>
+                    <th>Derniere activite</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <div id="dashboardDomainStatsEmpty" class="empty-state" hidden>Aucune activite.</div>
+            </section>
+          </article>
+        </section>
+        <div id="footer-placeholder"></div>
       </div>
-    </main>
-
-    <div id="footer-placeholder"></div>
+    </div>
   </body>
 </html>

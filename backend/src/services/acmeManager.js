@@ -10,6 +10,7 @@ const { execSync } = require('child_process');
 
 const ACME_EMAIL = process.env.ACME_EMAIL || '';
 const CERT_DIR = '/etc/letsencrypt/live';
+const CUSTOM_CERT_DIR = process.env.CUSTOM_CERT_DIR || path.join(__dirname, '..', '..', 'certs', 'manual');
 
 const running = new Set();
 
@@ -65,12 +66,16 @@ function isLocalDomain(host) {
 
 function certFilesExist(domain) {
   const dir = path.join(CERT_DIR, domain);
-  return fs.existsSync(path.join(dir, 'fullchain.pem')) && fs.existsSync(path.join(dir, 'privkey.pem'));
+  if (fs.existsSync(path.join(dir, 'fullchain.pem')) && fs.existsSync(path.join(dir, 'privkey.pem'))) return true;
+  const manualDir = path.join(CUSTOM_CERT_DIR, domain);
+  return fs.existsSync(path.join(manualDir, 'fullchain.pem')) && fs.existsSync(path.join(manualDir, 'privkey.pem'));
 }
 
 function getCertExpiry(domain) {
   try {
-    const out = execSync(`openssl x509 -in ${path.join(CERT_DIR, domain, 'fullchain.pem')} -noout -enddate`).toString();
+    let certPath = path.join(CERT_DIR, domain, 'fullchain.pem');
+    if (!fs.existsSync(certPath)) certPath = path.join(CUSTOM_CERT_DIR, domain, 'fullchain.pem');
+    const out = execSync(`openssl x509 -in ${certPath} -noout -enddate`).toString();
     const m = out.match(/notAfter=(.*)/);
     if (!m) return null;
     return new Date(m[1]);
@@ -187,9 +192,14 @@ async function ensureCert(domain) {
 
 function getCertContent(domain) {
   try {
-    const dir = path.join(CERT_DIR, domain);
-    const fullchainPath = path.join(dir, 'fullchain.pem');
-    const privkeyPath = path.join(dir, 'privkey.pem');
+    let dir = path.join(CERT_DIR, domain);
+    let fullchainPath = path.join(dir, 'fullchain.pem');
+    let privkeyPath = path.join(dir, 'privkey.pem');
+    if (!fs.existsSync(fullchainPath) || !fs.existsSync(privkeyPath)) {
+      dir = path.join(CUSTOM_CERT_DIR, domain);
+      fullchainPath = path.join(dir, 'fullchain.pem');
+      privkeyPath = path.join(dir, 'privkey.pem');
+    }
 
     if (fs.existsSync(fullchainPath) && fs.existsSync(privkeyPath)) {
       const cert = fs.readFileSync(fullchainPath, 'utf8');
@@ -203,7 +213,16 @@ function getCertContent(domain) {
   }
 }
 
-module.exports = { ensureCert, certFilesExist, getCertStatus, getCertContent };
+async function saveManualCert(domain, cert, key) {
+  if (!domain || !cert || !key) throw new Error('domain/cert/key required');
+  const dir = path.join(CUSTOM_CERT_DIR, domain);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'fullchain.pem'), cert, 'utf8');
+  fs.writeFileSync(path.join(dir, 'privkey.pem'), key, 'utf8');
+  return true;
+}
+
+module.exports = { ensureCert, certFilesExist, getCertStatus, getCertContent, saveManualCert };
 // Export helpers to allow runtime update of local TLDs from settings API
 module.exports.setLocalTlds = setLocalTlds;
 module.exports.getLocalTlds = getLocalTlds;

@@ -65,4 +65,17 @@ async function get(req, res) {
     }
 }
 
-module.exports = { list, generate, get };
+async function uploadManual(req, res) {
+    const { domain, certificate, privateKey } = req.body || {};
+    if (!domain || !certificate || !privateKey) return res.status(400).send('Domain, certificate and key required');
+    try {
+        await acmeManager.saveManualCert(domain.trim(), certificate, privateKey);
+        const status = acmeManager.getCertStatus(domain.trim());
+        res.json({ hostname: domain.trim(), ...status });
+    } catch (e) {
+        console.error('certController uploadManual error', e);
+        res.status(500).send('Upload failed');
+    }
+}
+
+module.exports = { list, generate, get, uploadManual };

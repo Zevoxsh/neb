@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Nebula Console - Securite</title>
+    <link rel="stylesheet" href="/public/styles.css">
+    <script src="/public/js/api.js" defer></script>
+    <script src="/public/js/include-partials.js" defer></script>
+    <script src="/public/js/app.js" defer></script>
+  </head>
+  <body data-page="security">
+    <div class="app-shell">
+      <div id="sidebar-placeholder"></div>
+      <div class="app-main">
+        <header class="topbar">
+          <div class="page-heading">
+            <p class="eyebrow">Protection</p>
+            <h1>Centre de securite</h1>
+            <p class="muted">Gerer les IP bloquees/de confiance, les alertes email et les seuils anti-DDoS.</p>
+          </div>
+        </header>
+        <section class="page-content">
+          <article class="card table-card">
+            <header>
+              <p class="eyebrow">Filtrage</p>
+              <h2>IPs bloquees</h2>
+            </header>
+            <section>
+              <form id="blockedIpForm" class="form-inline">
+                <input name="ip" placeholder="192.168.1.10" required>
+                <input name="reason" placeholder="Raison (optionnel)">
+                <button class="btn primary" type="submit">Bloquer</button>
+              </form>
+              <table id="blockedIpsTable" class="data-table">
+                <thead>
+                  <tr>
+                    <th>IP</th>
+                    <th>Raison</th>
+                    <th>Ajoutee</th>
+                    <th aria-label="actions"></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <div id="blockedIpsEmpty" class="empty-state" hidden>Aucune IP bloquee.</div>
+            </section>
+          </article>
+
+          <article class="card table-card">
+            <header>
+              <p class="eyebrow">Confiance</p>
+              <h2>IPs approuvees</h2>
+            </header>
+            <section>
+              <form id="trustedIpForm" class="form-inline">
+                <input name="ip" placeholder="10.0.0.5" required>
+                <input name="label" placeholder="Description">
+                <button class="btn primary" type="submit">Ajouter</button>
+              </form>
+              <table id="trustedIpsTable" class="data-table">
+                <thead>
+                  <tr>
+                    <th>IP</th>
+                    <th>Label</th>
+                    <th>Ajoutee</th>
+                    <th aria-label="actions"></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <div id="trustedIpsEmpty" class="empty-state" hidden>Aucune IP approuvee.</div>
+            </section>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Alertes</p>
+                <h2>Serveur mail</h2>
+              </div>
+            </div>
+            <form id="smtpForm" class="form-grid">
+              <div class="form-field">
+                <label for="smtpHost">SMTP host</label>
+                <input id="smtpHost" name="host" placeholder="smtp.exemple.com">
+              </div>
+              <div class="form-field">
+                <label for="smtpPort">Port</label>
+                <input id="smtpPort" name="port" type="number" placeholder="465">
+              </div>
+              <div class="form-field">
+                <label for="smtpUser">Utilisateur</label>
+                <input id="smtpUser" name="user">
+              </div>
+              <div class="form-field">
+                <label for="smtpPass">Mot de passe</label>
+                <input id="smtpPass" name="pass" type="password">
+              </div>
+              <div class="form-field">
+                <label for="smtpFrom">Expéditeur</label>
+                <input id="smtpFrom" name="from" placeholder="nebula@exemple.com">
+              </div>
+              <div class="form-field">
+                <label for="smtpTo">Destinataire</label>
+                <input id="smtpTo" name="to" placeholder="alerts@exemple.com">
+              </div>
+              <div class="form-actions">
+                <button class="btn primary" type="submit">Sauvegarder</button>
+              </div>
+            </form>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Defense</p>
+                <h2>Seuils & autoblocage</h2>
+              </div>
+            </div>
+            <form id="securityConfigForm" class="form-grid">
+              <div class="form-field">
+                <label for="ipBytesThreshold">Seuil IP (octets)</label>
+                <input id="ipBytesThreshold" name="ipBytesThreshold" type="number">
+                <p class="form-hint">Taille cumulée avant alerte/bannissement.</p>
+              </div>
+              <div class="form-field">
+                <label for="ipRequestsThreshold">Seuil IP (requêtes)</label>
+                <input id="ipRequestsThreshold" name="ipRequestsThreshold" type="number">
+              </div>
+              <div class="form-field">
+                <label for="domainBytesThreshold">Seuil domaine (octets)</label>
+                <input id="domainBytesThreshold" name="domainBytesThreshold" type="number">
+              </div>
+              <div class="form-field">
+                <label for="domainRequestsThreshold">Seuil domaine (requêtes)</label>
+                <input id="domainRequestsThreshold" name="domainRequestsThreshold" type="number">
+              </div>
+              <label class="form-check">
+                <input type="checkbox" id="autoBlockIps" name="autoBlockIps">
+                Autobloquer les IP dépassant les seuils
+              </label>
+              <label class="form-check">
+                <input type="checkbox" id="autoAlertDomains" name="autoAlertDomains">
+                Envoyer des alertes pour les domaines gourmands
+              </label>
+              <div class="form-actions">
+                <button class="btn primary" type="submit">Appliquer</button>
+              </div>
+            </form>
+          </article>
+        </section>
+        <div id="footer-placeholder"></div>
+      </div>
+    </div>
+  </body>
+</html>
