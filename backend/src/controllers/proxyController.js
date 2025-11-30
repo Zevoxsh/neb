@@ -47,20 +47,43 @@ async function update(req, res) {
   const id = parseInt(req.params.id, 10);
   const { name, protocol, listen_protocol, target_protocol, listen_host, listen_port, target_host, target_port, enabled, vhosts } = req.body;
   console.log('proxyController.update called id=', id, 'body=', req.body);
-  const missing = [];
-  if (!id) missing.push('id');
-  if (!name) missing.push('name');
-  if (!listen_host) missing.push('listen_host');
-  if (!listen_port) missing.push('listen_port');
-  if (!target_host) missing.push('target_host');
-  if (!target_port) missing.push('target_port');
-  if (missing.length) return res.status(400).json({ error: 'Missing fields', missing });
+  try {
+    // fetch existing proxy so we can preserve fields the client may omit
+    const existing = await proxyModel.getProxyById(id);
+    if (!existing) return res.status(404).json({ error: 'Proxy not found' });
+
+    // resolve fields: prefer request body, otherwise fall back to existing values
+    const resolvedName = name || existing.name;
+    const resolvedListenHost = listen_host || existing.listen_host;
+    const resolvedListenPort = listen_port !== undefined && listen_port !== null && listen_port !== '' ? parseInt(listen_port, 10) : existing.listen_port;
+    const resolvedTargetHost = target_host || existing.target_host;
+    const resolvedTargetPort = target_port !== undefined && target_port !== null && target_port !== '' ? parseInt(target_port, 10) : existing.target_port;
+
+    const missing = [];
+    if (!id) missing.push('id');
+    if (!resolvedName) missing.push('name');
+    if (!resolvedListenHost) missing.push('listen_host');
+    if (!resolvedListenPort) missing.push('listen_port');
+    if (!resolvedTargetHost) missing.push('target_host');
+    if (!resolvedTargetPort) missing.push('target_port');
+    if (missing.length) return res.status(400).json({ error: 'Missing fields', missing });
   const proto = (protocol || 'tcp').toLowerCase();
   const listenProto = (listen_protocol || proto).toLowerCase();
   const targetProto = (target_protocol || proto).toLowerCase();
-  try {
+    try {
     proxyManager.stopProxy(id); // stop current
-    const updated = await proxyModel.updateProxy(id, { name, protocol: proto, listen_protocol: listenProto, target_protocol: targetProto, listen_host, listen_port: parseInt(listen_port,10), target_host, target_port: parseInt(target_port,10), vhosts: vhosts || null, enabled: enabled === true });
+    const updated = await proxyModel.updateProxy(id, {
+      name: resolvedName,
+      protocol: proto,
+      listen_protocol: listenProto,
+      target_protocol: targetProto,
+      listen_host: resolvedListenHost,
+      listen_port: resolvedListenPort,
+      target_host: resolvedTargetHost,
+      target_port: resolvedTargetPort,
+      vhosts: vhosts || existing.vhosts || null,
+      enabled: enabled === true
+    });
     console.log('proxyController.update result:', updated);
     if (updated.enabled) {
       try {
