@@ -48,7 +48,7 @@
         initSettingsPage();
         break;
       case 'security':
-        initSecurityPage();
+        window.initSecurityPage();
         break;
       default:
         break;
@@ -602,40 +602,85 @@
   function populateSmtpForm(cfg) {
     const form = document.getElementById('smtpForm');
     if (!form) return;
-    form.host.value = cfg.host || '';
-    form.port.value = cfg.port || 465;
-    form.user.value = cfg.user || '';
-    form.pass.value = cfg.pass || '';
-    form.from.value = cfg.from || '';
-    form.to.value = cfg.to || '';
-  }
-
-  function populateSecurityForm(cfg) {
-    const form = document.getElementById('securityConfigForm');
-    if (!form) return;
-    form.ipBytesThreshold.value = cfg.ipBytesThreshold || '';
-    form.ipRequestsThreshold.value = cfg.ipRequestsThreshold || '';
-    form.domainBytesThreshold.value = cfg.domainBytesThreshold || '';
-    form.domainRequestsThreshold.value = cfg.domainRequestsThreshold || '';
-    form.autoBlockIps.checked = !!cfg.autoBlockIps;
-    form.autoAlertDomains.checked = !!cfg.autoAlertDomains;
+    const hostEl = document.getElementById('smtpHost') || form.elements && form.elements['host'];
+    const portEl = document.getElementById('smtpPort') || form.elements && form.elements['port'];
+    const secureEl = document.getElementById('smtpSecure') || form.elements && form.elements['secure'];
+    const userEl = document.getElementById('smtpUser') || form.elements && form.elements['user'];
+    const passEl = document.getElementById('smtpPass') || form.elements && form.elements['pass'];
+    const fromEl = document.getElementById('smtpFrom') || form.elements && form.elements['from'];
+    const toEl = document.getElementById('smtpTo') || form.elements && form.elements['to'];
+    if (hostEl) hostEl.value = cfg.host || '';
+    if (portEl) portEl.value = cfg.port || '';
+    if (secureEl) {
+      try { secureEl.checked = !!cfg.secure; } catch (e) { /* ignore */ }
+    }
+    if (userEl) userEl.value = cfg.user || '';
+    if (passEl) passEl.value = cfg.pass || '';
+    if (fromEl) fromEl.value = cfg.from || '';
+    if (toEl) toEl.value = cfg.to || '';
   }
 
   async function submitSmtpSettings(ev) {
     ev.preventDefault();
     const form = ev.target;
+    const hostEl = document.getElementById('smtpHost') || form.elements && form.elements['host'];
+    const portEl = document.getElementById('smtpPort') || form.elements && form.elements['port'];
+    const secureEl = document.getElementById('smtpSecure') || form.elements && form.elements['secure'];
+    const userEl = document.getElementById('smtpUser') || form.elements && form.elements['user'];
+    const passEl = document.getElementById('smtpPass') || form.elements && form.elements['pass'];
+    const fromEl = document.getElementById('smtpFrom') || form.elements && form.elements['from'];
+    const toEl = document.getElementById('smtpTo') || form.elements && form.elements['to'];
     const payload = {
       smtp: {
-        host: form.host.value || '',
-        port: Number(form.port.value) || 465,
-        user: form.user.value || '',
-        pass: form.pass.value || '',
-        from: form.from.value || '',
-        to: form.to.value || ''
+        host: (hostEl && (hostEl.value || '') || '').trim(),
+        port: Number(portEl && portEl.value) || 0,
+        secure: !!(secureEl && secureEl.checked),
+        user: (userEl && userEl.value) || '',
+        pass: (passEl && passEl.value) || '',
+        from: (fromEl && fromEl.value) || '',
+        to: (toEl && toEl.value) || ''
       }
     };
     await updateSecurityConfig(payload, 'Parametres SMTP mis a jour');
   }
+
+  function populateSecurityForm(cfg) {
+    const form = document.getElementById('securityConfigForm');
+    if (!form) return;
+    form.autoBlockIps.checked = !!(cfg.autoBlockIps || cfg.auto_block_ips);
+    form.autoAlertDomains.checked = !!(cfg.autoAlertDomains || cfg.auto_alert_domains);
+    form.ipBytesThreshold.value = Number(cfg.ipBytesThreshold ?? cfg.ip_bytes_threshold ?? 0) || 0;
+    form.ipRequestsThreshold.value = Number(cfg.ipRequestsThreshold ?? cfg.ip_requests_threshold ?? 0) || 0;
+    form.domainBytesThreshold.value = Number(cfg.domainBytesThreshold ?? cfg.domain_bytes_threshold ?? 0) || 0;
+    form.domainRequestsThreshold.value = Number(cfg.domainRequestsThreshold ?? cfg.domain_requests_threshold ?? 0) || 0;
+  }
+
+  // expose initSecurityPage to global scope so the DOMContentLoaded switch can call it
+  window.initSecurityPage = async function initSecurityPage() {
+    await Promise.all([loadBlockedIps(), loadTrustedIps(), loadSecurityConfig()]);
+    const blockedForm = document.getElementById('blockedIpForm');
+    if (blockedForm) blockedForm.addEventListener('submit', submitBlockedIp);
+    const trustedForm = document.getElementById('trustedIpForm');
+    if (trustedForm) trustedForm.addEventListener('submit', submitTrustedIp);
+    const smtpForm = document.getElementById('smtpForm');
+    if (smtpForm) smtpForm.addEventListener('submit', submitSmtpSettings);
+    const configForm = document.getElementById('securityConfigForm');
+    if (configForm) configForm.addEventListener('submit', submitSecurityConfig);
+
+    document.addEventListener('click', (ev) => {
+      if ((document.body.dataset.page || '') !== 'security') return;
+      const blockedBtn = ev.target.closest && ev.target.closest('.delete-blocked-ip');
+      if (blockedBtn && blockedBtn.dataset.id) {
+        ev.preventDefault();
+        deleteBlockedIp(blockedBtn.dataset.id);
+      }
+      const trustedBtn = ev.target.closest && ev.target.closest('.delete-trusted-ip');
+      if (trustedBtn && trustedBtn.dataset.id) {
+        ev.preventDefault();
+        deleteTrustedIp(trustedBtn.dataset.id);
+      }
+    });
+  };
 
   async function submitSecurityConfig(ev) {
     ev.preventDefault();
@@ -1386,29 +1431,4 @@
     }
   }
 })();
-
-async function initSecurityPage() {
-  await Promise.all([loadBlockedIps(), loadTrustedIps(), loadSecurityConfig()]);
-  const blockedForm = document.getElementById('blockedIpForm');
-  if (blockedForm) blockedForm.addEventListener('submit', submitBlockedIp);
-  const trustedForm = document.getElementById('trustedIpForm');
-  if (trustedForm) trustedForm.addEventListener('submit', submitTrustedIp);
-  const smtpForm = document.getElementById('smtpForm');
-  if (smtpForm) smtpForm.addEventListener('submit', submitSmtpSettings);
-  const configForm = document.getElementById('securityConfigForm');
-  if (configForm) configForm.addEventListener('submit', submitSecurityConfig);
-
-  document.addEventListener('click', (ev) => {
-    if ((document.body.dataset.page || '') !== 'security') return;
-    const blockedBtn = ev.target.closest && ev.target.closest('.delete-blocked-ip');
-    if (blockedBtn && blockedBtn.dataset.id) {
-      ev.preventDefault();
-      deleteBlockedIp(blockedBtn.dataset.id);
-    }
-    const trustedBtn = ev.target.closest && ev.target.closest('.delete-trusted-ip');
-    if (trustedBtn && trustedBtn.dataset.id) {
-      ev.preventDefault();
-      deleteTrustedIp(trustedBtn.dataset.id);
-    }
-  });
-}
+ 

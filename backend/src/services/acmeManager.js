@@ -215,11 +215,28 @@ function getCertContent(domain) {
 
 async function saveManualCert(domain, cert, key) {
   if (!domain || !cert || !key) throw new Error('domain/cert/key required');
-  const dir = path.join(CUSTOM_CERT_DIR, domain);
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'fullchain.pem'), cert, 'utf8');
-  fs.writeFileSync(path.join(dir, 'privkey.pem'), key, 'utf8');
-  return true;
+  // Prefer writing into the system cert directory used by certbot so other tools
+  // that expect certificates under /etc/letsencrypt/live/<domain>/ will find them.
+  // This typically requires root permissions. If writing to CERT_DIR fails we
+  // fall back to the repository-local CUSTOM_CERT_DIR.
+  const preferredDir = path.join(CERT_DIR, domain);
+  try {
+    // Ensure parent exists
+    fs.mkdirSync(preferredDir, { recursive: true, mode: 0o755 });
+    // Write files with conservative permissions: cert 0644, key 0600
+    fs.writeFileSync(path.join(preferredDir, 'fullchain.pem'), cert, { encoding: 'utf8', mode: 0o644 });
+    fs.writeFileSync(path.join(preferredDir, 'privkey.pem'), key, { encoding: 'utf8', mode: 0o600 });
+    console.log(`acmeManager: saved manual cert to ${preferredDir}`);
+    return true;
+  } catch (e) {
+    console.warn(`acmeManager: unable to write to ${preferredDir}, falling back to ${CUSTOM_CERT_DIR}:`, e && e.message ? e.message : e);
+    const dir = path.join(CUSTOM_CERT_DIR, domain);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'fullchain.pem'), cert, 'utf8');
+    fs.writeFileSync(path.join(dir, 'privkey.pem'), key, 'utf8');
+    console.log(`acmeManager: saved manual cert to ${dir}`);
+    return true;
+  }
 }
 
 module.exports = { ensureCert, certFilesExist, getCertStatus, getCertContent, saveManualCert };

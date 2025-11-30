@@ -819,3 +819,74 @@ label {
     opacity: 1;
   }
 }
+
+/* ===== Security page scoped styles ===== */
+body[data-page="security"] {
+  --sec-accent: rgba(79,142,247,0.12);
+}
+
+body[data-page="security"] .page-heading{
+  padding: 8px 0 6px;
+}
+body[data-page="security"] .page-heading .eyebrow{
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+body[data-page="security"] .page-heading h1{
+  font-size: 28px;
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+body[data-page="security"] .page-heading .muted{
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  max-width: 820px;
+}
+
+body[data-page="security"] .page-content{display:flex;flex-direction:column;gap:18px;padding:6px 0}
+
+/* compact table-card */
+body[data-page="security"] .table-card{border-radius:12px;overflow:visible}
+body[data-page="security"] .table-card header{padding:18px 22px;border-bottom:1px solid rgba(255,255,255,0.02)}
+body[data-page="security"] .table-card section{padding:14px 22px}
+
+/* Inline forms */
+body[data-page="security"] .form-inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+body[data-page="security"] .form-inline input{min-width:160px;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02)}
+body[data-page="security"] .form-inline .btn{padding:8px 12px;border-radius:8px;font-weight:700}
+
+/* data-table styling */
+body[data-page="security"] .data-table{width:100%;border-collapse:separate;border-spacing:0 10px}
+body[data-page="security"] .data-table thead th{background:transparent;padding:10px 12px;color:var(--text-muted);font-size:12px;text-transform:uppercase}
+body[data-page="security"] .data-table tbody tr{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));border-radius:8px}
+body[data-page="security"] .data-table td{padding:12px 12px;border-bottom:none;color:var(--text-main)}
+body[data-page="security"] .data-table td:last-child{text-align:right;width:120px}
+body[data-page="security"] .data-table tr:hover td{background:rgba(255,255,255,0.01)}
+
+/* empty states */
+body[data-page="security"] .empty-state{padding:14px;color:var(--text-muted);background:transparent;border-radius:8px}
+
+/* form-grid adjustments */
+body[data-page="security"] .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+body[data-page="security"] .form-field label{font-size:13px;color:var(--text-muted);margin-bottom:6px}
+body[data-page="security"] .form-field input{padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:rgba(255,255,255,0.02)}
+body[data-page="security"] .form-hint{font-size:12px;color:var(--text-muted);margin-top:6px}
+
+/* checkboxes */
+body[data-page="security"] .form-check{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:14px}
+body[data-page="security"] .form-check input{width:16px;height:16px}
+
+/* subtle divider between sections */
+body[data-page="security"] .card + .card{border-top:1px solid rgba(255,255,255,0.02)}
+
+/* tone down primary in this page to be less jarring */
+body[data-page="security"] .btn.primary{background:transparent;color:var(--text-main);border:1px solid rgba(255,255,255,0.06);box-shadow:none}
+
+@media (max-width:900px){
+  body[data-page="security"] .form-inline input{min-width:140px}
+}
+
+/* End security scoped styles */
