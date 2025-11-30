@@ -473,7 +473,12 @@ class ProxyManager {
             } catch (logErr) {
               console.error(`Proxy ${id} - upstream error (logging failed)`, logErr);
             }
-            try { res.writeHead(502); res.end('Bad gateway'); } catch (err) { }
+            try {
+              // send a nicer HTML page to the client (use configured error page if provided)
+              pm.sendBackendUnavailableResponse(res, entry, targetInfo);
+            } catch (err) {
+              try { res.writeHead(502); res.end('Bad gateway'); } catch (e) { }
+            }
           });
           req.pipe(upstream);
         } catch (e) {
@@ -1017,6 +1022,20 @@ class ProxyManager {
       console.log(`ProxyManager: auto-blocked IP ${ip}`);
     } catch (e) {
       console.error('ProxyManager autoBlockIp error', e);
+    }
+  }
+
+  // Send a friendly backend-unavailable HTML response to the client.
+  sendBackendUnavailableResponse(res, entry, targetInfo) {
+    try {
+      const html = entry && entry.meta && entry.meta.errorPageHtml ? entry.meta.errorPageHtml : null;
+      if (html) {
+        try { res.writeHead(502, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(html); return; } catch (e) { }
+      }
+      const body = `<!doctype html><html><head><meta charset="utf-8"><title>Service indisponible</title></head><body style="font-family: sans-serif; text-align:center; padding:40px;"><h1>Backend introuvable</h1><p>Le service en arrière-plan ${targetInfo || ''} est inaccessible pour le moment. Merci de réessayer plus tard.</p></body></html>`;
+      try { res.writeHead(502, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(body); } catch (e) { try { res.writeHead(502); res.end('Bad gateway'); } catch (er) { } }
+    } catch (e) {
+      try { res.writeHead(502); res.end('Bad gateway'); } catch (er) { }
     }
   }
 }
