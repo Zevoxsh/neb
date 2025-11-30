@@ -571,7 +571,11 @@ class ProxyManager {
             if (typeof upstream.setTimeout === 'function') {
               upstream.setTimeout(pm.backendConnectTimeoutMs, () => {
                 try { if (pm.markBackendFailure) pm.markBackendFailure(targetInfo); } catch (e) { }
-                console.warn(`Proxy ${id} - upstream timeout connecting to ${targetInfo} after ${pm.backendConnectTimeoutMs}ms`);
+                try {
+                  const m = (req && req.method) ? req.method : 'UNKNOWN';
+                  const u = (req && req.url) ? req.url : 'UNKNOWN';
+                  console.warn(`Proxy ${id} - upstream timeout connecting to ${targetInfo} after ${pm.backendConnectTimeoutMs}ms (request=${m} ${u})`);
+                } catch (e) { console.warn(`Proxy ${id} - upstream timeout connecting to ${targetInfo} after ${pm.backendConnectTimeoutMs}ms`); }
                 try { upstream.destroy(new Error('connect timeout')); } catch (e) { try { upstream.abort && upstream.abort(); } catch (er) { } }
                 try { pm.sendBackendUnavailableResponse(res, entry, targetInfo); } catch (e) { }
               });
