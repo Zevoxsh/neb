@@ -1143,6 +1143,11 @@ class ProxyManager {
   // Send a friendly backend-unavailable HTML response to the client.
   sendBackendUnavailableResponse(res, entry, targetInfo) {
     try {
+      // If the response is already finished, do nothing to avoid write-after-end errors
+      if (res && ((typeof res.writableEnded === 'boolean' && res.writableEnded) || res.finished)) {
+        try { console.warn(`ProxyManager: response already finished for ${targetInfo}, skipping unavailable response`); } catch (e) { }
+        return;
+      }
       const html = entry && entry.meta && entry.meta.errorPageHtml ? entry.meta.errorPageHtml : null;
       if (html) {
         try { res.writeHead(502, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(html); return; } catch (e) { }
