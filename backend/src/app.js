@@ -11,6 +11,7 @@ const metricsRoutes = require('./routes/metricsRoutes');
 const certRoutes = require('./routes/certRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const securityRoutes = require('./routes/securityRoutes');
+const debugRoutes = require('./routes/debugRoutes');
 
 function createApp() {
   const app = express();
@@ -56,6 +57,7 @@ function createApp() {
   app.use(certRoutes);
   app.use(settingsRoutes);
   app.use(securityRoutes);
+  app.use(debugRoutes);
 
   // Simple profile route
   app.get('/profile', (req, res) => {
