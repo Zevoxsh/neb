@@ -113,37 +113,66 @@ class ProxyManager {
 
   backendIsDown(targetInfo) {
     try {
-      if (!targetInfo) return false;
-      const rec = this.backendFailures.get(targetInfo);
-      if (!rec) return false;
-      if (rec.downUntil && Date.now() < rec.downUntil) return true;
+      // signature: backendIsDown(targetInfo, domain)
+      const args = Array.from(arguments);
+      const t = args[0];
+      const domain = args[1] || '';
+      if (!t) return false;
+      const domainKey = `${t}|@|${domain}`;
+      const hostKey = `${t}`;
+      const recDomain = this.backendFailures.get(domainKey);
+      if (recDomain && recDomain.downUntil && Date.now() < recDomain.downUntil) return true;
+      const recHost = this.backendFailures.get(hostKey);
+      if (recHost && recHost.downUntil && Date.now() < recHost.downUntil) return true;
       return false;
     } catch (e) { return false; }
   }
 
   markBackendFailure(targetInfo) {
     try {
-      if (!targetInfo) return;
+      // signature: markBackendFailure(targetInfo, domain)
+      const args = Array.from(arguments);
+      const t = args[0];
+      const domain = args[1] || '';
+      if (!t) return;
+      const key = `${t}|@|${domain}`;
       const now = Date.now();
-      const rec = this.backendFailures.get(targetInfo) || { count: 0, downUntil: 0 };
+      const rec = this.backendFailures.get(key) || { count: 0, downUntil: 0 };
       rec.count = (rec.count || 0) + 1;
       if (rec.count >= (this.failureThreshold || 3)) {
         rec.downUntil = now + (this.failureCooldownMs || 60000);
-        console.warn(`ProxyManager: marking backend ${targetInfo} as DOWN until ${new Date(rec.downUntil).toISOString()} (failures=${rec.count})`);
+        console.warn(`ProxyManager: marking backend ${t} (domain=${domain || '<all>'}) as DOWN until ${new Date(rec.downUntil).toISOString()} (failures=${rec.count})`);
         // reset count to avoid overflow
         rec.count = 0;
       }
-      this.backendFailures.set(targetInfo, rec);
+      this.backendFailures.set(key, rec);
     } catch (e) { }
   }
 
   markBackendSuccess(targetInfo) {
     try {
-      if (!targetInfo) return;
-      if (this.backendFailures.has(targetInfo)) {
-        this.backendFailures.delete(targetInfo);
-        console.log(`ProxyManager: backend ${targetInfo} marked UP`);
+      // signature: markBackendSuccess(targetInfo, domain)
+      const args = Array.from(arguments);
+      const t = args[0];
+      const domain = args[1];
+      if (!t) return;
+      if (domain !== undefined && domain !== null) {
+        const key = `${t}|@|${domain || ''}`;
+        if (this.backendFailures.has(key)) {
+          this.backendFailures.delete(key);
+          console.log(`ProxyManager: backend ${t} (domain=${domain || '<all>'}) marked UP`);
+        }
+        return;
       }
+      // no domain provided: clear all entries for this host (host-only and domain-specific)
+      const prefix = `${t}|@|`;
+      const keys = Array.from(this.backendFailures.keys());
+      for (const k of keys) {
+        if (k === t || k.startsWith(prefix)) {
+          this.backendFailures.delete(k);
+        }
+      }
+      console.log(`ProxyManager: backend ${t} marked UP (cleared host and domain entries)`);
     } catch (e) { }
   }
 
@@ -512,11 +541,13 @@ class ProxyManager {
           if (useHttpsUpstream) options.agent = new https.Agent({ rejectUnauthorized: false });
 
           const targetInfo = `${useTargetHost2}:${useTargetPort2}`;
-          // If this backend is temporarily marked as down, short-circuit and return a friendly page
+          // resolve host-only for domain-aware checks
+          const hostOnly = req.headers && req.headers.host ? req.headers.host.split(':')[0] : null;
+          // If this backend/domain is temporarily marked as down, short-circuit and return a friendly page
           try {
-            if (pm.backendIsDown && pm.backendIsDown(targetInfo)) {
-              console.warn(`Proxy ${id} - backend ${targetInfo} is marked DOWN, returning unavailable response`);
-              pm.sendBackendUnavailableResponse(res, entry, targetInfo);
+            if (pm.backendIsDown && pm.backendIsDown(targetInfo, hostOnly)) {
+              console.warn(`Proxy ${id} - backend ${targetInfo} (domain=${hostOnly}) is marked DOWN, returning unavailable response`);
+              pm.sendBackendUnavailableResponse(res, entry, targetInfo, hostOnly);
               return;
             }
           } catch (e) { }
@@ -560,8 +591,8 @@ class ProxyManager {
             }
 
             try { const len = parseInt(pres.headers['content-length']) || 0; pm.addMetrics(id, 0, len, 1); } catch (e) { }
-            // mark backend success/reset failure counter
-            try { if (pm.markBackendSuccess) pm.markBackendSuccess(targetInfo); } catch (e) { }
+            // mark backend success/reset failure counter (domain-aware)
+            try { if (pm.markBackendSuccess) pm.markBackendSuccess(targetInfo, hostOnly); } catch (e) { }
             console.log(`Forwarded ${req.method} ${req.url} -> ${useHttpsUpstream ? 'HTTPS' : 'HTTP'} ${useTargetHost2}:${useTargetPort2} [${pres.statusCode}]`);
             res.writeHead(pres.statusCode, outHeaders);
             pres.pipe(res);
@@ -570,14 +601,14 @@ class ProxyManager {
           try {
             if (typeof upstream.setTimeout === 'function') {
               upstream.setTimeout(pm.backendConnectTimeoutMs, () => {
-                try { if (pm.markBackendFailure) pm.markBackendFailure(targetInfo); } catch (e) { }
+                try { if (pm.markBackendFailure) pm.markBackendFailure(targetInfo, hostOnly); } catch (e) { }
                 try {
                   const m = (req && req.method) ? req.method : 'UNKNOWN';
                   const u = (req && req.url) ? req.url : 'UNKNOWN';
                   console.warn(`Proxy ${id} - upstream timeout connecting to ${targetInfo} after ${pm.backendConnectTimeoutMs}ms (request=${m} ${u})`);
                 } catch (e) { console.warn(`Proxy ${id} - upstream timeout connecting to ${targetInfo} after ${pm.backendConnectTimeoutMs}ms`); }
                 try { upstream.destroy(new Error('connect timeout')); } catch (e) { try { upstream.abort && upstream.abort(); } catch (er) { } }
-                try { pm.sendBackendUnavailableResponse(res, entry, targetInfo); } catch (e) { }
+                try { pm.sendBackendUnavailableResponse(res, entry, targetInfo, hostOnly); } catch (e) { }
               });
             }
           } catch (e) { }
@@ -585,7 +616,7 @@ class ProxyManager {
           upstream.on('error', (e) => {
             try {
               // record a failure for this backend so we can avoid hot loops
-              try { if (pm.markBackendFailure) pm.markBackendFailure(targetInfo); } catch (ee) { }
+              try { if (pm.markBackendFailure) pm.markBackendFailure(targetInfo, hostOnly); } catch (ee) { }
               const protoInfo = useHttpsUpstream ? 'https' : 'http';
               console.error(`Proxy ${id} - upstream error -> ${targetInfo} (${protoInfo})`, e && e.message ? e.message : e);
               if (e && e.stack) console.error(e.stack);
@@ -594,7 +625,7 @@ class ProxyManager {
             }
             try {
               // send a nicer HTML page to the client (use configured error page if provided)
-              pm.sendBackendUnavailableResponse(res, entry, targetInfo);
+              pm.sendBackendUnavailableResponse(res, entry, targetInfo, hostOnly);
             } catch (err) {
               try { res.writeHead(502); res.end('Bad gateway'); } catch (e) { }
             }
@@ -804,12 +835,25 @@ class ProxyManager {
             if (resolvedDomain) pm.trackDomainTraffic(resolvedDomain, prebuffer.length, 1);
           }
 
+        const targetInfoKey = `${selHost}:${selPort}`;
+        // If this backend/domain is marked down, short-circuit and return a custom error page to the client
+        try {
+          if (pm.backendIsDown && pm.backendIsDown(targetInfoKey, resolvedDomain)) {
+            console.warn(`Proxy ${id} - target ${targetInfoKey} for domain=${resolvedDomain} is marked DOWN, returning custom error page`);
+            if (!sendCustomErrorPage(clientSocket)) {
+              try { clientSocket.destroy(); } catch (e) { }
+            }
+            return;
+          }
+        } catch (e) { }
+
         const targetSocket = net.connect({ host: selHost, port: selPort }, () => {
           try {
             if (prebuffer && prebuffer.length) targetSocket.write(prebuffer);
             clientSocket.resume();
             clientSocket.pipe(targetSocket);
             targetSocket.pipe(clientSocket);
+            try { if (pm.markBackendSuccess) pm.markBackendSuccess(targetInfoKey, resolvedDomain); } catch (e) { }
             } catch (e) {
               console.error(`Proxy ${id} - error during piping setup`, e);
               try { clientSocket.destroy(); } catch (err) { }
@@ -827,7 +871,8 @@ class ProxyManager {
           targetSocket.on('data', (c) => { try { pm.addMetrics(id, 0, c ? c.length : 0, 0); } catch (e) { } });
 
           targetSocket.on('error', (err) => {
-            console.error(`Proxy ${id} - target TCP error connecting to ${selHost}:${selPort}`, err);
+            try { if (pm.markBackendFailure) pm.markBackendFailure(targetInfoKey, resolvedDomain); } catch (e) { }
+            console.error(`Proxy ${id} - target TCP error connecting to ${selHost}:${selPort} (domain=${resolvedDomain})`, err);
             if (!sendCustomErrorPage(clientSocket)) {
               try { clientSocket.destroy(); } catch (e) { }
             }
@@ -1145,7 +1190,8 @@ class ProxyManager {
   }
 
   // Send a friendly backend-unavailable HTML response to the client.
-  sendBackendUnavailableResponse(res, entry, targetInfo) {
+  // domain is optional and will be shown in the message when provided
+  sendBackendUnavailableResponse(res, entry, targetInfo, domain) {
     try {
       // If the response is already finished, do nothing to avoid write-after-end errors
       if (res && ((typeof res.writableEnded === 'boolean' && res.writableEnded) || res.finished)) {
@@ -1156,7 +1202,8 @@ class ProxyManager {
       if (html) {
         try { res.writeHead(502, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(html); return; } catch (e) { }
       }
-      const body = `<!doctype html><html><head><meta charset="utf-8"><title>Service indisponible</title></head><body style="font-family: sans-serif; text-align:center; padding:40px;"><h1>Backend introuvable</h1><p>Le service en arrière-plan ${targetInfo || ''} est inaccessible pour le moment. Merci de réessayer plus tard.</p></body></html>`;
+      const domainMsg = domain ? `<p>Nom de domaine concerné : <strong>${domain}</strong></p>` : '';
+      const body = `<!doctype html><html><head><meta charset="utf-8"><title>Service indisponible</title></head><body style="font-family: sans-serif; text-align:center; padding:40px;"><h1>Backend introuvable</h1><p>Le service en arrière-plan ${targetInfo || ''} est inaccessible pour le moment. Merci de réessayer plus tard.</p>${domainMsg}</body></html>`;
       try { res.writeHead(502, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(body); } catch (e) { try { res.writeHead(502); res.end('Bad gateway'); } catch (er) { } }
     } catch (e) {
       try { res.writeHead(502); res.end('Bad gateway'); } catch (er) { }
