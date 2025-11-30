@@ -54,6 +54,46 @@ class ProxyManager {
       domainRequestsThreshold: 5000,
       cooldown: Number(process.env.ALERT_COOLDOWN_MS) || 15 * 60 * 1000
     };
+    // backend failure tracking: Map<targetInfo, { count, downUntil }>
+    this.backendFailures = new Map();
+    this.failureThreshold = Number(process.env.BACKEND_FAILURE_THRESHOLD) || 3;
+    this.failureCooldownMs = Number(process.env.BACKEND_FAILURE_COOLDOWN_MS) || 60 * 1000; // 1 minute
+  }
+
+  backendIsDown(targetInfo) {
+    try {
+      if (!targetInfo) return false;
+      const rec = this.backendFailures.get(targetInfo);
+      if (!rec) return false;
+      if (rec.downUntil && Date.now() < rec.downUntil) return true;
+      return false;
+    } catch (e) { return false; }
+  }
+
+  markBackendFailure(targetInfo) {
+    try {
+      if (!targetInfo) return;
+      const now = Date.now();
+      const rec = this.backendFailures.get(targetInfo) || { count: 0, downUntil: 0 };
+      rec.count = (rec.count || 0) + 1;
+      if (rec.count >= (this.failureThreshold || 3)) {
+        rec.downUntil = now + (this.failureCooldownMs || 60000);
+        console.warn(`ProxyManager: marking backend ${targetInfo} as DOWN until ${new Date(rec.downUntil).toISOString()} (failures=${rec.count})`);
+        // reset count to avoid overflow
+        rec.count = 0;
+      }
+      this.backendFailures.set(targetInfo, rec);
+    } catch (e) { }
+  }
+
+  markBackendSuccess(targetInfo) {
+    try {
+      if (!targetInfo) return;
+      if (this.backendFailures.has(targetInfo)) {
+        this.backendFailures.delete(targetInfo);
+        console.log(`ProxyManager: backend ${targetInfo} marked UP`);
+      }
+    } catch (e) { }
   }
 
   // in-memory metrics buffer and periodic flush
@@ -420,6 +460,16 @@ class ProxyManager {
           options.port = useTargetPort2;
           if (useHttpsUpstream) options.agent = new https.Agent({ rejectUnauthorized: false });
 
+          const targetInfo = `${useTargetHost2}:${useTargetPort2}`;
+          // If this backend is temporarily marked as down, short-circuit and return a friendly page
+          try {
+            if (pm.backendIsDown && pm.backendIsDown(targetInfo)) {
+              console.warn(`Proxy ${id} - backend ${targetInfo} is marked DOWN, returning unavailable response`);
+              pm.sendBackendUnavailableResponse(res, entry, targetInfo);
+              return;
+            }
+          } catch (e) { }
+
           const upstream = (useHttpsUpstream ? https : http).request(options, (pres) => {
             const outHeaders = Object.assign({}, pres.headers);
             // Rewrite Location header to a relative path so the client stays on the same Host and to avoid redirect loops
@@ -459,6 +509,8 @@ class ProxyManager {
             }
 
             try { const len = parseInt(pres.headers['content-length']) || 0; pm.addMetrics(id, 0, len, 1); } catch (e) { }
+            // mark backend success/reset failure counter
+            try { if (pm.markBackendSuccess) pm.markBackendSuccess(targetInfo); } catch (e) { }
             console.log(`Forwarded ${req.method} ${req.url} -> ${useHttpsUpstream ? 'HTTPS' : 'HTTP'} ${useTargetHost2}:${useTargetPort2} [${pres.statusCode}]`);
             res.writeHead(pres.statusCode, outHeaders);
             pres.pipe(res);
@@ -466,7 +518,8 @@ class ProxyManager {
 
           upstream.on('error', (e) => {
             try {
-              const targetInfo = `${useTargetHost2}:${useTargetPort2}`;
+              // record a failure for this backend so we can avoid hot loops
+              try { if (pm.markBackendFailure) pm.markBackendFailure(targetInfo); } catch (ee) { }
               const protoInfo = useHttpsUpstream ? 'https' : 'http';
               console.error(`Proxy ${id} - upstream error -> ${targetInfo} (${protoInfo})`, e && e.message ? e.message : e);
               if (e && e.stack) console.error(e.stack);
