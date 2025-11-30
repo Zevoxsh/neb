@@ -8,6 +8,7 @@ const tls = require('tls');
 const acmeManager = require('./acmeManager');
 const domainModel = require('../models/domainModel');
 const proxyModel = require('../models/proxyModel');
+const backendModel = require('../models/backendModel');
 const blockedIpModel = require('../models/blockedIpModel');
 const trustedIpModel = require('../models/trustedIpModel');
 const alertService = require('./alertService');
@@ -59,6 +60,55 @@ class ProxyManager {
     this.failureThreshold = Number(process.env.BACKEND_FAILURE_THRESHOLD) || 3;
     this.failureCooldownMs = Number(process.env.BACKEND_FAILURE_COOLDOWN_MS) || 60 * 1000; // 1 minute
     this.backendConnectTimeoutMs = Number(process.env.BACKEND_CONNECT_TIMEOUT_MS) || 2000; // 2s
+    this.healthProbeIntervalMs = Number(process.env.BACKEND_HEALTH_INTERVAL_MS) || 30000; // 30s
+    this._healthProbeTimer = null;
+    // start active health probe
+    try { this._startHealthProbe(); } catch (e) { console.error('ProxyManager: failed to start health probe', e); }
+  }
+
+  async _startHealthProbe() {
+    try {
+      if (this._healthProbeTimer) return;
+      // run immediately then schedule
+      await this._runHealthProbe();
+      this._healthProbeTimer = setInterval(() => { this._runHealthProbe().catch((e) => { console.error('Health probe error', e); }); }, this.healthProbeIntervalMs);
+      console.log(`ProxyManager: backend health probe started (interval=${this.healthProbeIntervalMs}ms)`);
+    } catch (e) { console.error('ProxyManager._startHealthProbe error', e); }
+  }
+
+  async _runHealthProbe() {
+    try {
+      const backends = await backendModel.listBackends();
+      if (!backends || !Array.isArray(backends) || backends.length === 0) return;
+      for (const b of backends) {
+        try {
+          const host = b.target_host;
+          const port = Number(b.target_port) || 0;
+          const targetInfo = `${host}:${port}`;
+          // attempt TCP connect with timeout
+          const ok = await this._tcpConnectCheck(host, port, this.backendConnectTimeoutMs);
+          if (ok) {
+            if (this.markBackendSuccess) this.markBackendSuccess(targetInfo);
+          } else {
+            if (this.markBackendFailure) this.markBackendFailure(targetInfo);
+          }
+        } catch (e) { /* per-backend ignore */ }
+      }
+    } catch (e) { console.error('ProxyManager._runHealthProbe error', e); }
+  }
+
+  _tcpConnectCheck(host, port, timeoutMs) {
+    return new Promise((resolve) => {
+      const sock = new net.Socket();
+      let resolved = false;
+      const onDone = (ok) => { if (resolved) return; resolved = true; try { sock.destroy(); } catch (e) { } resolve(ok); };
+      sock.setTimeout(timeoutMs || 2000, () => onDone(false));
+      sock.once('error', () => onDone(false));
+      sock.once('connect', () => onDone(true));
+      try { sock.connect(port, host); } catch (e) { onDone(false); }
+      // safety timeout
+      setTimeout(() => onDone(resolved ? false : false), (timeoutMs || 2000) + 100);
+    });
   }
 
   backendIsDown(targetInfo) {

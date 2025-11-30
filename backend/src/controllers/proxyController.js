@@ -55,9 +55,9 @@ async function update(req, res) {
     // resolve fields: prefer request body, otherwise fall back to existing values
     const resolvedName = name || existing.name;
     const resolvedListenHost = listen_host || existing.listen_host;
-    const resolvedListenPort = listen_port !== undefined && listen_port !== null && listen_port !== '' ? parseInt(listen_port, 10) : existing.listen_port;
+    const resolvedListenPort = (listen_port !== undefined && listen_port !== null && listen_port !== '') ? parseInt(listen_port, 10) : existing.listen_port;
     const resolvedTargetHost = target_host || existing.target_host;
-    const resolvedTargetPort = target_port !== undefined && target_port !== null && target_port !== '' ? parseInt(target_port, 10) : existing.target_port;
+    const resolvedTargetPort = (target_port !== undefined && target_port !== null && target_port !== '') ? parseInt(target_port, 10) : existing.target_port;
 
     const missing = [];
     if (!id) missing.push('id');
@@ -67,10 +67,11 @@ async function update(req, res) {
     if (!resolvedTargetHost) missing.push('target_host');
     if (!resolvedTargetPort) missing.push('target_port');
     if (missing.length) return res.status(400).json({ error: 'Missing fields', missing });
-  const proto = (protocol || 'tcp').toLowerCase();
-  const listenProto = (listen_protocol || proto).toLowerCase();
-  const targetProto = (target_protocol || proto).toLowerCase();
-    try {
+
+    const proto = (protocol || 'tcp').toLowerCase();
+    const listenProto = (listen_protocol || proto).toLowerCase();
+    const targetProto = (target_protocol || proto).toLowerCase();
+
     proxyManager.stopProxy(id); // stop current
     const updated = await proxyModel.updateProxy(id, {
       name: resolvedName,
@@ -135,3 +136,4 @@ async function updateErrorPage(req, res) {
 }
 
 module.exports = { list, create, remove, update, getErrorPage, updateErrorPage };
+
