@@ -47,7 +47,14 @@ async function update(req, res) {
   const id = parseInt(req.params.id, 10);
   const { name, protocol, listen_protocol, target_protocol, listen_host, listen_port, target_host, target_port, enabled, vhosts } = req.body;
   console.log('proxyController.update called id=', id, 'body=', req.body);
-  if (!id || !name || !listen_host || !listen_port || !target_host || !target_port) return res.status(400).send('Missing fields');
+  const missing = [];
+  if (!id) missing.push('id');
+  if (!name) missing.push('name');
+  if (!listen_host) missing.push('listen_host');
+  if (!listen_port) missing.push('listen_port');
+  if (!target_host) missing.push('target_host');
+  if (!target_port) missing.push('target_port');
+  if (missing.length) return res.status(400).json({ error: 'Missing fields', missing });
   const proto = (protocol || 'tcp').toLowerCase();
   const listenProto = (listen_protocol || proto).toLowerCase();
   const targetProto = (target_protocol || proto).toLowerCase();
