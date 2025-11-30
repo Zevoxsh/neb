@@ -58,6 +58,7 @@ class ProxyManager {
     this.backendFailures = new Map();
     this.failureThreshold = Number(process.env.BACKEND_FAILURE_THRESHOLD) || 3;
     this.failureCooldownMs = Number(process.env.BACKEND_FAILURE_COOLDOWN_MS) || 60 * 1000; // 1 minute
+    this.backendConnectTimeoutMs = Number(process.env.BACKEND_CONNECT_TIMEOUT_MS) || 2000; // 2s
   }
 
   backendIsDown(targetInfo) {
@@ -515,6 +516,17 @@ class ProxyManager {
             res.writeHead(pres.statusCode, outHeaders);
             pres.pipe(res);
           });
+          // set a short timeout for backend connect/response to fail fast
+          try {
+            if (typeof upstream.setTimeout === 'function') {
+              upstream.setTimeout(pm.backendConnectTimeoutMs, () => {
+                try { if (pm.markBackendFailure) pm.markBackendFailure(targetInfo); } catch (e) { }
+                console.warn(`Proxy ${id} - upstream timeout connecting to ${targetInfo} after ${pm.backendConnectTimeoutMs}ms`);
+                try { upstream.destroy(new Error('connect timeout')); } catch (e) { try { upstream.abort && upstream.abort(); } catch (er) { } }
+                try { pm.sendBackendUnavailableResponse(res, entry, targetInfo); } catch (e) { }
+              });
+            }
+          } catch (e) { }
 
           upstream.on('error', (e) => {
             try {
