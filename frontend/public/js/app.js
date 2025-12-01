@@ -160,35 +160,35 @@
             {
               label: 'Trafic entrant',
               data: [],
-              borderColor: 'rgba(59, 130, 246, 1)',
-              backgroundColor: 'rgba(59, 130, 246, 0.1)',
-              borderWidth: 2,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+              borderWidth: 3,
               tension: 0.4,
               fill: true,
               pointRadius: 0,
-              pointHoverRadius: 4
+              pointHoverRadius: 6
             },
             {
               label: 'Trafic sortant',
               data: [],
-              borderColor: 'rgba(168, 85, 247, 1)',
-              backgroundColor: 'rgba(168, 85, 247, 0.1)',
-              borderWidth: 2,
+              borderColor: '#a855f7',
+              backgroundColor: 'rgba(168, 85, 247, 0.2)',
+              borderWidth: 3,
               tension: 0.4,
               fill: true,
               pointRadius: 0,
-              pointHoverRadius: 4
+              pointHoverRadius: 6
             },
             {
               label: 'Requêtes/s',
               data: [],
-              borderColor: 'rgba(34, 197, 94, 1)',
-              backgroundColor: 'rgba(34, 197, 94, 0.1)',
-              borderWidth: 2,
+              borderColor: '#22c55e',
+              backgroundColor: 'rgba(34, 197, 94, 0.2)',
+              borderWidth: 3,
               tension: 0.4,
               fill: false,
               pointRadius: 0,
-              pointHoverRadius: 4,
+              pointHoverRadius: 6,
               yAxisID: 'y1'
             }
           ]
@@ -197,7 +197,7 @@
           responsive: true,
           maintainAspectRatio: false,
           animation: {
-            duration: 300,
+            duration: 750,
             easing: 'easeInOutQuart'
           },
           interaction: {
@@ -209,11 +209,12 @@
               display: true,
               position: 'top',
               labels: {
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: 'rgba(255, 255, 255, 0.9)',
                 usePointStyle: true,
-                padding: 15,
+                padding: 20,
                 font: {
-                  size: 12
+                  size: 13,
+                  weight: '500'
                 }
               }
             },
@@ -242,14 +243,14 @@
           scales: {
             x: {
               grid: {
-                color: 'rgba(255, 255, 255, 0.05)',
+                color: 'rgba(255, 255, 255, 0.08)',
                 drawBorder: false
               },
               ticks: {
-                color: 'rgba(255, 255, 255, 0.5)',
-                maxTicksLimit: 8,
+                color: 'rgba(255, 255, 255, 0.6)',
+                maxTicksLimit: 10,
                 font: {
-                  size: 10
+                  size: 11
                 }
               }
             },
@@ -258,16 +259,16 @@
               display: true,
               position: 'left',
               grid: {
-                color: 'rgba(255, 255, 255, 0.05)',
+                color: 'rgba(255, 255, 255, 0.08)',
                 drawBorder: false
               },
               ticks: {
-                color: 'rgba(255, 255, 255, 0.5)',
+                color: 'rgba(255, 255, 255, 0.6)',
                 callback: function(value) {
                   return formatBytes(value) + '/s';
                 },
                 font: {
-                  size: 10
+                  size: 11
                 }
               }
             },
@@ -279,12 +280,12 @@
                 drawOnChartArea: false
               },
               ticks: {
-                color: 'rgba(255, 255, 255, 0.5)',
+                color: 'rgba(255, 255, 255, 0.6)',
                 callback: function(value) {
                   return formatNumber(value);
                 },
                 font: {
-                  size: 10
+                  size: 11
                 }
               }
             }
@@ -341,7 +342,7 @@
     } catch (err) {
       console.error('metrics fetch failed', err);
     } finally {
-      const delay = dashboardState.viewMode === 'realtime' ? 5000 : 60000;
+      const delay = dashboardState.viewMode === 'realtime' ? 1000 : 60000;
       dashboardState.timer = setTimeout(() => fetchDashboardMetrics(), delay);
     }
   }
@@ -400,7 +401,7 @@
       dashboardState.chart.data.datasets[1].data = chartData.map(p => p.outRate);
       dashboardState.chart.data.datasets[2].data = chartData.map(p => p.requestsRate);
       
-      dashboardState.chart.update('none');
+      dashboardState.chart.update('active');
     }
   }
 
