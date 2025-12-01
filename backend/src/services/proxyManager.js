@@ -426,11 +426,18 @@ class ProxyManager {
       const forwardRequest = (req, res) => {
         const startTime = Date.now();
         try {
-          // Get client IP
-          const clientIp = normalizeIp(req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+          // Get client IP - prioritize Cloudflare header
+          const clientIp = normalizeIp(
+            req.headers['cf-connecting-ip'] ||
             req.headers['x-real-ip'] ||
+            req.headers['x-forwarded-for']?.split(',')[0].trim() ||
             req.connection?.remoteAddress ||
-            req.socket?.remoteAddress);
+            req.socket?.remoteAddress
+          );
+          
+          // Debug: log IP detection on first request
+          if (!req.url.includes('.css') && !req.url.includes('.js') && !req.url.includes('.png')) {
+            console.log(`[ProxyManager] IP Detection - CF: ${req.headers['cf-connecting-ip']}, Real: ${req.headers['x-real-ip']}, Forwarded: ${req.headers['x-forwarded-for']}, Final: ${clientIp}`);
 
           // Serve challenge page
           if (req.url === '/challenge.html') {

@@ -7,8 +7,9 @@ const botProtection = require('../services/botProtection');
 const path = require('path');
 
 function getClientIp(req) {
-    return req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+    return req.headers['cf-connecting-ip'] ||
         req.headers['x-real-ip'] ||
+        req.headers['x-forwarded-for']?.split(',')[0].trim() ||
         req.connection.remoteAddress ||
         req.socket.remoteAddress;
 }
