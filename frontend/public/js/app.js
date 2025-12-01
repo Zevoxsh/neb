@@ -14,20 +14,38 @@
   };
   let currentErrorPageProxyId = null;
 
+  // Function to initialize detail pages when DOM is ready
+  function initDetailPageWhenReady() {
+    const path = window.location.pathname;
+    let targetInit = null;
+    
+    if (/^\/proxies\/\d+$/i.test(path)) {
+      targetInit = initProxyDetail;
+    } else if (/^\/domain\.html/i.test(path)) {
+      targetInit = initDomainDetail;
+    } else if (/^\/backend\.html/i.test(path)) {
+      targetInit = initBackendDetail;
+    }
+    
+    if (!targetInit) return false;
+    
+    // Wait for the main content to be available
+    const checkInterval = setInterval(() => {
+      const hasContent = document.querySelector('.page-content') !== null;
+      if (hasContent) {
+        clearInterval(checkInterval);
+        targetInit();
+      }
+    }, 50);
+    
+    // Timeout after 5 seconds
+    setTimeout(() => clearInterval(checkInterval), 5000);
+    return true;
+  }
+
   // Wait for partials to be loaded before initializing detail pages
   document.addEventListener('partials-loaded', () => {
-    const path = window.location.pathname;
-    
-    // Use setTimeout to ensure DOM is fully rendered
-    setTimeout(() => {
-      if (/^\/proxies\/\d+$/i.test(path)) {
-        initProxyDetail();
-      } else if (/^\/domain\.html/i.test(path)) {
-        initDomainDetail();
-      } else if (/^\/backend\.html/i.test(path)) {
-        initBackendDetail();
-      }
-    }, 100);
+    initDetailPageWhenReady();
   });
 
   document.addEventListener('DOMContentLoaded', () => {
