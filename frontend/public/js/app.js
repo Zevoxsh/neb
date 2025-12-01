@@ -2126,17 +2126,21 @@
         return;
       }
 
-      table.innerHTML = data.logs.map(log => {
+      // Fetch country codes for all IPs in parallel
+      const ipPromises = data.logs.map(log => getCountryFromIP(log.client_ip));
+      const countries = await Promise.all(ipPromises);
+
+      table.innerHTML = data.logs.map((log, index) => {
         const firstSeen = new Date(log.first_seen);
         const lastSeen = new Date(log.last_seen);
-        const countryCode = getCountryFromIP(log.client_ip);
+        const countryCode = countries[index];
         const flagEmoji = countryCode ? getFlagEmoji(countryCode) : '🌐';
         
         return `
           <tr>
             <td>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 20px;">${flagEmoji}</span>
+                <span style="font-size: 20px;" title="${countryCode || 'Inconnu'}">${flagEmoji}</span>
                 <a href="https://check-host.net/check-http?host=${encodeURIComponent(log.client_ip)}" 
                    target="_blank" 
                    rel="noopener noreferrer"
