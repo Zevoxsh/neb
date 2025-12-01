@@ -169,8 +169,11 @@ class BotProtection {
     verifyChallengeAnswer(ip, userInput) {
         const challenge = this.activeChallenges.get(ip);
         
+        console.log(`[BotProtection] Verify challenge - IP: ${ip}, userInput: ${userInput}, hasChallenge: ${!!challenge}`);
+        
         if (!challenge) {
             console.warn(`[BotProtection] No active challenge for IP ${ip}`);
+            console.log(`[BotProtection] Active challenges:`, Array.from(this.activeChallenges.keys()));
             return { success: false, reason: 'no_challenge' };
         }
 
