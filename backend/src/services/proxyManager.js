@@ -426,35 +426,44 @@ class ProxyManager {
       const forwardRequest = (req, res) => {
         const startTime = Date.now();
         try {
+          // Get client IP
+          const clientIp = normalizeIp(req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+            req.headers['x-real-ip'] ||
+            req.connection?.remoteAddress ||
+            req.socket?.remoteAddress);
+
           // Handle challenge verification
           if (req.url === '/verify-challenge' && req.method === 'POST') {
             let body = '';
             req.on('data', chunk => { body += chunk.toString(); });
             req.on('end', () => {
               try {
-                const clientIp = normalizeIp(req.headers['x-forwarded-for']?.split(',')[0].trim() ||
-                  req.headers['x-real-ip'] ||
-                  req.connection?.remoteAddress ||
-                  req.socket?.remoteAddress);
+                const contentType = req.headers['content-type'] || '';
+                let userInput;
                 
-                // Parse form data
-                const params = new URLSearchParams(body);
-                const timestamp = params.get('timestamp');
-                
-                if (timestamp) {
-                  const now = Date.now();
-                  const challengeTs = parseInt(timestamp);
-                  
-                  if (Math.abs(now - challengeTs) < 30000) {
-                    botProtection.verifyIP(clientIp);
-                    res.writeHead(302, { 'Location': '/' });
-                    res.end();
-                    return;
-                  }
+                if (contentType.includes('application/json')) {
+                  const data = JSON.parse(body);
+                  userInput = data.userInput || data.solution;
+                } else {
+                  const params = new URLSearchParams(body);
+                  userInput = params.get('userInput') || params.get('solution');
                 }
                 
-                res.writeHead(403);
-                res.end('Challenge expired');
+                const result = botProtection.verifyChallengeAnswer(clientIp, userInput);
+                
+                if (!result.success) {
+                  if (result.banned) {
+                    res.writeHead(403, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Trop de tentatives. Banni.', banned: true }));
+                    return;
+                  }
+                  res.writeHead(400, { 'Content-Type': 'application/json' });
+                  res.end(JSON.stringify({ error: 'Code incorrect', attemptsLeft: result.attemptsLeft }));
+                  return;
+                }
+                
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true }));
               } catch (e) {
                 res.writeHead(500);
                 res.end('Error');
@@ -463,37 +472,36 @@ class ProxyManager {
             return;
           }
           
-          // Bot protection check
-          const clientIp = normalizeIp(req.headers['x-forwarded-for']?.split(',')[0].trim() ||
-            req.headers['x-real-ip'] ||
-            req.connection?.remoteAddress ||
-            req.socket?.remoteAddress);
-          
-          botProtection.trackRequest(clientIp);
-          
           // Skip challenge for API endpoints and static assets
           const skipPaths = ['/api/', '/public/', '/verify-challenge', '/challenge.html', '/.well-known/'];
           const shouldSkip = skipPaths.some(path => req.url.startsWith(path));
           
-          if (!shouldSkip && botProtection.shouldChallenge(clientIp)) {
-            const { token, timestamp } = botProtection.generateChallenge(clientIp);
-            const challengeHtml = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Vérification de sécurité</title>
-<style>body{font-family:sans-serif;text-align:center;padding:50px;background:#f5f5f5}
-.box{background:white;padding:40px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);max-width:500px;margin:0 auto}
-h1{color:#333}button{background:#007bff;color:white;border:none;padding:12px 30px;font-size:16px;border-radius:5px;cursor:pointer}
-button:hover{background:#0056b3}</style></head><body><div class="box">
-<h1>🛡️ Vérification de sécurité</h1>
-<p>Veuillez patienter quelques secondes...</p>
-<form id="challengeForm" method="POST" action="/verify-challenge">
-<input type="hidden" name="solution" value="verified">
-<input type="hidden" name="timestamp" value="${timestamp}">
-<button type="submit">Continuer</button></form>
-<script>setTimeout(()=>document.getElementById('challengeForm').submit(),3000)</script>
-</div></body></html>`;
-            res.writeHead(503, { 'Content-Type': 'text/html; charset=utf-8' });
-            res.end(challengeHtml);
-            return;
+          if (!shouldSkip) {
+            botProtection.trackRequest(clientIp);
+            
+            const challengeStatus = botProtection.shouldChallenge(clientIp);
+            
+            if (challengeStatus === 'banned') {
+              const bannedHtml = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Accès refusé</title>
+<style>body{font-family:sans-serif;background:#000;color:#fff;text-align:center;padding:50px}
+.box{background:#0a0a0a;border:1px solid #333;border-radius:12px;padding:40px;max-width:500px;margin:0 auto}
+h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="box">
+<h1>🚫 Accès Refusé</h1>
+<p>Votre adresse IP a été temporairement bloquée.</p>
+<p>Veuillez réessayer dans quelques minutes.</p></div></body></html>`;
+              res.writeHead(403, { 'Content-Type': 'text/html; charset=utf-8' });
+              res.end(bannedHtml);
+              return;
+            }
+            
+            if (challengeStatus) {
+              botProtection.generateChallenge(clientIp);
+              // Redirect to challenge page
+              res.writeHead(302, { 'Location': '/challenge.html' });
+              res.end();
+              return;
+            }
           }
           
           const incomingHostHeader = req.headers && req.headers.host ? req.headers.host : null;

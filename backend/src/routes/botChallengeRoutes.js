@@ -9,22 +9,39 @@ const logger = createLogger('BotChallenge');
 
 // Verify challenge
 router.post('/verify-challenge', asyncHandler(async (req, res) => {
-    const { solution, timestamp } = req.body;
+    const { solution, userInput } = req.body;
     const ip = getClientIp(req);
 
-    // For now, just verify timestamp is recent
-    const now = Date.now();
-    const challengeTs = parseInt(timestamp);
+    // Verify the CAPTCHA answer
+    const result = botProtection.verifyChallengeAnswer(ip, userInput || solution);
 
-    if (Math.abs(now - challengeTs) > 30000) {
-        logger.warn('Challenge timeout', { ip });
-        return res.status(403).json({ error: 'Challenge expired' });
+    if (!result.success) {
+        if (result.banned) {
+            logger.warn('IP banned for too many failed attempts', { ip });
+            return res.status(403).json({ 
+                error: 'Trop de tentatives échouées. Vous avez été temporairement banni.',
+                banned: true
+            });
+        }
+        
+        if (result.reason === 'expired') {
+            return res.status(400).json({ 
+                error: 'Challenge expiré. Veuillez rafraîchir la page.',
+                expired: true
+            });
+        }
+        
+        if (result.reason === 'wrong_answer') {
+            return res.status(400).json({ 
+                error: 'Code incorrect',
+                attemptsLeft: result.attemptsLeft
+            });
+        }
+        
+        return res.status(400).json({ error: 'Vérification échouée' });
     }
 
-    // Mark IP as verified
-    botProtection.verifyIP(ip);
-    logger.info('IP verified', { ip });
-
+    logger.info('IP verified successfully', { ip });
     res.json({ success: true });
 }));
 
