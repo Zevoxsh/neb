@@ -1587,12 +1587,20 @@
       document.getElementById('editProxyListenHost').value = proxy.listen_host || '';
       document.getElementById('editProxyListenPort').value = proxy.listen_port || '';
       document.getElementById('editProxyProtocol').value = proxy.protocol || 'tcp';
+      const enabledCheckbox = document.getElementById('editEnabled');
+      if (enabledCheckbox) {
+        enabledCheckbox.checked = proxy.enabled === true;
+      }
 
       const saveBtn = document.getElementById('btnSaveProxy');
       if (saveBtn) {
         saveBtn.addEventListener('click', async () => {
           const form = document.getElementById('editProxyForm');
           const payload = formDataToObject(new FormData(form));
+          // Manually handle checkbox since unchecked checkboxes aren't in FormData
+          const enabledCheckbox = document.getElementById('editEnabled');
+          payload.enabled = enabledCheckbox ? enabledCheckbox.checked : false;
+          
           const resp = await window.api.requestJson(`/api/proxies/${id}`, { method: 'PUT', body: payload });
           if (resp && resp.status === 200) {
             showToast('Proxy enregistre');
