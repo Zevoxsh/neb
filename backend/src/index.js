@@ -88,6 +88,7 @@ async function initDbAndStart() {
     try {
       await pool.query(`ALTER TABLE metrics ADD COLUMN IF NOT EXISTS latency_ms INT DEFAULT 0`);
       await pool.query(`ALTER TABLE metrics ADD COLUMN IF NOT EXISTS status_code INT DEFAULT 0`);
+      await pool.query(`ALTER TABLE metrics ADD COLUMN IF NOT EXISTS hostname VARCHAR(255)`);
     } catch (e) {
       console.warn('Migration: failed to add metrics columns', e.message);
     }

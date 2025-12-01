@@ -181,7 +181,7 @@ class ProxyManager {
   }
 
   // Add metrics sample. For streaming bytes, requests=0. For a completed request/response, requests=1 and provide latency/status.
-  addMetrics(proxyId, bytesIn, bytesOut, requests, latencyMs = 0, statusCode = 0) {
+  addMetrics(proxyId, bytesIn, bytesOut, requests, latencyMs = 0, statusCode = 0, hostname = null) {
     this.metricsBuffer.push({
       proxy_id: parseInt(proxyId, 10),
       ts: new Date(),
@@ -189,7 +189,8 @@ class ProxyManager {
       bytes_out: bytesOut || 0,
       requests: requests || 0,
       latency_ms: latencyMs || 0,
-      status_code: statusCode || 0
+      status_code: statusCode || 0,
+      hostname: hostname || null
     });
   }
 
@@ -257,7 +258,7 @@ class ProxyManager {
         }
 
         // Record connection immediately
-        try { pm.addMetrics(id, 0, 0, 1); } catch (e) { }
+        try { pm.addMetrics(id, 0, 0, 1, 0, 0, null); } catch (e) { }
         pm.trackIpTraffic(remoteIp, 0, 1);
 
         const targetSocket = net.connect({ host: entry.meta.targetHost, port: entry.meta.targetPort }, () => {
@@ -267,11 +268,11 @@ class ProxyManager {
 
         clientSocket.on('data', (c) => {
           const len = c ? c.length : 0;
-          try { pm.addMetrics(id, len, 0, 0); } catch (e) { }
+          try { pm.addMetrics(id, len, 0, 0, 0, 0, null); } catch (e) { }
           pm.trackIpTraffic(remoteIp, len, 0);
         });
         targetSocket.on('data', (c) => {
-          try { pm.addMetrics(id, 0, c ? c.length : 0, 0); } catch (e) { }
+          try { pm.addMetrics(id, 0, c ? c.length : 0, 0, 0, 0, null); } catch (e) { }
         });
 
         targetSocket.on('error', () => { try { clientSocket.destroy(); } catch (e) { } });
@@ -324,7 +325,8 @@ class ProxyManager {
       const http = require('http');
       const server = http.createServer((req, res) => {
         try {
-          try { pm.addMetrics(id, 0, 0, 1, 0, 301); } catch (e) { }
+          const hostname = req.headers && req.headers.host ? req.headers.host.split(':')[0] : null;
+          try { pm.addMetrics(id, 0, 0, 1, 0, 301, hostname); } catch (e) { }
 
           const hostHeader = req.headers && req.headers.host ? req.headers.host.split(':')[0] : entry.meta.listenHost;
           const portSuffix = '';
@@ -350,10 +352,11 @@ class ProxyManager {
       const http = require('http');
 
       const handleRequest = async (req, res) => {
+        const hostname = req.headers && req.headers.host ? req.headers.host.split(':')[0] : null;
         try {
           // ACME handling
           if (req.url && req.url.startsWith('/.well-known/acme-challenge/')) {
-            try { pm.addMetrics(id, 0, 0, 1, 0, 200); } catch (e) { } // Count as success for now
+            try { pm.addMetrics(id, 0, 0, 1, 0, 200, hostname); } catch (e) { } // Count as success for now
             const prefix = '/.well-known/acme-challenge/';
             const rest = req.url.slice(prefix.length);
             const token = rest.split('/')[0];
@@ -395,7 +398,7 @@ class ProxyManager {
             }
           }
 
-          try { pm.addMetrics(id, 0, 0, 1, 0, 301); } catch (e) { }
+          try { pm.addMetrics(id, 0, 0, 1, 0, 301, hostname); } catch (e) { }
           const location = `https://${hostHeader}${req.url}`;
           res.writeHead(301, { Location: location });
           res.end(`Redirecting to ${location}`);
@@ -425,6 +428,7 @@ class ProxyManager {
 
       const forwardRequest = (req, res) => {
         const startTime = Date.now();
+        const hostname = req.headers && req.headers.host ? req.headers.host.split(':')[0] : null;
         try {
           // Get client IP - prioritize Cloudflare header
           const clientIp = normalizeIp(
@@ -626,7 +630,7 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
           try {
             if (pm.backendIsDown && pm.backendIsDown(targetInfo, hostOnly)) {
               pm.sendBackendUnavailableResponse(res, entry, targetInfo, hostOnly);
-              try { pm.addMetrics(id, 0, 0, 1, Date.now() - startTime, 503); } catch (e) { }
+              try { pm.addMetrics(id, 0, 0, 1, Date.now() - startTime, 503, hostname); } catch (e) { }
               return;
             }
           } catch (e) { }
@@ -642,7 +646,7 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
               const len = parseInt(pres.headers['content-length']) || 0;
               // Record metrics on response
               const lat = Date.now() - startTime;
-              pm.addMetrics(id, 0, len, 1, lat, pres.statusCode);
+              pm.addMetrics(id, 0, len, 1, lat, pres.statusCode, hostname);
             } catch (e) { }
 
             try { if (pm.markBackendSuccess) pm.markBackendSuccess(targetInfo, hostOnly); } catch (e) { }
@@ -654,19 +658,19 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
             try { if (pm.markBackendFailure) pm.markBackendFailure(targetInfo, hostOnly); } catch (e) { }
             try { upstream.destroy(new Error('connect timeout')); } catch (e) { }
             try { pm.sendBackendUnavailableResponse(res, entry, targetInfo, hostOnly); } catch (e) { }
-            try { pm.addMetrics(id, 0, 0, 1, Date.now() - startTime, 504); } catch (e) { }
+            try { pm.addMetrics(id, 0, 0, 1, Date.now() - startTime, 504, hostname); } catch (e) { }
           });
 
           upstream.on('error', (e) => {
             try { if (pm.markBackendFailure) pm.markBackendFailure(targetInfo, hostOnly); } catch (ee) { }
             try { pm.sendBackendUnavailableResponse(res, entry, targetInfo, hostOnly); } catch (err) { try { res.writeHead(502); res.end('Bad gateway'); } catch (e) { } }
-            try { pm.addMetrics(id, 0, 0, 1, Date.now() - startTime, 502); } catch (e) { }
+            try { pm.addMetrics(id, 0, 0, 1, Date.now() - startTime, 502, hostname); } catch (e) { }
           });
           req.pipe(upstream);
         } catch (e) {
           console.error(`Proxy ${id} - forward exception`, e);
           try { res.writeHead(500); res.end('Server error'); } catch (err) { }
-          try { pm.addMetrics(id, 0, 0, 1, Date.now() - startTime, 500); } catch (e) { }
+          try { pm.addMetrics(id, 0, 0, 1, Date.now() - startTime, 500, hostname); } catch (e) { }
         }
       };
 
@@ -743,7 +747,7 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
         let resolvedDomain = null;
 
         // Record connection
-        try { pm.addMetrics(id, 0, 0, 1); } catch (e) { }
+        try { pm.addMetrics(id, 0, 0, 1, 0, 0, null); } catch (e) { }
 
         clientSocket.pause();
         let firstChunk = null;
@@ -771,7 +775,7 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
         function connectToTarget(selHost, selPort, prebuffer) {
           clientSocket.removeListener('data', onClientData);
           if (prebuffer && prebuffer.length) {
-            try { pm.addMetrics(id, prebuffer.length, 0, 0); } catch (e) { }
+            try { pm.addMetrics(id, prebuffer.length, 0, 0, 0, 0, null); } catch (e) { }
             pm.trackIpTraffic(remoteIp, prebuffer.length, 1);
           }
           const targetInfoKey = `${selHost}:${selPort}`;
@@ -794,10 +798,10 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
 
           clientSocket.on('data', (c) => {
             const len = c ? c.length : 0;
-            try { pm.addMetrics(id, len, 0, 0); } catch (e) { }
+            try { pm.addMetrics(id, len, 0, 0, 0, 0, null); } catch (e) { }
             pm.trackIpTraffic(remoteIp, len, 0);
           });
-          targetSocket.on('data', (c) => { try { pm.addMetrics(id, 0, c ? c.length : 0, 0); } catch (e) { } });
+          targetSocket.on('data', (c) => { try { pm.addMetrics(id, 0, c ? c.length : 0, 0, 0, 0, null); } catch (e) { } });
           targetSocket.on('error', (err) => {
             try { if (pm.markBackendFailure) pm.markBackendFailure(targetInfoKey, resolvedDomain); } catch (e) { }
             if (!sendCustomErrorPage(clientSocket)) try { clientSocket.destroy(); } catch (e) { }

@@ -1635,22 +1635,21 @@
     if (!Array.isArray(rows)) return [];
     const map = new Map();
     rows.forEach((row) => {
-      const id = row.domain_id || row.domainId || row.id;
-      if (!id) return;
-      if (!map.has(id)) {
-        map.set(id, {
-          domainId: id,
-          hostname: row.hostname || `domaine #${id}`,
+      const hostname = row.hostname;
+      if (!hostname) return;
+      if (!map.has(hostname)) {
+        map.set(hostname, {
+          hostname: hostname,
           bytesIn: 0,
           bytesOut: 0,
           requests: 0,
           lastSeen: null
         });
       }
-      const entry = map.get(id);
+      const entry = map.get(hostname);
       entry.bytesIn += Number(row.bytes_in ?? row.bytesIn ?? 0);
       entry.bytesOut += Number(row.bytes_out ?? row.bytesOut ?? 0);
-      entry.requests += Number(row.requests ?? row.requests_per_second ?? 0);
+      entry.requests += Number(row.requests ?? 0);
       const bucket = row.bucket || row.ts;
       if (bucket) {
         const ts = new Date(bucket).getTime();

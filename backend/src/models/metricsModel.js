@@ -47,25 +47,23 @@ async function queryAggregatedPerProxy(fromTs, toTs, intervalSec) {
 
 async function queryAggregatedPerDomain(fromTs, toTs, intervalSec) {
   const sql = `
-    SELECT dm.id AS domain_id,
-           dm.hostname,
-           dm.proxy_id,
+    SELECT m.hostname,
            to_timestamp(floor(extract(epoch from m.ts)/$3)*$3) AS bucket,
            sum(m.bytes_in)::bigint AS bytes_in,
            sum(m.bytes_out)::bigint AS bytes_out,
            sum(m.requests)::bigint AS requests
-    FROM domain_mappings dm
-    JOIN metrics m ON m.proxy_id = dm.proxy_id
+    FROM metrics m
     WHERE m.ts >= $1
       AND m.ts <= $2
-    GROUP BY dm.id, dm.hostname, dm.proxy_id, bucket
-    ORDER BY dm.id, bucket;
+      AND m.hostname IS NOT NULL
+    GROUP BY m.hostname, bucket
+    ORDER BY bucket, m.hostname;
   `;
   const res = await pool.query(sql, [fromTs, toTs, intervalSec]);
   return res.rows;
 }
 
-// Insert multiple samples in a single batch insert. samples: [{ proxy_id, ts, bytes_in, bytes_out, requests, latency_ms, status_code }, ...]
+// Insert multiple samples in a single batch insert. samples: [{ proxy_id, ts, bytes_in, bytes_out, requests, latency_ms, status_code, hostname }, ...]
 async function insertSamplesBatch(samples) {
   if (!samples || !samples.length) return;
   const values = [];
@@ -79,11 +77,12 @@ async function insertSamplesBatch(samples) {
       s.bytes_out || 0,
       s.requests || 0,
       s.latency_ms || 0,
-      s.status_code || 0
+      s.status_code || 0,
+      s.hostname || null
     );
-    values.push(`($${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++})`);
+    values.push(`($${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++})`);
   }
-  const sql = `INSERT INTO metrics (proxy_id, ts, bytes_in, bytes_out, requests, latency_ms, status_code) VALUES ${values.join(',')}`;
+  const sql = `INSERT INTO metrics (proxy_id, ts, bytes_in, bytes_out, requests, latency_ms, status_code, hostname) VALUES ${values.join(',')}`;
   await pool.query(sql, params);
 }
 
