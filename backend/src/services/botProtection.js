@@ -303,6 +303,8 @@ class BotProtection {
             code += chars.charAt(Math.floor(Math.random() * chars.length));
         }
         
+        console.log(`[BotProtection] Generated new challenge for IP ${ip}: ${code}`);
+        
         // Store challenge
         this.activeChallenges.set(ip, {
             code,
@@ -350,6 +352,8 @@ class BotProtection {
             console.log(`[BotProtection] Active challenges:`, Array.from(this.activeChallenges.keys()));
             return { success: false, reason: 'no_challenge' };
         }
+
+        console.log(`[BotProtection] Challenge details - Expected: ${challenge.code}, Received: ${userInput}, Match: ${userInput.toUpperCase() === challenge.code}`);
 
         // Check if challenge is expired (5 minutes)
         const now = Date.now();
