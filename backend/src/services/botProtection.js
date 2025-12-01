@@ -1,6 +1,6 @@
 /**
  * Bot Protection Service
- * Cloudflare-style "Under Attack" mode
+ * Cloudflare-style "Under Attack" mode with CAPTCHA
  */
 
 const crypto = require('crypto');
@@ -23,6 +23,9 @@ class BotProtection {
         // Reset counters every second
         setInterval(() => {
             this.requestsPerSecond = 0;
+            this.requestCounts.clear();
+        }, 1000);
+
         // Clean expired IPs every minute
         setInterval(() => {
             const now = Date.now();
@@ -43,9 +46,6 @@ class BotProtection {
                 if (now - challenge.timestamp > 300000) { // 5 minutes
                     this.activeChallenges.delete(ip);
                 }
-            }
-        }, 60000);
-    }           }
             }
         }, 60000);
     }
@@ -69,6 +69,19 @@ class BotProtection {
         const oneMinuteAgo = now - 60000;
         while (history.length > 0 && history[0] < oneMinuteAgo) {
             history.shift();
+        }
+        
+        // Debug logging
+        if (history.length % 10 === 0) {
+            console.log(`[BotProtection] IP ${ip}: ${history.length} requests in last minute`);
+        }
+    }
+
+    getRequestsPerMinute(ip) {
+        const history = this.ipRequestHistory.get(ip);
+        return history ? history.length : 0;
+    }
+
     isRateLimited(ip) {
         const requestsInLastMinute = this.getRequestsPerMinute(ip);
         return requestsInLastMinute > this.perIpLimit;
@@ -78,6 +91,17 @@ class BotProtection {
         const banExpiration = this.bannedIPs.get(ip);
         return banExpiration && banExpiration > Date.now();
     }
+
+    banIP(ip, durationMs = 300000) { // 5 minutes by default
+        const expiration = Date.now() + durationMs;
+        this.bannedIPs.set(ip, expiration);
+        console.log(`[BotProtection] IP ${ip} banned until ${new Date(expiration).toISOString()}`);
+    }
+
+    isUnderAttack() {
+        return this.enabled || this.requestsPerSecond > this.threshold;
+    }
+
     shouldChallenge(ip) {
         // Check if IP is banned
         if (this.isBanned(ip)) {
@@ -109,14 +133,6 @@ class BotProtection {
         return shouldBlock;
     }
 
-    generateChallenge(ip) {
-        const timestamp = Date.now();
-        
-        // Generate a random 6-character code
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        let code = '';
-        for (let i = 0; i < 6; i++) {
-            code += chars.charAt(Math.floor(Math.random() * chars.length));
     verifyIP(ip) {
         // Mark IP as verified for 24 hours
         const expiration = Date.now() + (24 * 60 * 60 * 1000);
@@ -164,52 +180,6 @@ class BotProtection {
             this.activeChallenges.delete(ip);
             return { success: false, reason: 'expired' };
         }
-    getStats() {
-        return {
-            enabled: this.enabled,
-            threshold: this.threshold,
-            perIpLimit: this.perIpLimit,
-            challengeFirstVisit: this.challengeFirstVisit,
-            requestsPerSecond: this.requestsPerSecond,
-            verifiedIPs: this.verifiedIPs.size,
-            bannedIPs: this.bannedIPs.size,
-            activeChallenges: this.activeChallenges.size,
-            trackedIPs: this.ipRequestHistory.size,
-            isUnderAttack: this.isUnderAttack()
-        };
-    }   // Verify answer
-        if (userInput.toUpperCase() !== challenge.code) {
-            console.warn(`[BotProtection] IP ${ip} failed challenge (attempt ${challenge.attempts}/${this.maxAttempts})`);
-            return { 
-                success: false, 
-                reason: 'wrong_answer',
-                attemptsLeft: this.maxAttempts - challenge.attempts
-            };
-        }
-
-        // Success!
-        this.activeChallenges.delete(ip);
-        this.verifyIP(ip);
-        console.log(`[BotProtection] IP ${ip} passed challenge`);
-        return { success: true };
-    }
-
-    verifyChallenge(ip, token, timestamp) {
-        // Check if timestamp is recent (within 30 seconds)
-        const now = Date.now();
-        if (Math.abs(now - timestamp) > 30000) {
-            return false;
-        }
-
-        const expected = crypto
-            .createHmac('sha256', this.secret)
-            .update(ip + timestamp)
-            .digest('hex');
-
-        return token === expected;
-    }       this.activeChallenges.delete(ip);
-            return { success: false, reason: 'expired' };
-        }
 
         // Increment attempt counter
         challenge.attempts++;
@@ -236,50 +206,10 @@ class BotProtection {
         this.verifyIP(ip);
         console.log(`[BotProtection] IP ${ip} passed challenge`);
         return { success: true };
-    }houldChallenge(ip) {
-        // Check if IP already verified
-        const expiration = this.verifiedIPs.get(ip);
-        if (expiration && expiration > Date.now()) {
-            return false;
-        }
-
-        // Challenge if:
-        // 1. Under attack mode is enabled
-        // 2. IP is rate limited (too many requests)
-        // 3. First visit and challengeFirstVisit is enabled
-        const isRateLimited = this.isRateLimited(ip);
-        const isUnderAttack = this.isUnderAttack();
-        const isNewVisitor = this.challengeFirstVisit && !this.verifiedIPs.has(ip);
-        
-        const shouldBlock = isUnderAttack || isRateLimited || isNewVisitor;
-        
-        if (shouldBlock) {
-            const reqCount = this.getRequestsPerMinute(ip);
-            const reason = isNewVisitor ? 'New visitor' : `${reqCount} requests in last minute`;
-            console.log(`[BotProtection] Challenging IP ${ip} - ${reason} (limit: ${this.perIpLimit})`);
-        }
-        
-        return shouldBlock;
-    }
-
-    verifyIP(ip) {
-        // Mark IP as verified for 24 hours
-        const expiration = Date.now() + (24 * 60 * 60 * 1000);
-        this.verifiedIPs.set(ip, expiration);
-    }
-
-    generateChallenge(ip) {
-        const timestamp = Date.now();
-        const token = crypto
-            .createHmac('sha256', this.secret)
-            .update(ip + timestamp)
-            .digest('hex');
-
-        return { token, timestamp };
     }
 
     verifyChallenge(ip, token, timestamp) {
-        // Check if timestamp is recent (within 30 seconds)
+        // Legacy method for backward compatibility
         const now = Date.now();
         if (Math.abs(now - timestamp) > 30000) {
             return false;
@@ -317,6 +247,8 @@ class BotProtection {
             challengeFirstVisit: this.challengeFirstVisit,
             requestsPerSecond: this.requestsPerSecond,
             verifiedIPs: this.verifiedIPs.size,
+            bannedIPs: this.bannedIPs.size,
+            activeChallenges: this.activeChallenges.size,
             trackedIPs: this.ipRequestHistory.size,
             isUnderAttack: this.isUnderAttack()
         };
