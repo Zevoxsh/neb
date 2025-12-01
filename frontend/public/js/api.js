@@ -31,7 +31,7 @@ window.api = (function () {
     delete options.skipAuthRedirect;
 
     const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
-    const fetchOpts = Object.assign({ credentials: 'same-origin' }, options, { headers });
+    const fetchOpts = Object.assign({ credentials: 'same-origin', method: 'GET' }, options, { headers });
     if (fetchOpts.body && typeof fetchOpts.body !== 'string') {
       fetchOpts.body = JSON.stringify(fetchOpts.body);
     }
