@@ -1,9 +1,9 @@
 const pool = require('../config/db');
 
-async function insertSample(proxyId, ts, bytesIn, bytesOut, requests) {
+async function insertSample(proxyId, ts, bytesIn, bytesOut, requests, latencyMs, statusCode) {
   await pool.query(
-    'INSERT INTO metrics (proxy_id, ts, bytes_in, bytes_out, requests) VALUES ($1,$2,$3,$4,$5)',
-    [proxyId || null, ts || new Date(), bytesIn || 0, bytesOut || 0, requests || 0]
+    'INSERT INTO metrics (proxy_id, ts, bytes_in, bytes_out, requests, latency_ms, status_code) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+    [proxyId || null, ts || new Date(), bytesIn || 0, bytesOut || 0, requests || 0, latencyMs || 0, statusCode || 0]
   );
 }
 
@@ -13,7 +13,9 @@ async function queryAggregated(proxyId, fromTs, toTs, intervalSec) {
     SELECT to_timestamp(floor(extract(epoch from ts)/$4)*$4) AS bucket,
            sum(bytes_in)::bigint AS bytes_in,
            sum(bytes_out)::bigint AS bytes_out,
-           sum(requests)::bigint AS requests
+           sum(requests)::bigint AS requests,
+           avg(latency_ms)::int AS avg_latency,
+           max(latency_ms)::int AS max_latency
     FROM metrics
     WHERE ($1::int IS NULL OR proxy_id = $1)
       AND ts >= $2
@@ -63,18 +65,59 @@ async function queryAggregatedPerDomain(fromTs, toTs, intervalSec) {
   return res.rows;
 }
 
-// Insert multiple samples in a single batch insert. samples: [{ proxy_id, ts, bytes_in, bytes_out, requests }, ...]
+// Insert multiple samples in a single batch insert. samples: [{ proxy_id, ts, bytes_in, bytes_out, requests, latency_ms, status_code }, ...]
 async function insertSamplesBatch(samples) {
   if (!samples || !samples.length) return;
   const values = [];
   const params = [];
   let idx = 1;
   for (const s of samples) {
-    params.push(s.proxy_id || null, s.ts || new Date(), s.bytes_in || 0, s.bytes_out || 0, s.requests || 0);
-    values.push(`($${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++})`);
+    params.push(
+      s.proxy_id || null,
+      s.ts || new Date(),
+      s.bytes_in || 0,
+      s.bytes_out || 0,
+      s.requests || 0,
+      s.latency_ms || 0,
+      s.status_code || 0
+    );
+    values.push(`($${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++})`);
   }
-  const sql = `INSERT INTO metrics (proxy_id, ts, bytes_in, bytes_out, requests) VALUES ${values.join(',')}`;
+  const sql = `INSERT INTO metrics (proxy_id, ts, bytes_in, bytes_out, requests, latency_ms, status_code) VALUES ${values.join(',')}`;
   await pool.query(sql, params);
 }
 
-module.exports = { insertSample, queryAggregated, queryAggregatedPerProxy, queryAggregatedPerDomain, insertSamplesBatch };
+async function queryStatusCodeStats(fromTs, toTs) {
+  const sql = `
+    SELECT status_code, count(*)::int as count
+    FROM metrics
+    WHERE ts >= $1 AND ts <= $2 AND status_code > 0
+    GROUP BY status_code
+    ORDER BY count DESC;
+  `;
+  const res = await pool.query(sql, [fromTs, toTs]);
+  return res.rows;
+}
+
+async function queryLatencyPercentiles(fromTs, toTs) {
+  const sql = `
+    SELECT 
+      percentile_cont(0.5) WITHIN GROUP (ORDER BY latency_ms) as p50,
+      percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_ms) as p95,
+      percentile_cont(0.99) WITHIN GROUP (ORDER BY latency_ms) as p99
+    FROM metrics
+    WHERE ts >= $1 AND ts <= $2 AND latency_ms > 0;
+  `;
+  const res = await pool.query(sql, [fromTs, toTs]);
+  return res.rows[0];
+}
+
+module.exports = {
+  insertSample,
+  queryAggregated,
+  queryAggregatedPerProxy,
+  queryAggregatedPerDomain,
+  insertSamplesBatch,
+  queryStatusCodeStats,
+  queryLatencyPercentiles
+};

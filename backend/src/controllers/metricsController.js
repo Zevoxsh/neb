@@ -129,10 +129,27 @@ function streamMetrics(req, res) {
   });
 }
 
+// GET /api/metrics/advanced
+const advancedStats = asyncHandler(async (req, res) => {
+  const { from, to } = req.query;
+  let toTs = to ? new Date(to) : new Date();
+  let fromTs = from ? new Date(from) : new Date(toTs.getTime() - 24 * 3600 * 1000);
+
+  const statusCodes = await metricsModel.queryStatusCodeStats(fromTs.toISOString(), toTs.toISOString());
+  const latency = await metricsModel.queryLatencyPercentiles(fromTs.toISOString(), toTs.toISOString());
+
+  res.json({
+    statusCodes: statusCodes || [],
+    latency: latency || { p50: 0, p95: 0, p99: 0 },
+    window: { from: fromTs.toISOString(), to: toTs.toISOString() }
+  });
+});
+
 module.exports = {
   aggregated,
   allAggregated,
   combined,
   domainInsights,
-  streamMetrics
+  streamMetrics,
+  advancedStats
 };

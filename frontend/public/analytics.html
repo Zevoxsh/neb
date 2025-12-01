@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Nebula Console - Analytics</title>
+    <link rel="stylesheet" href="/public/styles.css">
+    <script src="/public/js/theme.js"></script>
+    <script src="/public/js/api.js" defer></script>
+    <script src="/public/js/include-partials.js" defer></script>
+    <script src="/public/js/analytics.js" defer></script>
+</head>
+
+<body data-page="analytics">
+    <div class="app-shell">
+        <div id="sidebar-placeholder"></div>
+        <div class="app-main">
+            <header class="topbar">
+                <div class="page-heading">
+                    <p class="eyebrow">Monitoring</p>
+                    <h1>Analytics</h1>
+                    <p class="muted">Analyse détaillée des performances et des erreurs.</p>
+                </div>
+                <div class="topbar-actions">
+                    <div class="chip-group" role="group" aria-label="Bascules periode">
+                        <button id="btnView24h" class="chip active" type="button">24 h</button>
+                        <button id="btnView7d" class="chip" type="button">7 jours</button>
+                    </div>
+                </div>
+            </header>
+            <section class="page-content">
+                <div class="grid-2">
+                    <article class="card">
+                        <div class="card-header">
+                            <div>
+                                <p class="eyebrow">Performance</p>
+                                <h2>Latence (ms)</h2>
+                            </div>
+                        </div>
+                        <div class="chart-shell">
+                            <canvas id="latencyChart"></canvas>
+                        </div>
+                    </article>
+                    <article class="card">
+                        <div class="card-header">
+                            <div>
+                                <p class="eyebrow">Fiabilité</p>
+                                <h2>Codes HTTP</h2>
+                            </div>
+                        </div>
+                        <div class="chart-shell">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </article>
+                </div>
+            </section>
+            <div id="footer-placeholder"></div>
+        </div>
+    </div>
+</body>
+
+</html>
