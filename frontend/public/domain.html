@@ -80,15 +80,19 @@
               </div>
               <div class="form-field">
                 <label>Certificat (fullchain.pem)</label>
-                <textarea id="domainCertFullchain" class="mono" rows="8" readonly></textarea>
+                <textarea id="domainCertFullchain" class="mono" rows="8" placeholder="Collez le certificat complet ici..."></textarea>
               </div>
               <div class="form-field">
                 <label>Clé privée (privkey.pem)</label>
-                <textarea id="domainCertKey" class="mono" rows="8" readonly></textarea>
+                <textarea id="domainCertKey" class="mono" rows="8" placeholder="Collez la clé privée ici..."></textarea>
+              </div>
+              <div class="form-actions">
+                <button class="btn primary" type="button" id="btnImportDomainCert">Importer le certificat</button>
               </div>
             </div>
             <div id="domainCertEmpty" class="empty-state">
-              Aucun certificat configuré pour ce domaine.
+              <p>Aucun certificat configuré pour ce domaine.</p>
+              <button class="btn primary" type="button" id="btnShowCertImport">Importer un certificat</button>
             </div>
           </section>
         </article>

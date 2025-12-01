@@ -1174,6 +1174,62 @@
     }
   }
 
+  async function importDomainCertificate() {
+    const hostnameField = document.getElementById('editDomainHostname');
+    const fullchainField = document.getElementById('domainCertFullchain');
+    const keyField = document.getElementById('domainCertKey');
+    
+    if (!hostnameField || !fullchainField || !keyField) return;
+    
+    const hostname = hostnameField.value.trim();
+    const certificate = fullchainField.value.trim();
+    const privateKey = keyField.value.trim();
+    
+    if (!hostname) {
+      showToast('Nom de domaine requis', 'error');
+      return;
+    }
+    
+    if (!certificate || !privateKey) {
+      showToast('Le certificat et la clé privée sont requis', 'error');
+      return;
+    }
+    
+    try {
+      const res = await window.api.requestJson('/api/certificates/manual', 'POST', {
+        domain: hostname,
+        certificate,
+        privateKey
+      });
+      
+      if (res && res.status === 200) {
+        showToast('Certificat importé avec succès', 'success');
+        await loadDomainCertificate();
+      } else {
+        throw new Error('Import failed');
+      }
+    } catch (e) {
+      console.error('[Domain Cert] Import failed:', e);
+      showToast('Échec de l\'importation du certificat', 'error');
+    }
+  }
+
+  function showCertImportForm() {
+    const certInfo = document.getElementById('domainCertInfo');
+    const certEmpty = document.getElementById('domainCertEmpty');
+    
+    if (certInfo && certEmpty) {
+      certInfo.hidden = false;
+      certEmpty.hidden = true;
+      
+      // Vider les champs pour l'import
+      const fullchainField = document.getElementById('domainCertFullchain');
+      const keyField = document.getElementById('domainCertKey');
+      if (fullchainField) fullchainField.value = '';
+      if (keyField) keyField.value = '';
+    }
+  }
+
   async function loadDomainDetail() {
     const urlParams = new URLSearchParams(window.location.search);
     const domainId = urlParams.get('id');
@@ -1477,6 +1533,16 @@
     const deleteBtn = document.getElementById('btnDeleteDomain');
     if (deleteBtn) {
       deleteBtn.addEventListener('click', deleteDomainDetail);
+    }
+
+    const importCertBtn = document.getElementById('btnImportDomainCert');
+    if (importCertBtn) {
+      importCertBtn.addEventListener('click', importDomainCertificate);
+    }
+
+    const showImportBtn = document.getElementById('btnShowCertImport');
+    if (showImportBtn) {
+      showImportBtn.addEventListener('click', showCertImportForm);
     }
   }
 
