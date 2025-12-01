@@ -277,10 +277,11 @@ class BotProtection {
         
         const shouldBlock = isDomainProtected || isUnderAttack || isNewVisitor;
         
-        if (shouldBlock) {
+        // Log uniquement les événements importants (pas les nouveaux visiteurs normaux)
+        if (shouldBlock && !isNewVisitor) {
             const reqCount = this.getRequestsPerMinute(ip);
-            const reason = isDomainProtected ? 'Protected domain' : (isNewVisitor ? 'New visitor' : 'Under attack mode');
-            console.log(`[BotProtection] Challenging IP ${ip} - ${reason} (${reqCount} req/min)`);
+            const reason = isDomainProtected ? 'Protected domain' : 'Under attack mode';
+            console.log(`[BotProtection] 🛡️ Challenging IP ${ip} - ${reason} (${reqCount} req/min)`);
         }
         
         return shouldBlock;
@@ -290,7 +291,7 @@ class BotProtection {
         // Mark IP as verified (duration configurable, default 6 hours)
         const expiration = Date.now() + this.verificationDuration;
         this.verifiedIPs.set(ip, expiration);
-        console.log(`[BotProtection] IP ${ip} verified until ${new Date(expiration).toISOString()}`);
+        // Log silencieux - l'IP est vérifiée pour 6h
     }
 
     generateChallenge(ip) {
