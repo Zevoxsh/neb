@@ -18,8 +18,8 @@
   document.addEventListener('partials-loaded', () => {
     const path = window.location.pathname;
     
-    // Use requestAnimationFrame to ensure DOM is fully rendered
-    requestAnimationFrame(() => {
+    // Use setTimeout to ensure DOM is fully rendered
+    setTimeout(() => {
       if (/^\/proxies\/\d+$/i.test(path)) {
         initProxyDetail();
       } else if (/^\/domain\.html/i.test(path)) {
@@ -27,7 +27,7 @@
       } else if (/^\/backend\.html/i.test(path)) {
         initBackendDetail();
       }
-    });
+    }, 100);
   });
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -1034,7 +1034,14 @@
       const protocolField = document.getElementById('editBackendProtocol');
 
       if (!idField || !nameField || !hostField || !portField || !protocolField) {
-        console.error('[Backend Detail] Required form fields not found');
+        console.error('[Backend Detail] Required form fields not found', {
+          idField: !!idField,
+          nameField: !!nameField,
+          hostField: !!hostField,
+          portField: !!portField,
+          protocolField: !!protocolField,
+          bodyHTML: document.body ? 'exists' : 'missing'
+        });
         return;
       }
 
@@ -1267,7 +1274,14 @@
       const protectionField = document.getElementById('editDomainBotProtection');
 
       if (!idField || !hostnameField || !proxyField || !backendField || !protectionField) {
-        console.error('[Domain Detail] Required form fields not found');
+        console.error('[Domain Detail] Required form fields not found', {
+          idField: !!idField,
+          hostnameField: !!hostnameField,
+          proxyField: !!proxyField,
+          backendField: !!backendField,
+          protectionField: !!protectionField,
+          bodyHTML: document.body ? 'exists' : 'missing'
+        });
         return;
       }
 
