@@ -2134,13 +2134,15 @@
         const firstSeen = new Date(log.first_seen);
         const lastSeen = new Date(log.last_seen);
         const countryCode = countries[index];
-        const flagEmoji = countryCode ? getFlagEmoji(countryCode) : '🌐';
+        const flagImg = countryCode && countryCode !== 'LOCAL' 
+          ? `<img src="https://flagsapi.com/${countryCode}/flat/32.png" style="width: 24px; height: 18px; border-radius: 2px;" alt="${countryCode}" title="${countryCode}">`
+          : '<span style="font-size: 18px;">🏠</span>';
         
         return `
           <tr>
             <td>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 20px;" title="${countryCode || 'Inconnu'}">${flagEmoji}</span>
+                ${flagImg}
                 <a href="https://check-host.net/check-http?host=${encodeURIComponent(log.client_ip)}" 
                    target="_blank" 
                    rel="noopener noreferrer"
@@ -2196,38 +2198,60 @@
     return div.innerHTML;
   }
 
-  function getCountryFromIP(ip) {
-    // Basic IP geolocation based on known ranges
-    // This is a simplified version - for production, use a proper GeoIP service
+  // Cache for IP geolocation to avoid repeated API calls
+  const ipCountryCache = new Map();
+
+  async function getCountryFromIP(ip) {
     if (!ip) return null;
     
-    // Cloudflare IPs
-    if (ip.startsWith('104.') || ip.startsWith('172.') || ip.startsWith('188.114.')) return 'US';
+    // Check cache first
+    if (ipCountryCache.has(ip)) {
+      return ipCountryCache.get(ip);
+    }
     
-    // Common European ranges
-    if (ip.startsWith('82.64.') || ip.startsWith('87.121.')) return 'FR';
-    if (ip.startsWith('185.171.')) return 'NL';
-    if (ip.startsWith('46.') || ip.startsWith('78.')) return 'DE';
+    // Private/Local IPs
+    if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.16.') || 
+        ip.startsWith('172.17.') || ip.startsWith('172.18.') || ip.startsWith('172.19.') ||
+        ip.startsWith('172.2') || ip.startsWith('172.30.') || ip.startsWith('172.31.') ||
+        ip === '127.0.0.1' || ip === 'localhost') {
+      ipCountryCache.set(ip, 'LOCAL');
+      return 'LOCAL';
+    }
     
-    // Private/Local
-    if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip === '127.0.0.1') return 'LOCAL';
+    try {
+      // Use ip-api.com (free, no API key needed, 45 req/min limit)
+      const response = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode`, {
+        method: 'GET',
+        cache: 'force-cache'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const countryCode = data.countryCode || null;
+        ipCountryCache.set(ip, countryCode);
+        return countryCode;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch country for IP:', ip, error);
+    }
     
+    // Fallback to null
+    ipCountryCache.set(ip, null);
     return null;
   }
 
   function getFlagEmoji(countryCode) {
+    if (!countryCode) return '🌐';
     if (countryCode === 'LOCAL') return '🏠';
     
-    const flags = {
-      'FR': '🇫🇷', 'US': '🇺🇸', 'GB': '🇬🇧', 'DE': '🇩🇪', 'NL': '🇳🇱',
-      'BE': '🇧🇪', 'ES': '🇪🇸', 'IT': '🇮🇹', 'CH': '🇨🇭', 'CA': '🇨🇦',
-      'CN': '🇨🇳', 'JP': '🇯🇵', 'RU': '🇷🇺', 'BR': '🇧🇷', 'IN': '🇮🇳',
-      'AU': '🇦🇺', 'MX': '🇲🇽', 'KR': '🇰🇷', 'SE': '🇸🇪', 'NO': '🇳🇴',
-      'DK': '🇩🇰', 'FI': '🇫🇮', 'PL': '🇵🇱', 'PT': '🇵🇹', 'AT': '🇦🇹',
-      'IE': '🇮🇪', 'CZ': '🇨🇿', 'GR': '🇬🇷', 'RO': '🇷🇴', 'HU': '🇭🇺'
-    };
+    // Convert country code to flag emoji
+    // Each letter is converted to its regional indicator symbol
+    const codePoints = countryCode
+      .toUpperCase()
+      .split('')
+      .map(char => 127397 + char.charCodeAt(0));
     
-    return flags[countryCode] || '🌐';
+    return String.fromCodePoint(...codePoints);
   }
 
 })();
