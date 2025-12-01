@@ -1148,6 +1148,19 @@
           `<span class="status-badge ${badge}"><span class="status-dot"></span>${escapeHtml(statusText)}</span>`;
         document.getElementById('domainCertExpiry').textContent = validUntil;
         
+        // Charger le contenu du certificat
+        try {
+          const contentRes = await window.api.requestJson(`/api/certificates/${encodeURIComponent(hostname)}`);
+          if (contentRes && contentRes.status === 200 && contentRes.body) {
+            const fullchainEl = document.getElementById('domainCertFullchain');
+            const keyEl = document.getElementById('domainCertKey');
+            if (fullchainEl) fullchainEl.value = contentRes.body.cert || '';
+            if (keyEl) keyEl.value = contentRes.body.key || '';
+          }
+        } catch (e) {
+          console.error('[Domain Cert] Failed to load content:', e);
+        }
+        
         certInfo.hidden = false;
         certEmpty.hidden = true;
       } else {
