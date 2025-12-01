@@ -53,6 +53,11 @@ class BotProtection {
         while (history.length > 0 && history[0] < oneMinuteAgo) {
             history.shift();
         }
+        
+        // Debug logging
+        if (history.length % 10 === 0) {
+            console.log(`[BotProtection] IP ${ip}: ${history.length} requests in last minute`);
+        }
     }
 
     getRequestsPerMinute(ip) {
@@ -77,7 +82,14 @@ class BotProtection {
         }
 
         // Challenge if under attack OR if this specific IP is rate limited
-        return this.isUnderAttack() || this.isRateLimited(ip);
+        const shouldBlock = this.isUnderAttack() || this.isRateLimited(ip);
+        
+        if (shouldBlock) {
+            const reqCount = this.getRequestsPerMinute(ip);
+            console.log(`[BotProtection] Challenging IP ${ip} - ${reqCount} requests in last minute (limit: ${this.perIpLimit})`);
+        }
+        
+        return shouldBlock;
     }
 
     verifyIP(ip) {

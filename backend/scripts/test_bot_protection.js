@@ -12,18 +12,18 @@ async function makeRequest(url) {
     try {
         const response = await axios.get(url, {
             timeout: 5000,
-            maxRedirects: 0,
+            maxRedirects: 5, // Follow redirects to actually hit the server
             validateStatus: null // Accept all status codes
         });
         return {
             status: response.status,
-            challenged: response.status === 200 && response.data.includes('challenge')
+            challenged: response.status === 503 || (response.data && response.data.includes('Vérification de sécurité'))
         };
     } catch (error) {
         if (error.response) {
             return {
                 status: error.response.status,
-                challenged: false
+                challenged: error.response.status === 503 || (error.response.data && error.response.data.includes('Vérification de sécurité'))
             };
         }
         return { status: 'ERROR', error: error.message };
@@ -41,9 +41,10 @@ async function testRateLimit() {
     let challengeAtRequest = 0;
     const startTime = Date.now();
 
-    // Faire 150 requêtes rapidement (devrait déclencher la limite)
-    const numRequests = 150;
-    console.log(`📊 Envoi de ${numRequests} requêtes...\n`);
+    // Faire 120 requêtes avec un petit délai pour rester sous 1 minute
+    const numRequests = 120;
+    const delayMs = 400; // 400ms entre chaque requête = environ 2.5 req/s
+    console.log(`📊 Envoi de ${numRequests} requêtes espacées de ${delayMs}ms...\n`);
 
     for (let i = 1; i <= numRequests; i++) {
         const result = await makeRequest(TARGET_URL);
@@ -63,8 +64,10 @@ async function testRateLimit() {
             process.stdout.write(`\r✓ ${i}/${numRequests} requêtes | ${rps} req/s | Temps: ${elapsed}s`);
         }
 
-        // Petite pause pour ne pas surcharger (optionnel)
-        // await new Promise(resolve => setTimeout(resolve, 10));
+        // Pause pour espacer les requêtes
+        if (i < numRequests) {
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
     }
 
     console.log('\n\n================================');
