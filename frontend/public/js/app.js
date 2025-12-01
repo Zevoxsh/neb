@@ -1298,7 +1298,11 @@
           proxyField: !!proxyField,
           backendField: !!backendField,
           protectionField: !!protectionField,
-          bodyHTML: document.body ? 'exists' : 'missing'
+          bodyHTML: document.body ? 'exists' : 'missing',
+          bodyDataPage: document.body?.dataset?.page,
+          formExists: !!document.getElementById('editDomainForm'),
+          pageContentExists: !!document.querySelector('.page-content'),
+          allEditDomain: document.querySelectorAll('[id^="editDomain"]').length
         });
         return;
       }
