@@ -1457,7 +1457,7 @@
   async function deleteDomainDetail() {
     const domainId = document.getElementById('editDomainId').value;
     const hostname = document.getElementById('editDomainHostname').value;
-    if (!confirm(`Supprimer le domaine "${hostname}" ?")) return;
+    if (!confirm(`Supprimer le domaine "${hostname}" ?`)) return;
     
     try {
       const res = await window.api.requestJson(`/api/domains/${domainId}`, { method: 'DELETE' });
