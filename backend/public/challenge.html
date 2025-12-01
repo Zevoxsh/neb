@@ -4,8 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vérification de sécurité - Nebula</title>
+    <title>Security Check - Nebula</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-deep: #000000;
+            --bg-surface: #080808;
+            --border: #1a1a1a;
+            --text-main: #ffffff;
+            --text-muted: #666666;
+            --primary-glow: rgba(255, 255, 255, 0.15);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,166 +25,188 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0a0a0f;
-            color: #e0e0e0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-deep);
+            background-image: radial-gradient(circle at 50% 0%, #111111, #000000 80%);
+            color: var(--text-main);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
+        }
+
+        .challenge-container {
+            position: relative;
+            width: 100%;
+            max-width: 420px;
             padding: 2rem;
         }
 
-        .challenge-wrapper {
-            width: 100%;
-            max-width: 480px;
-        }
-
+        /* Glass card effect matching dashboard */
         .challenge-card {
-            background: #15151f;
-            border: 1px solid #2a2a3a;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
             border-radius: 16px;
-            padding: 3rem 2.5rem;
+            padding: 3rem 2rem;
             text-align: center;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
 
-        .logo-container {
-            width: 90px;
-            height: 90px;
+        /* Subtle glow at top of card */
+        .challenge-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        }
+
+        .logo {
+            width: 64px;
+            height: 64px;
             margin: 0 auto 2rem;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            border-radius: 18px;
+            background: #0a0a0a;
+            border: 1px solid #222;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.5rem;
             font-weight: 700;
-            color: white;
-            letter-spacing: -2px;
-            animation: pulse 2s ease-in-out infinite;
-            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+            font-size: 1.5rem;
+            letter-spacing: -1px;
+            color: #fff;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            position: relative;
         }
 
-        @keyframes pulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-                box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
-            }
-
-            50% {
-                transform: scale(1.05);
-                box-shadow: 0 12px 32px rgba(99, 102, 241, 0.4);
-            }
+        .logo::after {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent);
+            pointer-events: none;
         }
 
         h1 {
-            font-size: 1.875rem;
-            font-weight: 600;
-            color: #ffffff;
+            font-size: 1.25rem;
+            font-weight: 500;
             margin-bottom: 0.75rem;
+            letter-spacing: -0.02em;
         }
 
-        .subtitle {
-            font-size: 1rem;
-            color: #9ca3af;
+        p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            line-height: 1.6;
             margin-bottom: 2.5rem;
-            line-height: 1.5;
         }
 
-        .progress-track {
+        /* Minimalist loader */
+        .loader-track {
             width: 100%;
-            height: 8px;
-            background: #1a1a24;
-            border-radius: 4px;
+            height: 2px;
+            background: #1a1a1a;
+            border-radius: 2px;
             overflow: hidden;
-            margin-bottom: 2rem;
+            position: relative;
         }
 
-        .progress-fill {
+        .loader-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
             height: 100%;
-            background: linear-gradient(90deg, #6366f1, #8b5cf6);
-            width: 0%;
-            animation: progress 5s linear forwards;
-            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+            width: 30%;
+            background: #fff;
+            border-radius: 2px;
+            animation: load 1.5s ease-in-out infinite;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
         }
 
-        @keyframes progress {
-            to {
-                width: 100%;
+        @keyframes load {
+            0% {
+                left: -30%;
+            }
+
+            50% {
+                left: 100%;
+            }
+
+            100% {
+                left: 100%;
             }
         }
 
-        .status {
+        .status-row {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.75rem;
-            font-size: 0.95rem;
-            color: #9ca3af;
+            gap: 8px;
+            margin-top: 1.5rem;
+            font-size: 0.75rem;
+            color: #444;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .spinner {
-            width: 18px;
-            height: 18px;
-            border: 2px solid #2a2a3a;
-            border-top-color: #6366f1;
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: #333;
             border-radius: 50%;
-            animation: spin 0.7s linear infinite;
+            animation: blink 1s infinite alternate;
         }
 
-        @keyframes spin {
+        @keyframes blink {
+            from {
+                background: #333;
+            }
+
             to {
-                transform: rotate(360deg);
+                background: #fff;
             }
         }
 
         .footer {
-            margin-top: 2.5rem;
+            position: absolute;
+            bottom: 1rem;
+            left: 0;
+            right: 0;
             text-align: center;
-            font-size: 0.8rem;
-            color: #6b7280;
-        }
-
-        .footer strong {
-            color: #6366f1;
-            font-weight: 600;
-        }
-
-        @media (max-width: 480px) {
-            .challenge-card {
-                padding: 2rem 1.5rem;
-            }
-
-            h1 {
-                font-size: 1.5rem;
-            }
+            font-size: 0.7rem;
+            color: #333;
+            pointer-events: none;
         }
     </style>
 </head>
 
 <body>
-    <div class="challenge-wrapper">
+    <div class="challenge-container">
         <div class="challenge-card">
-            <div class="logo-container">NB</div>
+            <div class="logo">NB</div>
 
-            <h1>Vérification de sécurité</h1>
-            <p class="subtitle">Veuillez patienter pendant que nous vérifions la sécurité de votre connexion</p>
+            <h1>Security Check</h1>
+            <p>Analyzing your connection to ensure secure access to this resource.</p>
 
-            <div class="progress-track">
-                <div class="progress-fill"></div>
+            <div class="loader-track">
+                <div class="loader-bar"></div>
             </div>
 
-            <div class="status">
-                <div class="spinner"></div>
-                <span id="statusText">Vérification en cours...</span>
+            <div class="status-row">
+                <div class="status-dot"></div>
+                <span id="statusText">VERIFYING</span>
             </div>
         </div>
 
         <div class="footer">
-            Protégé par <strong>Nebula Control</strong>
+            NEBULA CONTROL
         </div>
     </div>
 
@@ -181,15 +215,12 @@
             const statusEl = document.getElementById('statusText');
             const originalUrl = window.location.href;
 
-            // Update status after 2s
             setTimeout(() => {
-                if (statusEl) statusEl.textContent = 'Finalisation de la vérification...';
+                if (statusEl) statusEl.textContent = 'ANALYZING';
             }, 2000);
 
-            // Complete challenge after 5s
             setTimeout(async () => {
                 try {
-                    // Get timestamp from cookie
                     const cookies = document.cookie.split(';').reduce((acc, cookie) => {
                         const [key, value] = cookie.trim().split('=');
                         acc[key] = value;
@@ -199,7 +230,6 @@
                     const timestamp = parseInt(cookies.challenge_ts || Date.now());
                     const solution = computeHash(timestamp.toString());
 
-                    // Verify with server
                     const response = await fetch('/verify-challenge', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -207,20 +237,22 @@
                     });
 
                     if (response.ok) {
-                        if (statusEl) statusEl.textContent = '✓ Vérification réussie !';
+                        if (statusEl) {
+                            statusEl.textContent = 'GRANTED';
+                            statusEl.style.color = '#fff';
+                        }
                         setTimeout(() => {
                             window.location.href = originalUrl;
                         }, 500);
                     } else {
-                        if (statusEl) statusEl.textContent = 'Échec de la vérification';
+                        if (statusEl) statusEl.textContent = 'DENIED';
                         setTimeout(() => window.location.reload(), 2000);
                     }
                 } catch (err) {
                     console.error('Challenge error:', err);
-                    if (statusEl) statusEl.textContent = 'Erreur, rechargement...';
                     setTimeout(() => window.location.reload(), 2000);
                 }
-            }, 5000);
+            }, 4500);
 
             function computeHash(data) {
                 let hash = 0;
