@@ -13,7 +13,7 @@ class BotProtection {
         this.verifiedIPs = new Map(); // IP => expiration timestamp
         this.requestCounts = new Map(); // IP => count per second
         this.ipRequestHistory = new Map(); // IP => array of timestamps for rate limiting
-        this.perIpLimit = 30; // Max requests per IP per minute (stricter)
+        this.perIpLimit = 100; // Max requests per IP per minute
         this.challengeFirstVisit = false; // DISABLED by default - only on proxy HTTPS
         this.activeChallenges = new Map(); // IP => { code, timestamp, attempts }
         this.maxAttempts = 3; // Max failed attempts before temporary ban

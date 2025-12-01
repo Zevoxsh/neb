@@ -488,7 +488,9 @@ class ProxyManager {
           
           // Skip challenge for API endpoints and static assets
           const skipPaths = ['/api/', '/public/', '/verify-challenge', '/challenge.html', '/.well-known/'];
-          const shouldSkip = skipPaths.some(path => req.url.startsWith(path));
+          const skipExtensions = ['.css', '.js', '.png', '.jpg', '.jpeg', '.svg', '.woff', '.woff2', '.ttf', '.ico'];
+          const shouldSkip = skipPaths.some(path => req.url.startsWith(path)) || 
+                            skipExtensions.some(ext => req.url.includes(ext));
           
           if (!shouldSkip) {
             botProtection.trackRequest(clientIp);
