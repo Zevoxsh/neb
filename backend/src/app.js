@@ -25,25 +25,6 @@ function createApp() {
   // Bot protection middleware (must be before routes)
   app.use(botChallengeMiddleware);
 
-  // Simple request logger middleware for debugging
-  app.use((req, res, next) => {
-    try {
-      const info = {
-        method: req.method,
-        originalUrl: req.originalUrl,
-        path: req.path,
-        ip: req.ip,
-        hasBody: !!(req.body && Object.keys(req.body).length),
-        cookies: req.cookies && Object.keys(req.cookies).length ? Object.keys(req.cookies) : []
-      };
-      if (req.method === 'GET') console.log('[REQ]', info.method, info.originalUrl, 'ip=', info.ip);
-      else console.log('[REQ]', info.method, info.originalUrl, 'ip=', info.ip, 'hasBody=', info.hasBody, 'cookies=', info.cookies);
-    } catch (e) { /* ignore logging errors */ }
-    next();
-  });
-
-
-
   // Static files middleware - CRITICAL for serving app.js and styles.css
   app.use('/public', express.static(path.join(__dirname, '..', '..', 'frontend', 'public')));
 
