@@ -510,13 +510,19 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
             }
             
             if (challengeStatus) {
-              const challengeData = botProtection.generateChallenge(clientIp);
+              // Generate challenge only if one doesn't already exist for this IP
+              let challengeData = botProtection.getActiveChallenge(clientIp);
+              if (!challengeData) {
+                challengeData = botProtection.generateChallenge(clientIp);
+                console.log(`[ProxyManager] New challenge generated for IP ${clientIp}, code: ${challengeData.code}`);
+              } else {
+                console.log(`[ProxyManager] Reusing existing challenge for IP ${clientIp}, code: ${challengeData.code}`);
+              }
+              
               // Serve challenge page directly
               const fs = require('fs');
               const path = require('path');
               const challengePath = path.join(__dirname, '..', '..', 'public', 'challenge.html');
-              
-              console.log(`[ProxyManager] Serving challenge to IP ${clientIp}, code: ${challengeData.code}`);
               
               if (fs.existsSync(challengePath)) {
                 try {

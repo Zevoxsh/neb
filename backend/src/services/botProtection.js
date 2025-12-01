@@ -166,6 +166,27 @@ class BotProtection {
         return { token, timestamp, code };
     }
 
+    getActiveChallenge(ip) {
+        const challenge = this.activeChallenges.get(ip);
+        if (!challenge) return null;
+        
+        // Check if expired (5 minutes)
+        const now = Date.now();
+        if (now - challenge.timestamp > 300000) {
+            this.activeChallenges.delete(ip);
+            return null;
+        }
+        
+        return {
+            code: challenge.code,
+            timestamp: challenge.timestamp,
+            token: crypto
+                .createHmac('sha256', this.secret)
+                .update(ip + challenge.code + challenge.timestamp)
+                .digest('hex')
+        };
+    }
+
     verifyChallengeAnswer(ip, userInput) {
         const challenge = this.activeChallenges.get(ip);
         
