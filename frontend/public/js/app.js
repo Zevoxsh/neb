@@ -958,9 +958,30 @@
       showToast('Choisissez un backend', 'error');
       return;
     }
+    
+    // Handle bot protection setting
+    const botProtection = payload.botProtection || 'default';
+    delete payload.botProtection;
+    
     try {
       const res = await window.api.requestJson('/api/domains', { method: 'POST', body: payload });
       if (res && (res.status === 200 || res.status === 201)) {
+        const data = await res.json();
+        const domain = data.domain || payload.hostname;
+        
+        // Apply bot protection setting
+        if (botProtection === 'protected') {
+          await window.api.requestJson('/api/bot-protection/protected-domains/add', {
+            method: 'POST',
+            body: { domain }
+          });
+        } else if (botProtection === 'unprotected') {
+          await window.api.requestJson('/api/bot-protection/unprotected-domains/add', {
+            method: 'POST',
+            body: { domain }
+          });
+        }
+        
         showToast('Domaine cree');
         form.reset();
         await loadDomains();

@@ -74,6 +74,15 @@
                   </select>
                   <p class="form-hint">La selection d'un backend est obligatoire.</p>
                 </div>
+                <div class="form-field">
+                  <label for="domainBotProtection">Protection CAPTCHA</label>
+                  <select id="domainBotProtection" name="botProtection">
+                    <option value="default">Par défaut (toutes nouvelles IPs)</option>
+                    <option value="protected">Protégé (force CAPTCHA pour ce domaine)</option>
+                    <option value="unprotected">Non protégé (bypass CAPTCHA)</option>
+                  </select>
+                  <p class="form-hint">Contrôle si ce domaine nécessite une vérification humaine.</p>
+                </div>
               </div>
               <div class="form-actions">
                 <button class="btn ghost" type="button" data-panel-close="domainFormPanel">Annuler</button>
