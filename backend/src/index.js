@@ -116,7 +116,7 @@ async function initDbAndStart() {
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS target_protocol VARCHAR(10) NOT NULL DEFAULT 'tcp';");
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS vhosts JSONB;");
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS error_page_html TEXT;");
-    await pool.query("ALTER TABLE domain_mappings ADD COLUMN IF NOT EXISTS bot_protection VARCHAR(20) DEFAULT 'default';");
+    await pool.query("ALTER TABLE domain_mappings ADD COLUMN IF NOT EXISTS bot_protection VARCHAR(20) DEFAULT 'unprotected';");
 
     const adminUser = process.env.DEFAULT_ADMIN_USER || 'admin';
     const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';

@@ -867,18 +867,15 @@
           : `${escapeHtml(d.target_host || '')}:${d.target_port || ''}`;
         
         // Bot protection status
-        const botProtection = d.bot_protection || 'default';
+        const botProtection = d.bot_protection || 'unprotected';
         let protectionBadge = '';
         let protectionText = '';
         if (botProtection === 'protected') {
           protectionBadge = 'warning';
           protectionText = '🔒 Protégé';
-        } else if (botProtection === 'unprotected') {
+        } else {
           protectionBadge = 'success';
           protectionText = '✓ Ouvert';
-        } else {
-          protectionBadge = 'muted';
-          protectionText = 'Par défaut';
         }
         
         const tr = document.createElement('tr');
@@ -991,7 +988,7 @@
     }
     
     // Handle bot protection setting
-    const botProtection = payload.botProtection || 'default';
+    const botProtection = payload.botProtection || 'unprotected';
     const hostname = payload.hostname;
     delete payload.botProtection;
     
@@ -1097,7 +1094,7 @@
       return;
     }
     
-    const botProtection = payload.botProtection || 'default';
+    const botProtection = payload.botProtection || 'unprotected';
     const hostname = payload.hostname;
     delete payload.id;
     delete payload.botProtection;
