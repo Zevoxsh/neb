@@ -14,6 +14,19 @@
   };
   let currentErrorPageProxyId = null;
 
+  // Wait for partials to be loaded before initializing detail pages
+  document.addEventListener('partials-loaded', () => {
+    const path = window.location.pathname;
+    
+    if (/^\/proxies\/\d+$/i.test(path)) {
+      initProxyDetail();
+    } else if (/^\/domain\.html/i.test(path)) {
+      initDomainDetail();
+    } else if (/^\/backend\.html/i.test(path)) {
+      initBackendDetail();
+    }
+  });
+
   document.addEventListener('DOMContentLoaded', () => {
     const body = document.body || {};
     const page = body.dataset ? body.dataset.page : '';
@@ -23,18 +36,16 @@
     attachProxyBackendChange();
     setupErrorPageEditor();
 
+    // Skip initialization for detail pages, wait for partials-loaded event
     if (/^\/proxies\/\d+$/i.test(path)) {
-      initProxyDetail();
       return;
     }
     
     if (/^\/domain\.html/i.test(path)) {
-      initDomainDetail();
       return;
     }
     
     if (/^\/backend\.html/i.test(path)) {
-      initBackendDetail();
       return;
     }
 

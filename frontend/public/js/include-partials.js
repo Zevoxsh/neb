@@ -37,6 +37,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   highlightActiveNav();
   enforceAuthGuard();
+  
+  // Dispatch event to signal that partials are loaded
+  document.dispatchEvent(new CustomEvent('partials-loaded'));
 
   try {
     document.addEventListener('submit', function (ev) {
