@@ -2129,10 +2129,23 @@
       table.innerHTML = data.logs.map(log => {
         const firstSeen = new Date(log.first_seen);
         const lastSeen = new Date(log.last_seen);
+        const countryCode = getCountryFromIP(log.client_ip);
+        const flagEmoji = countryCode ? getFlagEmoji(countryCode) : '🌐';
         
         return `
           <tr>
-            <td><code style="color: #3b82f6;">${escapeHtml(log.client_ip)}</code></td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 20px;">${flagEmoji}</span>
+                <a href="https://check-host.net/check-http?host=${encodeURIComponent(log.client_ip)}" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   style="color: #3b82f6; text-decoration: none; font-family: monospace; cursor: pointer;"
+                   title="Voir les infos de ${log.client_ip} sur check-host.net">
+                  ${escapeHtml(log.client_ip)}
+                </a>
+              </div>
+            </td>
             <td><strong>${escapeHtml(log.hostname || 'N/A')}</strong></td>
             <td><span style="color: #22c55e; font-weight: 600;">${formatNumber(log.request_count)}</span></td>
             <td style="color: rgba(255,255,255,0.6); font-size: 13px;">${formatDate(firstSeen)}</td>
@@ -2177,6 +2190,40 @@
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  function getCountryFromIP(ip) {
+    // Basic IP geolocation based on known ranges
+    // This is a simplified version - for production, use a proper GeoIP service
+    if (!ip) return null;
+    
+    // Cloudflare IPs
+    if (ip.startsWith('104.') || ip.startsWith('172.') || ip.startsWith('188.114.')) return 'US';
+    
+    // Common European ranges
+    if (ip.startsWith('82.64.') || ip.startsWith('87.121.')) return 'FR';
+    if (ip.startsWith('185.171.')) return 'NL';
+    if (ip.startsWith('46.') || ip.startsWith('78.')) return 'DE';
+    
+    // Private/Local
+    if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip === '127.0.0.1') return 'LOCAL';
+    
+    return null;
+  }
+
+  function getFlagEmoji(countryCode) {
+    if (countryCode === 'LOCAL') return '🏠';
+    
+    const flags = {
+      'FR': '🇫🇷', 'US': '🇺🇸', 'GB': '🇬🇧', 'DE': '🇩🇪', 'NL': '🇳🇱',
+      'BE': '🇧🇪', 'ES': '🇪🇸', 'IT': '🇮🇹', 'CH': '🇨🇭', 'CA': '🇨🇦',
+      'CN': '🇨🇳', 'JP': '🇯🇵', 'RU': '🇷🇺', 'BR': '🇧🇷', 'IN': '🇮🇳',
+      'AU': '🇦🇺', 'MX': '🇲🇽', 'KR': '🇰🇷', 'SE': '🇸🇪', 'NO': '🇳🇴',
+      'DK': '🇩🇰', 'FI': '🇫🇮', 'PL': '🇵🇱', 'PT': '🇵🇹', 'AT': '🇦🇹',
+      'IE': '🇮🇪', 'CZ': '🇨🇿', 'GR': '🇬🇷', 'RO': '🇷🇴', 'HU': '🇭🇺'
+    };
+    
+    return flags[countryCode] || '🌐';
   }
 
 })();
