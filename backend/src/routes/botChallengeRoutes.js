@@ -91,4 +91,51 @@ router.post('/api/bot-protection/challenge-first-visit', asyncHandler(async (req
     res.json({ enabled });
 }));
 
+// Set verification duration
+router.post('/api/bot-protection/verification-duration', asyncHandler(async (req, res) => {
+    const { hours } = req.body;
+    botProtection.setVerificationDuration(hours);
+    logger.info('Verification duration updated', { hours });
+    res.json({ hours });
+}));
+
+// Add protected domain
+router.post('/api/bot-protection/protected-domains/add', asyncHandler(async (req, res) => {
+    const { domain } = req.body;
+    botProtection.addProtectedDomain(domain);
+    logger.info('Protected domain added', { domain });
+    res.json({ success: true, domain });
+}));
+
+// Remove protected domain
+router.post('/api/bot-protection/protected-domains/remove', asyncHandler(async (req, res) => {
+    const { domain } = req.body;
+    botProtection.removeProtectedDomain(domain);
+    logger.info('Protected domain removed', { domain });
+    res.json({ success: true, domain });
+}));
+
+// Add unprotected domain
+router.post('/api/bot-protection/unprotected-domains/add', asyncHandler(async (req, res) => {
+    const { domain } = req.body;
+    botProtection.addUnprotectedDomain(domain);
+    logger.info('Unprotected domain added', { domain });
+    res.json({ success: true, domain });
+}));
+
+// Remove unprotected domain
+router.post('/api/bot-protection/unprotected-domains/remove', asyncHandler(async (req, res) => {
+    const { domain } = req.body;
+    botProtection.removeUnprotectedDomain(domain);
+    logger.info('Unprotected domain removed', { domain });
+    res.json({ success: true, domain });
+}));
+
+// Clear domain lists
+router.post('/api/bot-protection/domains/clear', asyncHandler(async (req, res) => {
+    botProtection.clearDomainLists();
+    logger.info('Domain lists cleared');
+    res.json({ success: true });
+}));
+
 module.exports = router;

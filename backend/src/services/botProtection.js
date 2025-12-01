@@ -19,6 +19,9 @@ class BotProtection {
         this.maxAttempts = 3; // Max failed attempts before temporary ban
         this.bannedIPs = new Map(); // IP => ban expiration timestamp
         this.secret = process.env.BOT_SECRET || crypto.randomBytes(32).toString('hex');
+        this.verificationDuration = 6 * 60 * 60 * 1000; // 6 hours by default
+        this.protectedDomains = new Set(); // Domains that require verification
+        this.unprotectedDomains = new Set(); // Domains that bypass verification
 
         // Reset counters every second
         setInterval(() => {
@@ -102,7 +105,12 @@ class BotProtection {
         return this.enabled || this.requestsPerSecond > this.threshold;
     }
 
-    shouldChallenge(ip, forceNewVisitor = false) {
+    shouldChallenge(ip, forceNewVisitor = false, domain = null) {
+        // Check if domain is unprotected (bypass all checks)
+        if (domain && this.unprotectedDomains.has(domain)) {
+            return false;
+        }
+
         // Check if IP is banned
         if (this.isBanned(ip)) {
             return 'banned';
@@ -114,15 +122,19 @@ class BotProtection {
             return false;
         }
 
+        // If domain is specified and in protected list, force challenge
+        const isDomainProtected = domain && this.protectedDomains.size > 0 && this.protectedDomains.has(domain);
+
         // Challenge if:
-        // 1. Under attack mode is enabled
-        // 2. IP is rate limited (too many requests)
-        // 3. First visit and (challengeFirstVisit is enabled OR forceNewVisitor is true)
+        // 1. Domain is in protected list
+        // 2. Under attack mode is enabled
+        // 3. IP is rate limited (too many requests)
+        // 4. First visit and (challengeFirstVisit is enabled OR forceNewVisitor is true)
         const isRateLimited = this.isRateLimited(ip);
         const isUnderAttack = this.isUnderAttack();
         const isNewVisitor = (this.challengeFirstVisit || forceNewVisitor) && !this.verifiedIPs.has(ip);
         
-        const shouldBlock = isUnderAttack || isRateLimited || isNewVisitor;
+        const shouldBlock = isDomainProtected || isUnderAttack || isRateLimited || isNewVisitor;
         
         if (shouldBlock) {
             const reqCount = this.getRequestsPerMinute(ip);
@@ -134,8 +146,8 @@ class BotProtection {
     }
 
     verifyIP(ip) {
-        // Mark IP as verified for 24 hours
-        const expiration = Date.now() + (24 * 60 * 60 * 1000);
+        // Mark IP as verified (duration configurable, default 6 hours)
+        const expiration = Date.now() + this.verificationDuration;
         this.verifiedIPs.set(ip, expiration);
         console.log(`[BotProtection] IP ${ip} verified until ${new Date(expiration).toISOString()}`);
     }
@@ -263,17 +275,51 @@ class BotProtection {
         this.challengeFirstVisit = enabled;
     }
 
+    setVerificationDuration(hours) {
+        this.verificationDuration = hours * 60 * 60 * 1000;
+        console.log(`[BotProtection] Verification duration set to ${hours} hours`);
+    }
+
+    addProtectedDomain(domain) {
+        this.protectedDomains.add(domain);
+        console.log(`[BotProtection] Domain ${domain} added to protected list`);
+    }
+
+    removeProtectedDomain(domain) {
+        this.protectedDomains.delete(domain);
+        console.log(`[BotProtection] Domain ${domain} removed from protected list`);
+    }
+
+    addUnprotectedDomain(domain) {
+        this.unprotectedDomains.add(domain);
+        console.log(`[BotProtection] Domain ${domain} added to unprotected list (bypass)`);
+    }
+
+    removeUnprotectedDomain(domain) {
+        this.unprotectedDomains.delete(domain);
+        console.log(`[BotProtection] Domain ${domain} removed from unprotected list`);
+    }
+
+    clearDomainLists() {
+        this.protectedDomains.clear();
+        this.unprotectedDomains.clear();
+        console.log(`[BotProtection] Domain lists cleared`);
+    }
+
     getStats() {
         return {
             enabled: this.enabled,
             threshold: this.threshold,
             perIpLimit: this.perIpLimit,
             challengeFirstVisit: this.challengeFirstVisit,
+            verificationDuration: this.verificationDuration / (60 * 60 * 1000), // Convert to hours
             requestsPerSecond: this.requestsPerSecond,
             verifiedIPs: this.verifiedIPs.size,
             bannedIPs: this.bannedIPs.size,
             activeChallenges: this.activeChallenges.size,
             trackedIPs: this.ipRequestHistory.size,
+            protectedDomains: Array.from(this.protectedDomains),
+            unprotectedDomains: Array.from(this.unprotectedDomains),
             isUnderAttack: this.isUnderAttack()
         };
     }
