@@ -49,11 +49,33 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
         }
         
         if (challengeStatus) {
-            // Generate challenge
-            botProtection.generateChallenge(ip);
+            // Get or generate challenge for this IP
+            let challengeData = botProtection.getActiveChallenge(ip);
+            if (!challengeData) {
+                challengeData = botProtection.generateChallenge(ip);
+                console.log(`[BotChallenge-Middleware] New challenge generated for IP ${ip}, code: ${challengeData.code}`);
+            } else {
+                console.log(`[BotChallenge-Middleware] Reusing existing challenge for IP ${ip}, code: ${challengeData.code}`);
+            }
 
-            // Send challenge page
-            return res.sendFile(path.join(__dirname, '..', '..', 'public', 'challenge.html'));
+            // Read and inject challenge code into HTML
+            const fs = require('fs');
+            const challengePath = path.join(__dirname, '..', '..', 'public', 'challenge.html');
+            
+            if (fs.existsSync(challengePath)) {
+                let html = fs.readFileSync(challengePath, 'utf8');
+                // Inject the challenge code into the HTML
+                html = html.replace('{{CHALLENGE_CODE}}', challengeData.code);
+                res.writeHead(200, { 
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Content-Length': Buffer.byteLength(html)
+                });
+                return res.end(html);
+            } else {
+                // Fallback if file not found
+                res.status(503).send('<h1>Challenge page not found</h1>');
+                return;
+            }
         }
     }
 
