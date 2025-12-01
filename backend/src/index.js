@@ -147,6 +147,21 @@ async function initDbAndStart() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_security_alerts_type ON security_alerts(alert_type);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_security_alerts_severity ON security_alerts(severity);`);
 
+    // Certificates table for SSL/TLS certificates
+    await pool.query(`CREATE TABLE IF NOT EXISTS certificates(
+      id SERIAL PRIMARY KEY,
+      domain VARCHAR(255) NOT NULL UNIQUE,
+      private_key TEXT NOT NULL,
+      certificate TEXT NOT NULL,
+      chain TEXT,
+      expires_at TIMESTAMP WITH TIME ZONE,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    ); `);
+    
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_certificates_domain ON certificates(domain);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_certificates_expires_at ON certificates(expires_at);`);
+
     const adminUser = process.env.DEFAULT_ADMIN_USER || 'admin';
     const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
     const res = await pool.query('SELECT id FROM users WHERE username = $1', [adminUser]);
