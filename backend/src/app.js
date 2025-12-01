@@ -81,6 +81,7 @@ function createApp() {
   app.get('/backends.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'backends.html')));
   app.get('/domains.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'domains.html')));
   app.get('/security.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'security.html')));
+  app.get('/analytics.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'analytics.html')));
   app.get('/certificates.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'certificates.html')));
   app.get('/settings.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'settings.html')));
   app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'login.html')));
@@ -107,6 +108,7 @@ function createApp() {
       { prefix: '/backends', file: 'backends.html' },
       { prefix: '/domains', file: 'domains.html' },
       { prefix: '/security', file: 'security.html' },
+      { prefix: '/analytics', file: 'analytics.html' },
       { prefix: '/certificates', file: 'certificates.html' },
       { prefix: '/settings', file: 'settings.html' },
       { prefix: '/login', file: 'login.html' }
