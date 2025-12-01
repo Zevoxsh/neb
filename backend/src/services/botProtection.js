@@ -13,7 +13,13 @@ class BotProtection {
         this.verifiedIPs = new Map(); // IP => expiration timestamp
         this.requestCounts = new Map(); // IP => count per second
         this.ipRequestHistory = new Map(); // IP => array of timestamps for rate limiting
-        this.perIpLimit = 100; // Max requests per IP per minute
+        
+        // Strict rate limits
+        this.perIpLimit = 60; // Max requests per IP per minute (reduced from 100)
+        this.perIpLimitProtected = 30; // Max requests per IP per minute for protected domains
+        this.verifiedIpLimit = 120; // Higher limit for verified IPs
+        this.burstLimit = 10; // Max requests in 10 seconds
+        
         this.challengeFirstVisit = false; // DISABLED by default - only on proxy HTTPS
         this.activeChallenges = new Map(); // IP => { code, timestamp, attempts }
         this.maxAttempts = 3; // Max failed attempts before temporary ban
@@ -85,9 +91,92 @@ class BotProtection {
         return history ? history.length : 0;
     }
 
-    isRateLimited(ip) {
+    getRequestsInLastSeconds(ip, seconds) {
+        const history = this.ipRequestHistory.get(ip);
+        if (!history) return 0;
+        
+        const now = Date.now();
+        const cutoff = now - (seconds * 1000);
+        return history.filter(ts => ts > cutoff).length;
+    }
+
+    isRateLimited(ip, domain = null) {
         const requestsInLastMinute = this.getRequestsPerMinute(ip);
-        return requestsInLastMinute > this.perIpLimit;
+        const requestsInLast10Sec = this.getRequestsInLastSeconds(ip, 10);
+        const isVerified = this.verifiedIPs.has(ip) && this.verifiedIPs.get(ip) > Date.now();
+        
+        // Check burst protection (10 requests in 10 seconds)
+        if (requestsInLast10Sec > this.burstLimit) {
+            console.log(`[BotProtection] IP ${ip} burst limited: ${requestsInLast10Sec} requests in 10s (limit: ${this.burstLimit})`);
+            
+            // Create alert for burst attack
+            const alertService = require('./alertService');
+            alertService.createSecurityAlert({
+                type: 'RATE_LIMIT',
+                severity: 'high',
+                ipAddress: ip,
+                hostname: domain,
+                message: `IP ${ip} exceeded burst limit: ${requestsInLast10Sec} requests in 10 seconds`,
+                details: { 
+                    requestsInLast10Sec,
+                    burstLimit: this.burstLimit,
+                    attackType: 'burst'
+                }
+            });
+            
+            return true;
+        }
+        
+        // Different limits based on domain protection and verification status
+        let limit = this.perIpLimit;
+        let limitType = 'standard';
+        
+        if (domain && this.protectedDomains.has(domain)) {
+            // Stricter limit for protected domains
+            limit = this.perIpLimitProtected;
+            limitType = 'protected_domain';
+        } else if (isVerified) {
+            // Higher limit for verified IPs on unprotected domains
+            limit = this.verifiedIpLimit;
+            limitType = 'verified_ip';
+        }
+        
+        if (requestsInLastMinute > limit) {
+            console.log(`[BotProtection] IP ${ip} rate limited: ${requestsInLastMinute} requests/min (limit: ${limit}, verified: ${isVerified}, protected: ${domain && this.protectedDomains.has(domain)})`);
+            
+            // Determine severity based on how much the limit was exceeded
+            const exceededBy = requestsInLastMinute - limit;
+            const exceededPercent = (exceededBy / limit) * 100;
+            let severity = 'medium';
+            
+            if (exceededPercent > 100) {
+                severity = 'critical'; // More than double the limit
+            } else if (exceededPercent > 50) {
+                severity = 'high';
+            }
+            
+            // Create alert for rate limit violation
+            const alertService = require('./alertService');
+            alertService.createSecurityAlert({
+                type: 'RATE_LIMIT',
+                severity: severity,
+                ipAddress: ip,
+                hostname: domain,
+                message: `IP ${ip} exceeded rate limit: ${requestsInLastMinute} requests/min (limit: ${limit})`,
+                details: { 
+                    requestsPerMinute: requestsInLastMinute,
+                    limit,
+                    limitType,
+                    isVerified,
+                    exceededBy,
+                    exceededPercent: Math.round(exceededPercent)
+                }
+            });
+            
+            return true;
+        }
+        
+        return false;
     }
 
     isBanned(ip) {
@@ -119,7 +208,11 @@ class BotProtection {
     shouldChallenge(ip, forceNewVisitor = false, domain = null) {
         // Check if domain is unprotected (bypass all checks)
         if (domain && this.unprotectedDomains.has(domain)) {
-            // console.log(`[BotProtection] Domain ${domain} is unprotected - bypassing challenge for IP ${ip}`);
+            // Still check for rate limiting even on unprotected domains
+            if (this.isRateLimited(ip, domain)) {
+                console.log(`[BotProtection] IP ${ip} rate limited on unprotected domain ${domain}`);
+                return true;
+            }
             return false;
         }
 
@@ -130,33 +223,56 @@ class BotProtection {
 
         // Check if IP already verified
         const expiration = this.verifiedIPs.get(ip);
-        if (expiration && expiration > Date.now()) {
+        const isVerified = expiration && expiration > Date.now();
+        
+        // Even verified IPs need to respect rate limits
+        const isRateLimited = this.isRateLimited(ip, domain);
+        if (isRateLimited) {
+            // If verified IP is rate limited, remove verification and challenge again
+            if (isVerified) {
+                console.log(`[BotProtection] Verified IP ${ip} exceeded rate limit, removing verification`);
+                this.verifiedIPs.delete(ip);
+                
+                // Create alert for suspicious behavior from verified IP
+                const alertService = require('./alertService');
+                alertService.createSecurityAlert({
+                    type: 'SUSPICIOUS_ACTIVITY',
+                    severity: 'high',
+                    ipAddress: ip,
+                    hostname: domain,
+                    message: `Verified IP ${ip} exceeded rate limit and lost verification status`,
+                    details: { 
+                        previouslyVerified: true,
+                        requestsPerMinute: this.getRequestsPerMinute(ip),
+                        domain
+                    }
+                });
+            }
+            return true;
+        }
+
+        // If verified and not rate limited, allow
+        if (isVerified) {
             return false;
         }
 
         // If domain is specified and in protected list, force challenge
         const isDomainProtected = domain && this.protectedDomains.size > 0 && this.protectedDomains.has(domain);
         
-        // if (isDomainProtected) {
-        //     console.log(`[BotProtection] Domain ${domain} is protected - forcing challenge for IP ${ip}`);
-        // }
-
         // Challenge if:
-        // 1. Domain is in protected list
+        // 1. Domain is in protected list (always challenge new IPs)
         // 2. Under attack mode is enabled
-        // 3. IP is rate limited (too many requests)
-        // 4. First visit and (challengeFirstVisit is enabled OR forceNewVisitor is true)
-        const isRateLimited = this.isRateLimited(ip);
+        // 3. First visit and (challengeFirstVisit is enabled OR forceNewVisitor is true)
         const isUnderAttack = this.isUnderAttack();
         const isNewVisitor = (this.challengeFirstVisit || forceNewVisitor) && !this.verifiedIPs.has(ip);
         
-        const shouldBlock = isDomainProtected || isUnderAttack || isRateLimited || isNewVisitor;
+        const shouldBlock = isDomainProtected || isUnderAttack || isNewVisitor;
         
-        // if (shouldBlock) {
-        //     const reqCount = this.getRequestsPerMinute(ip);
-        //     const reason = isNewVisitor ? 'New visitor' : `${reqCount} requests in last minute`;
-        //     console.log(`[BotProtection] Challenging IP ${ip} - ${reason} (limit: ${this.perIpLimit})`);
-        // }
+        if (shouldBlock) {
+            const reqCount = this.getRequestsPerMinute(ip);
+            const reason = isDomainProtected ? 'Protected domain' : (isNewVisitor ? 'New visitor' : 'Under attack mode');
+            console.log(`[BotProtection] Challenging IP ${ip} - ${reason} (${reqCount} req/min)`);
+        }
         
         return shouldBlock;
     }
