@@ -1196,10 +1196,13 @@
     }
     
     try {
-      const res = await window.api.requestJson('/api/certificates/manual', 'POST', {
-        domain: hostname,
-        certificate,
-        privateKey
+      const res = await window.api.requestJson('/api/certificates/manual', {
+        method: 'POST',
+        body: {
+          domain: hostname,
+          certificate,
+          privateKey
+        }
       });
       
       if (res && res.status === 200) {
