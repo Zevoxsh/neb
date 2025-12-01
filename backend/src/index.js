@@ -116,6 +116,7 @@ async function initDbAndStart() {
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS target_protocol VARCHAR(10) NOT NULL DEFAULT 'tcp';");
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS vhosts JSONB;");
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS error_page_html TEXT;");
+    await pool.query("ALTER TABLE domain_mappings ADD COLUMN IF NOT EXISTS bot_protection VARCHAR(20) DEFAULT 'default';");
 
     const adminUser = process.env.DEFAULT_ADMIN_USER || 'admin';
     const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
@@ -198,6 +199,26 @@ async function initDbAndStart() {
       console.log('Loaded security config');
     } catch (e) {
       console.error('Failed to load security config', e);
+    }
+
+    // Load bot protection domain lists
+    try {
+      const botProtection = require('./services/botProtection');
+      const domainModel = require('./models/domainModel');
+      const domains = await domainModel.listDomainMappings();
+      
+      domains.forEach(d => {
+        const protection = d.bot_protection || 'default';
+        if (protection === 'protected') {
+          botProtection.addProtectedDomain(d.hostname);
+        } else if (protection === 'unprotected') {
+          botProtection.addUnprotectedDomain(d.hostname);
+        }
+      });
+      
+      console.log('Loaded bot protection domain lists');
+    } catch (e) {
+      console.error('Failed to load bot protection domains', e);
     }
 
     // Load settings from DB (e.g., local_tlds) and apply to acmeManager
