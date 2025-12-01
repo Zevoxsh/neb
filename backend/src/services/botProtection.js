@@ -43,15 +43,16 @@ class BotProtection {
         if (!this.ipRequestHistory.has(ip)) {
             this.ipRequestHistory.set(ip, []);
         }
-    shouldChallenge(ip) {
-        // Check if IP already verified
-        const expiration = this.verifiedIPs.get(ip);
-        if (expiration && expiration > Date.now()) {
-            return false;
+        const history = this.ipRequestHistory.get(ip);
+        
+        // Add current request
+        history.push(now);
+        
+        // Remove requests older than 1 minute
+        const oneMinuteAgo = now - 60000;
+        while (history.length > 0 && history[0] < oneMinuteAgo) {
+            history.shift();
         }
-
-        // Challenge if under attack OR if this specific IP is rate limited
-        return this.isUnderAttack() || this.isRateLimited(ip);
     }
 
     getRequestsPerMinute(ip) {
@@ -69,15 +70,14 @@ class BotProtection {
     }
 
     shouldChallenge(ip) {
-        if (!this.isUnderAttack()) return false;
-
         // Check if IP already verified
         const expiration = this.verifiedIPs.get(ip);
         if (expiration && expiration > Date.now()) {
             return false;
         }
 
-        return true;
+        // Challenge if under attack OR if this specific IP is rate limited
+        return this.isUnderAttack() || this.isRateLimited(ip);
     }
 
     verifyIP(ip) {
@@ -90,25 +90,19 @@ class BotProtection {
         const timestamp = Date.now();
         const token = crypto
             .createHmac('sha256', this.secret)
-    setThreshold(threshold) {
-        this.threshold = threshold;
+            .update(ip + timestamp)
+            .digest('hex');
+
+        return { token, timestamp };
     }
 
-    setPerIpLimit(limit) {
-        this.perIpLimit = limit;
-    }
+    verifyChallenge(ip, token, timestamp) {
+        // Check if timestamp is recent (within 30 seconds)
+        const now = Date.now();
+        if (Math.abs(now - timestamp) > 30000) {
+            return false;
+        }
 
-    getStats() {
-        return {
-            enabled: this.enabled,
-            threshold: this.threshold,
-            perIpLimit: this.perIpLimit,
-            requestsPerSecond: this.requestsPerSecond,
-            verifiedIPs: this.verifiedIPs.size,
-            trackedIPs: this.ipRequestHistory.size,
-            isUnderAttack: this.isUnderAttack()
-        };
-    }
         const expected = crypto
             .createHmac('sha256', this.secret)
             .update(ip + timestamp)
@@ -125,12 +119,18 @@ class BotProtection {
         this.threshold = threshold;
     }
 
+    setPerIpLimit(limit) {
+        this.perIpLimit = limit;
+    }
+
     getStats() {
         return {
             enabled: this.enabled,
             threshold: this.threshold,
+            perIpLimit: this.perIpLimit,
             requestsPerSecond: this.requestsPerSecond,
             verifiedIPs: this.verifiedIPs.size,
+            trackedIPs: this.ipRequestHistory.size,
             isUnderAttack: this.isUnderAttack()
         };
     }
