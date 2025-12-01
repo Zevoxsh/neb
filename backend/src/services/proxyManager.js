@@ -432,6 +432,20 @@ class ProxyManager {
             req.connection?.remoteAddress ||
             req.socket?.remoteAddress);
 
+          // Serve challenge page
+          if (req.url === '/challenge.html') {
+            const fs = require('fs');
+            const path = require('path');
+            const challengePath = path.join(__dirname, '..', '..', 'public', 'challenge.html');
+            
+            if (fs.existsSync(challengePath)) {
+              const html = fs.readFileSync(challengePath, 'utf8');
+              res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+              res.end(html);
+              return;
+            }
+          }
+
           // Handle challenge verification
           if (req.url === '/verify-challenge' && req.method === 'POST') {
             let body = '';
@@ -497,9 +511,23 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
             
             if (challengeStatus) {
               botProtection.generateChallenge(clientIp);
-              // Redirect to challenge page
-              res.writeHead(302, { 'Location': '/challenge.html' });
-              res.end();
+              // Serve challenge page directly
+              const fs = require('fs');
+              const path = require('path');
+              const challengePath = path.join(__dirname, '..', '..', 'public', 'challenge.html');
+              
+              if (fs.existsSync(challengePath)) {
+                const html = fs.readFileSync(challengePath, 'utf8');
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(html);
+              } else {
+                // Fallback inline HTML if file not found
+                const fallbackHtml = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Vérification</title></head>
+<body><h1>Challenge requis</h1><p>Veuillez accéder à /challenge.html</p></body></html>`;
+                res.writeHead(503, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(fallbackHtml);
+              }
               return;
             }
           }
