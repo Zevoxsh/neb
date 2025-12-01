@@ -109,11 +109,9 @@ class BotProtection {
         
         // Check burst protection (10 requests in 10 seconds)
         if (requestsInLast10Sec > this.burstLimit) {
-            console.log(`[BotProtection] IP ${ip} burst limited: ${requestsInLast10Sec} requests in 10s (limit: ${this.burstLimit})`);
-            
             // Auto-ban if extreme burst (more than 3x the limit)
             if (requestsInLast10Sec > this.burstLimit * 3) {
-                console.log(`[BotProtection] IP ${ip} auto-banned for extreme burst: ${requestsInLast10Sec} req/10s`);
+                console.log(`[BotProtection] 🚫 IP ${ip} auto-banned: burst ${requestsInLast10Sec} req/10s (limit: ${this.burstLimit})`);
                 this.banIP(ip, 600000); // Ban for 10 minutes
             }
             
@@ -160,7 +158,7 @@ class BotProtection {
             if (exceededPercent > 100) {
                 severity = 'critical'; // More than double the limit
                 // Auto-ban for extreme abuse (more than 2x limit)
-                console.log(`[BotProtection] IP ${ip} auto-banned for extreme rate: ${requestsInLastMinute} req/min`);
+                console.log(`[BotProtection] 🚫 IP ${ip} auto-banned: ${requestsInLastMinute} req/min (limit: ${limit})`);
                 this.banIP(ip, 600000); // Ban for 10 minutes
             } else if (exceededPercent > 50) {
                 severity = 'high';
@@ -306,8 +304,6 @@ class BotProtection {
             code += chars.charAt(Math.floor(Math.random() * chars.length));
         }
         
-        console.log(`[BotProtection] Generated new challenge for IP ${ip}: ${code}`);
-        
         // Store challenge
         this.activeChallenges.set(ip, {
             code,
@@ -348,15 +344,9 @@ class BotProtection {
     verifyChallengeAnswer(ip, userInput) {
         const challenge = this.activeChallenges.get(ip);
         
-        console.log(`[BotProtection] Verify challenge - IP: ${ip}, userInput: ${userInput}, hasChallenge: ${!!challenge}`);
-        
         if (!challenge) {
-            console.warn(`[BotProtection] No active challenge for IP ${ip}`);
-            console.log(`[BotProtection] Active challenges:`, Array.from(this.activeChallenges.keys()));
             return { success: false, reason: 'no_challenge' };
         }
-
-        console.log(`[BotProtection] Challenge details - Expected: ${challenge.code}, Received: ${userInput}, Match: ${userInput.toUpperCase() === challenge.code}`);
 
         // Check if challenge is expired (5 minutes)
         const now = Date.now();
@@ -388,7 +378,7 @@ class BotProtection {
         // Success!
         this.activeChallenges.delete(ip);
         this.verifyIP(ip);
-        console.log(`[BotProtection] IP ${ip} passed challenge`);
+        console.log(`[BotProtection] ✓ IP ${ip} verified (challenge passed)`);
         return { success: true };
     }
 

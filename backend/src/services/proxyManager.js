@@ -579,11 +579,6 @@ animation:spin 1s linear infinite;margin:30px auto}
             req.connection?.remoteAddress ||
             req.socket?.remoteAddress
           );
-          
-          // Debug: log IP detection on first request
-          if (!req.url.includes('.css') && !req.url.includes('.js') && !req.url.includes('.png')) {
-            console.log(`[ProxyManager] IP Detection - CF: ${req.headers['cf-connecting-ip']}, Real: ${req.headers['x-real-ip']}, Forwarded: ${req.headers['x-forwarded-for']}, Final: ${clientIp}`);
-          }
 
           // Serve challenge page
           if (req.url === '/challenge.html') {
@@ -594,9 +589,6 @@ animation:spin 1s linear infinite;margin:30px auto}
             let challengeData = botProtection.getActiveChallenge(clientIp);
             if (!challengeData) {
               challengeData = botProtection.generateChallenge(clientIp);
-              console.log(`[ProxyManager-HTTP] New challenge generated for IP ${clientIp}, code: ${challengeData.code}`);
-            } else {
-              console.log(`[ProxyManager-HTTP] Reusing existing challenge for IP ${clientIp}, code: ${challengeData.code}`);
             }
             
             const challengePath = path.join(__dirname, '..', '..', 'public', 'challenge.html');
@@ -712,9 +704,6 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
               let challengeData = botProtection.getActiveChallenge(clientIp);
               if (!challengeData) {
                 challengeData = botProtection.generateChallenge(clientIp);
-                console.log(`[ProxyManager] New challenge generated for IP ${clientIp}, code: ${challengeData.code}`);
-              } else {
-                console.log(`[ProxyManager] Reusing existing challenge for IP ${clientIp}, code: ${challengeData.code}`);
               }
               
               // Serve challenge page directly
@@ -727,7 +716,6 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
                   let html = fs.readFileSync(challengePath, 'utf8');
                   // Inject the challenge code into the HTML
                   html = html.replace('{{CHALLENGE_CODE}}', challengeData.code);
-                  console.log(`[ProxyManager] Challenge HTML loaded (${html.length} bytes)`);
                   res.writeHead(200, { 
                     'Content-Type': 'text/html; charset=utf-8',
                     'Content-Length': Buffer.byteLength(html)

@@ -15,13 +15,16 @@ function isApiRequest(req) {
 function authenticateToken(req, res, next) {
   const token = req.cookies && req.cookies.token;
   if (!token) {
-    try { console.warn('auth: missing token for', req.method, req.originalUrl, 'from', req.ip); } catch(e){}
+    // Only log non-static resources
+    if (!req.originalUrl.match(/\.(css|js|png|jpg|ico|svg|woff|woff2|ttf)$/)) {
+      console.log(`[Auth] 🔐 Missing token: ${req.method} ${req.originalUrl}`);
+    }
     if (isApiRequest(req)) return res.status(401).json({ error: 'Not authenticated' });
     return res.redirect('/login');
   }
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      try { console.warn('auth: invalid token for', req.method, req.originalUrl, 'from', req.ip, 'err=', err && err.message); } catch(e){}
+      console.log(`[Auth] ⚠️ Invalid token: ${req.method} ${req.originalUrl} - ${err.message}`);
       if (isApiRequest(req)) return res.status(401).json({ error: 'Invalid token' });
       return res.redirect('/login');
     }
