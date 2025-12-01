@@ -148,9 +148,153 @@
     if (dashboardState.buttons.daily) {
       dashboardState.buttons.daily.addEventListener('click', () => setDashboardViewMode('24h'));
     }
+    
+    // Initialize Chart.js
+    if (dashboardState.canvas) {
+      const ctx = dashboardState.canvas.getContext('2d');
+      dashboardState.chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Trafic entrant',
+              data: [],
+              borderColor: 'rgba(59, 130, 246, 1)',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              borderWidth: 2,
+              tension: 0.4,
+              fill: true,
+              pointRadius: 0,
+              pointHoverRadius: 4
+            },
+            {
+              label: 'Trafic sortant',
+              data: [],
+              borderColor: 'rgba(168, 85, 247, 1)',
+              backgroundColor: 'rgba(168, 85, 247, 0.1)',
+              borderWidth: 2,
+              tension: 0.4,
+              fill: true,
+              pointRadius: 0,
+              pointHoverRadius: 4
+            },
+            {
+              label: 'Requêtes/s',
+              data: [],
+              borderColor: 'rgba(34, 197, 94, 1)',
+              backgroundColor: 'rgba(34, 197, 94, 0.1)',
+              borderWidth: 2,
+              tension: 0.4,
+              fill: false,
+              pointRadius: 0,
+              pointHoverRadius: 4,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: {
+            duration: 300,
+            easing: 'easeInOutQuart'
+          },
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                color: 'rgba(255, 255, 255, 0.7)',
+                usePointStyle: true,
+                padding: 15,
+                font: {
+                  size: 12
+                }
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              titleColor: 'rgba(255, 255, 255, 1)',
+              bodyColor: 'rgba(255, 255, 255, 0.9)',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              borderWidth: 1,
+              padding: 12,
+              displayColors: true,
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) label += ': ';
+                  if (context.datasetIndex < 2) {
+                    label += formatBytes(context.parsed.y) + '/s';
+                  } else {
+                    label += formatNumber(context.parsed.y) + ' req/s';
+                  }
+                  return label;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                color: 'rgba(255, 255, 255, 0.05)',
+                drawBorder: false
+              },
+              ticks: {
+                color: 'rgba(255, 255, 255, 0.5)',
+                maxTicksLimit: 8,
+                font: {
+                  size: 10
+                }
+              }
+            },
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              grid: {
+                color: 'rgba(255, 255, 255, 0.05)',
+                drawBorder: false
+              },
+              ticks: {
+                color: 'rgba(255, 255, 255, 0.5)',
+                callback: function(value) {
+                  return formatBytes(value) + '/s';
+                },
+                font: {
+                  size: 10
+                }
+              }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              grid: {
+                drawOnChartArea: false
+              },
+              ticks: {
+                color: 'rgba(255, 255, 255, 0.5)',
+                callback: function(value) {
+                  return formatNumber(value);
+                },
+                font: {
+                  size: 10
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
     updateDashboardToggle();
     updateDashboardStats();
-    startDashboardAnimation();
     fetchDashboardMetrics();
     refreshDashboardDomainStats();
   }
@@ -239,98 +383,25 @@
     stats.rps.textContent = `${formatNumber(rpsValue >= 100 ? Math.round(rpsValue) : Number(rpsValue.toFixed(1)))} /s`;
     stats.trafficIn.textContent = `${formatBytes(inValue)}/s`;
     stats.trafficOut.textContent = `${formatBytes(outValue)}/s`;
-  }
-
-  function startDashboardAnimation() {
-    if (dashboardState.animationId || !dashboardState.canvas) return;
-    const loop = () => {
-      renderDashboardChart();
-      dashboardState.animationId = window.requestAnimationFrame(loop);
-    };
-    dashboardState.animationId = window.requestAnimationFrame(loop);
-  }
-
-  function renderDashboardChart() {
-    const canvas = dashboardState.canvas;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    const dpr = window.devicePixelRatio || 1;
-    if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-    }
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, rect.width, rect.height);
-    const data = getDashboardChartData();
-    if (!data.length) {
-      return;
-    }
-    const padding = 20;
-    const width = rect.width - padding * 2;
-    const height = rect.height - padding * 2;
-    const maxValue = Math.max(...data.map(point => Math.max(point.inRate, point.outRate, point.requestsRate || 0)), 1);
-    const stepX = data.length <= 1 ? 0 : width / (data.length - 1);
-    const toX = (index) => padding + (stepX * index);
-    const toY = (value) => padding + (height - (value / maxValue) * height);
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = 1;
-    const gridLines = 4;
-    for (let i = 0; i <= gridLines; i++) {
-      const y = padding + (height / gridLines) * i;
-      ctx.beginPath();
-      ctx.moveTo(padding, y);
-      ctx.lineTo(padding + width, y);
-      ctx.stroke();
-    }
-
-    drawSeries('outRate', 'rgba(255,255,255,0.35)');
-    drawSeries('inRate', 'rgba(255,255,255,0.75)');
-    drawSeries('requestsRate', 'rgba(180,180,180,0.55)');
-    fillInbound();
-
-    function drawSeries(prop, color) {
-      ctx.beginPath();
-      data.forEach((point, idx) => {
-        const x = toX(idx);
-        const y = toY(point[prop]);
-        if (idx === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+    
+    // Update Chart.js
+    if (dashboardState.chart && data.length) {
+      const maxPoints = dashboardState.viewMode === 'realtime' ? 60 : 24;
+      const chartData = data.slice(-maxPoints);
+      
+      dashboardState.chart.data.labels = chartData.map(point => {
+        const date = new Date(point.ts);
+        return dashboardState.viewMode === 'realtime' 
+          ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+          : date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
       });
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-      ctx.stroke();
+      
+      dashboardState.chart.data.datasets[0].data = chartData.map(p => p.inRate);
+      dashboardState.chart.data.datasets[1].data = chartData.map(p => p.outRate);
+      dashboardState.chart.data.datasets[2].data = chartData.map(p => p.requestsRate);
+      
+      dashboardState.chart.update('none');
     }
-
-    function fillInbound() {
-      ctx.beginPath();
-      data.forEach((point, idx) => {
-        const x = toX(idx);
-        const y = toY(point.inRate);
-        if (idx === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.lineTo(padding + width, padding + height);
-      ctx.lineTo(padding, padding + height);
-      ctx.closePath();
-      const gradient = ctx.createLinearGradient(0, padding, 0, padding + height);
-      gradient.addColorStop(0, 'rgba(255,255,255,0.08)');
-      gradient.addColorStop(1, 'rgba(255,255,255,0.0)');
-      ctx.fillStyle = gradient;
-      ctx.fill();
-    }
-  }
-
-  function getDashboardChartData() {
-    const data = dashboardState.metrics || [];
-    const limit = dashboardState.viewMode === 'realtime' ? 90 : 120;
-    return data.slice(-limit);
   }
 
   async function refreshDashboardDomainStats() {
