@@ -384,20 +384,38 @@ class ProxyManager {
         // Redirect logic
         try {
           const hostHeader = req.headers && req.headers.host ? req.headers.host.split(':')[0] : listenHost;
+          
+          // Check and generate SSL certificate BEFORE redirect
           if (hostHeader && !isIpAddress(hostHeader)) {
             const certDir = `/etc/letsencrypt/live/${hostHeader}`;
             const privkey = path.join(certDir, 'privkey.pem');
+            
             if (!fs.existsSync(privkey)) {
               try {
                 const exists = await domainModel.domainExists(hostHeader);
                 if (exists) {
+                  console.log(`[HTTP->HTTPS] Certificate not found for ${hostHeader}, generating before redirect...`);
+                  
                   if (!pm.pendingAcme.has(hostHeader)) {
                     pm.pendingAcme.add(hostHeader);
-                    acmeManager.ensureCert(hostHeader).finally(() => { try { pm.pendingAcme.delete(hostHeader); } catch (e) { } });
+                    try {
+                      // Wait for certificate generation to complete
+                      await acmeManager.ensureCert(hostHeader);
+                      console.log(`[HTTP->HTTPS] Certificate generated for ${hostHeader}`);
+                    } catch (certError) {
+                      console.error(`[HTTP->HTTPS] Failed to generate certificate for ${hostHeader}:`, certError.message);
+                    } finally {
+                      pm.pendingAcme.delete(hostHeader);
+                    }
+                  } else {
+                    console.log(`[HTTP->HTTPS] Certificate generation already in progress for ${hostHeader}, waiting...`);
+                    // Wait a bit for the pending generation
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                   }
-                  // Wait for cert...
                 }
-              } catch (e) { }
+              } catch (e) {
+                console.error(`[HTTP->HTTPS] Error during certificate check/generation:`, e.message);
+              }
             }
           }
 
@@ -540,31 +558,10 @@ class ProxyManager {
                             skipExtensions.some(ext => req.url.includes(ext));
           
           if (!shouldSkip) {
+            botProtection.trackRequest(clientIp);
+            
             // Get domain from Host header
             const domain = req.headers.host ? req.headers.host.split(':')[0] : null;
-            
-            // Generate SSL certificate BEFORE bot challenge verification
-            if (domain) {
-              try {
-                const db = require('../config/db');
-                const certResult = await db.query('SELECT * FROM certificates WHERE domain = $1', [domain]);
-                
-                if (certResult.rows.length === 0) {
-                  console.log(`[ProxyManager] Generating SSL certificate for ${domain} before bot challenge...`);
-                  const acmeManager = require('./acmeManager');
-                  try {
-                    await acmeManager.ensureCert(domain);
-                    console.log(`[ProxyManager] SSL certificate generated for ${domain}`);
-                  } catch (certError) {
-                    console.error(`[ProxyManager] Failed to generate certificate for ${domain}:`, certError.message);
-                  }
-                }
-              } catch (e) {
-                console.error(`[ProxyManager] Error checking certificate:`, e.message);
-              }
-            }
-            
-            botProtection.trackRequest(clientIp);
             
             // Log request asynchronously
             if (domain) {
