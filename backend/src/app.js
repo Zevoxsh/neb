@@ -85,6 +85,8 @@ function createApp() {
   app.get('/settings.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'settings.html')));
   app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'login.html')));
   app.get('/login', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'login.html')));
+  app.get('/domain.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'domain.html')));
+  app.get('/backend.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'backend.html')));
 
   // SPA Fallback: serve the correct top-level page for known client routes so
   // direct links / refresh on deep routes work (e.g. /proxies/3 -> proxies.html)
