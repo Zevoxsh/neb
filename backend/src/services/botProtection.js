@@ -13,6 +13,8 @@ class BotProtection {
         this.verifiedIPs = new Map(); // IP => expiration timestamp
         this.requestCounts = new Map(); // IP => count per second
         this.ipRequestHistory = new Map(); // IP => array of timestamps for rate limiting
+        this.activeConnections = new Map(); // IP => count (pour limiter connexions)
+        this.maxConnectionsPerIP = 100; // Max connexions simultanées par IP
         
         // Strict rate limits
         this.perIpLimit = 60; // Max requests per IP per minute (reduced from 100)
@@ -297,6 +299,7 @@ class BotProtection {
         const timestamp = Date.now();
         
         // Generate a random 6-character code
+        // Utilise uniquement des caractères sûrs (pas de < > & " ')
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         let code = '';
         for (let i = 0; i < 6; i++) {
@@ -465,8 +468,42 @@ class BotProtection {
             trackedIPs: this.ipRequestHistory.size,
             protectedDomains: Array.from(this.protectedDomains),
             unprotectedDomains: Array.from(this.unprotectedDomains),
-            isUnderAttack: this.isUnderAttack()
+            isUnderAttack: this.isUnderAttack(),
+            activeConnections: this.activeConnections ? this.activeConnections.size : 0,
+            maxConnectionsPerIP: this.maxConnectionsPerIP || 100
         };
+    }
+    
+    // Gestion des connexions actives pour prévenir épuisement de ressources
+    trackConnection(ip) {
+        if (!this.activeConnections) this.activeConnections = new Map();
+        if (!this.maxConnectionsPerIP) this.maxConnectionsPerIP = 100;
+        
+        const count = (this.activeConnections.get(ip) || 0) + 1;
+        this.activeConnections.set(ip, count);
+        
+        if (count > this.maxConnectionsPerIP) {
+            console.warn(`[BotProtection] IP ${ip} exceeded max connections: ${count}`);
+            return false; // Refuser la connexion
+        }
+        
+        return true;
+    }
+    
+    releaseConnection(ip) {
+        if (!this.activeConnections) return;
+        
+        const count = (this.activeConnections.get(ip) || 1) - 1;
+        if (count <= 0) {
+            this.activeConnections.delete(ip);
+        } else {
+            this.activeConnections.set(ip, count);
+        }
+    }
+    
+    getActiveConnections(ip) {
+        if (!this.activeConnections) return 0;
+        return this.activeConnections.get(ip) || 0;
     }
 }
 

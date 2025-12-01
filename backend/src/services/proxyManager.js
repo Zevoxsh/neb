@@ -183,15 +183,28 @@ class ProxyManager {
 
   // Add metrics sample. For streaming bytes, requests=0. For a completed request/response, requests=1 and provide latency/status.
   addMetrics(proxyId, bytesIn, bytesOut, requests, latencyMs = 0, statusCode = 0, hostname = null) {
+    const MAX_BUFFER_SIZE = 100000; // 100k entrées max
+    
+    if (this.metricsBuffer.length >= MAX_BUFFER_SIZE) {
+      // Flush immédiat en mode urgence
+      console.warn('Metrics buffer full, forcing flush');
+      setImmediate(() => this.flushMetrics());
+      
+      // Rejeter les nouvelles métriques si le buffer est toujours plein
+      if (this.metricsBuffer.length >= MAX_BUFFER_SIZE) {
+        return; // Drop silently
+      }
+    }
+    
     this.metricsBuffer.push({
       proxy_id: parseInt(proxyId, 10),
       ts: new Date(),
-      bytes_in: bytesIn || 0,
-      bytes_out: bytesOut || 0,
-      requests: requests || 0,
-      latency_ms: latencyMs || 0,
-      status_code: statusCode || 0,
-      hostname: hostname || null
+      bytes_in: Math.min(bytesIn || 0, 2147483647), // Limite INT32
+      bytes_out: Math.min(bytesOut || 0, 2147483647),
+      requests: Math.min(requests || 0, 65535), // Limite UINT16
+      latency_ms: Math.min(latencyMs || 0, 65535),
+      status_code: Math.min(statusCode || 0, 999),
+      hostname: hostname ? String(hostname).slice(0, 255) : null
     });
   }
 
@@ -250,6 +263,14 @@ class ProxyManager {
     if (listenProtocol === 'tcp') {
       // plain TCP passthrough
       const server = net.createServer((clientSocket) => {
+        // Protection contre slowloris
+        clientSocket.setTimeout(30000); // 30 secondes timeout
+        
+        clientSocket.on('timeout', () => {
+          console.warn(`Proxy ${id} - socket timeout from ${normalizeIp(clientSocket.remoteAddress)}`);
+          try { clientSocket.destroy(); } catch (e) { }
+        });
+        
         clientSocket.on('error', (err) => console.error(`Proxy ${id} - client socket error (tcp)`, err));
         const remoteIp = normalizeIp(clientSocket.remoteAddress || '');
         if (pm.isIpBlocked(remoteIp)) {
@@ -261,14 +282,34 @@ class ProxyManager {
         // Record connection immediately
         try { pm.addMetrics(id, 0, 0, 1, 0, 0, null); } catch (e) { }
         pm.trackIpTraffic(remoteIp, 0, 1);
+        
+        // Limite de données par connexion (anti-slowloris)
+        let bytesReceived = 0;
+        const MAX_BYTES = 100 * 1024 * 1024; // 100 MB max
 
         const targetSocket = net.connect({ host: entry.meta.targetHost, port: entry.meta.targetPort }, () => {
           clientSocket.pipe(targetSocket);
           targetSocket.pipe(clientSocket);
         });
+        
+        // Timeout sur backend aussi
+        targetSocket.setTimeout(30000);
+        targetSocket.on('timeout', () => {
+          console.warn(`Proxy ${id} - backend timeout`);
+          try { clientSocket.destroy(); targetSocket.destroy(); } catch (e) { }
+        });
 
         clientSocket.on('data', (c) => {
           const len = c ? c.length : 0;
+          bytesReceived += len;
+          
+          // Détection d\'abus
+          if (bytesReceived > MAX_BYTES) {
+            console.warn(`Proxy ${id} - max bytes exceeded from ${remoteIp}`);
+            try { clientSocket.destroy(); targetSocket.destroy(); } catch (e) { }
+            return;
+          }
+          
           try { pm.addMetrics(id, len, 0, 0, 0, 0, null); } catch (e) { }
           pm.trackIpTraffic(remoteIp, len, 0);
         });
@@ -359,21 +400,37 @@ class ProxyManager {
         try {
           // ACME handling
           if (req.url && req.url.startsWith('/.well-known/acme-challenge/')) {
-            try { pm.addMetrics(id, 0, 0, 1, 0, 200, hostname); } catch (e) { } // Count as success for now
+            try { pm.addMetrics(id, 0, 0, 1, 0, 200, hostname); } catch (e) { }
             const prefix = '/.well-known/acme-challenge/';
             const rest = req.url.slice(prefix.length);
             const token = rest.split('/')[0];
-            if (!token || token.includes('..') || token.includes('/')) {
-              res.writeHead(404); return res.end('Not found');
+            
+            // Validation stricte: alphanumérique, dash, underscore seulement
+            if (!/^[a-zA-Z0-9_-]+$/.test(token) || token.length > 128 || token.length === 0) {
+              res.writeHead(404);
+              return res.end('Not found');
             }
-            const candidate1 = path.join('/var/www/letsencrypt', '.well-known', 'acme-challenge', token);
-            const candidate2 = path.join('/var/www/letsencrypt', token);
+            
+            // Résolution du chemin et vérification qu\'il reste dans le webroot
+            const webroot = '/var/www/letsencrypt';
+            const candidate1 = path.join(webroot, '.well-known', 'acme-challenge', token);
+            const candidate2 = path.join(webroot, token);
+            
+            // Vérifier que les chemins résolus restent dans webroot
+            const resolvedWebroot = path.resolve(webroot);
+            const resolved1 = path.resolve(candidate1);
+            const resolved2 = path.resolve(candidate2);
+            
             let webrootPath = null;
-            if (fs.existsSync(candidate1)) webrootPath = candidate1;
-            else if (fs.existsSync(candidate2)) webrootPath = candidate2;
+            if (resolved1.startsWith(resolvedWebroot) && fs.existsSync(candidate1)) {
+              webrootPath = candidate1;
+            } else if (resolved2.startsWith(resolvedWebroot) && fs.existsSync(candidate2)) {
+              webrootPath = candidate2;
+            }
 
             if (!webrootPath) {
-              res.writeHead(404); return res.end('Not found');
+              res.writeHead(404);
+              return res.end('Not found');
             }
             const stream = fs.createReadStream(webrootPath);
             res.writeHead(200, { 'Content-Type': 'text/plain' });

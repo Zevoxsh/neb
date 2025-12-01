@@ -37,17 +37,47 @@ router.get('/challenge.html', asyncHandler(async (req, res) => {
     res.send(html);
 }));
 
+// Rate limiting pour vérification challenge
+const verifyAttempts = new Map();
+
+// Nettoyage périodique
+setInterval(() => {
+    const now = Date.now();
+    for (const [ip, data] of verifyAttempts.entries()) {
+        if (data.resetAt < now) {
+            verifyAttempts.delete(ip);
+        }
+    }
+}, 60000);
+
 // Verify challenge
 router.post('/verify-challenge', asyncHandler(async (req, res) => {
     const { solution, userInput } = req.body;
     const ip = getClientIp(req);
+    const now = Date.now();
+    
+    // Rate limiting: max 5 tentatives par minute
+    let attempts = verifyAttempts.get(ip);
+    if (!attempts || attempts.resetAt < now) {
+        attempts = { count: 0, resetAt: now + 60000 };
+        verifyAttempts.set(ip, attempts);
+    }
+    
+    if (attempts.count >= 5) {
+        logger.warn('Too many verification attempts', { ip, count: attempts.count });
+        return res.status(429).json({ 
+            error: 'Trop de tentatives. Réessayez dans 1 minute.',
+            retryAfter: Math.ceil((attempts.resetAt - now) / 1000)
+        });
+    }
+    
+    attempts.count++;
 
     logger.info('Challenge verification request', { 
         ip, 
         userInput, 
         solution,
-        body: req.body,
-        headers: req.headers['x-forwarded-for'] || req.connection.remoteAddress
+        attempts: attempts.count
     });
 
     // Verify the CAPTCHA answer
@@ -131,7 +161,24 @@ router.post('/api/bot-protection/verification-duration', asyncHandler(async (req
 
 // Add protected domain
 router.post('/api/bot-protection/protected-domains/add', asyncHandler(async (req, res) => {
-    const { domain } = req.body;
+    const rawDomain = req.body.domain;
+    
+    // Validation stricte du domaine
+    if (!rawDomain || typeof rawDomain !== 'string') {
+        return res.status(400).json({ error: 'Domain required' });
+    }
+    
+    const domain = rawDomain.trim().toLowerCase();
+    
+    // Validation format de domaine (RFC 1035)
+    if (!/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i.test(domain)) {
+        return res.status(400).json({ error: 'Invalid domain format' });
+    }
+    
+    // Limite de longueur
+    if (domain.length > 253) {
+        return res.status(400).json({ error: 'Domain too long (max 253 characters)' });
+    }
     
     // First, generate SSL certificate for the domain
     try {

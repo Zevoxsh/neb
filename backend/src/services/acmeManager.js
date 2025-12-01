@@ -1,7 +1,6 @@
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 // ACME manager that calls certbot in webroot mode to obtain certificates.
 // Uses the webroot at /var/www/letsencrypt so the Node proxy can serve HTTP-01
@@ -113,20 +112,34 @@ function runCmd(cmd, opts = {}) {
 
 async function ensureCert(domain) {
   if (!domain || typeof domain !== 'string') return;
-  if (isIpAddress(domain)) {
-    console.log(`acmeManager: skipping certificate request for IP address ${domain}`);
+  
+  // Validation stricte du domaine pour prévenir command injection
+  const cleanDomain = String(domain).trim().toLowerCase();
+  
+  if (!/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i.test(cleanDomain)) {
+    console.error(`acmeManager: invalid domain format: ${domain}`);
     return;
   }
-  if (isLocalDomain(domain)) {
-    console.log(`acmeManager: skipping certificate request for local domain ${domain}`);
+  
+  if (cleanDomain.length > 253) {
+    console.error(`acmeManager: domain too long: ${domain}`);
     return;
   }
-  if (running.has(domain)) return;
-  running.add(domain);
+  
+  if (isIpAddress(cleanDomain)) {
+    console.log(`acmeManager: skipping certificate request for IP address ${cleanDomain}`);
+    return;
+  }
+  if (isLocalDomain(cleanDomain)) {
+    console.log(`acmeManager: skipping certificate request for local domain ${cleanDomain}`);
+    return;
+  }
+  if (running.has(cleanDomain)) return;
+  running.add(cleanDomain);
   try {
-    if (certFilesExist(domain) && !certExpiresSoon(domain)) {
-      console.log(`acmeManager: cert for ${domain} already exists and is valid`);
-      running.delete(domain);
+    if (certFilesExist(cleanDomain) && !certExpiresSoon(cleanDomain)) {
+      console.log(`acmeManager: cert for ${cleanDomain} already exists and is valid`);
+      running.delete(cleanDomain);
       return;
     }
 
@@ -134,59 +147,85 @@ async function ensureCert(domain) {
       throw new Error('ACME_EMAIL not set in environment');
     }
 
-    console.log(`acmeManager: requesting certificate for ${domain} via certbot (webroot)`);
+    console.log(`acmeManager: requesting certificate for ${cleanDomain} via certbot (webroot)`);
 
     // Ensure webroot exists and is writable
-    // Use a local directory for webroot on Windows/Dev, or /var/www/letsencrypt on Linux
     const isWindows = process.platform === 'win32';
     const webroot = isWindows ? path.join(__dirname, '..', '..', 'letsencrypt') : '/var/www/letsencrypt';
 
     try { if (!fs.existsSync(webroot)) fs.mkdirSync(webroot, { recursive: true, mode: 0o755 }); } catch (e) { console.error('acmeManager: failed to create webroot', e); }
 
-    // run certbot in webroot mode (no need to stop node)
     const os = require('os');
-    const logFile = path.join(os.tmpdir(), `acme-${domain}.log`);
+    const logFile = path.join(os.tmpdir(), `acme-${cleanDomain}.log`);
 
-    // Construct command carefully for cross-platform compatibility
-    // Note: certbot must be in PATH. On Windows, redirection >> might need shell: true option in exec.
-    const cmd = `certbot certonly --webroot -w "${webroot}" -d ${domain} --agree-tos --non-interactive -m ${ACME_EMAIL} > "${logFile}" 2>&1`;
-
-    try {
-      const res = await runCmd(cmd, { shell: true }); // shell: true is important for redirection
-      console.log('acmeManager: certbot output logged to', logFile);
-    } catch (err) {
-      // If certbot failed, include the log file contents to aid debugging
-      console.error('acmeManager: certbot failed; see log:', logFile);
-      try {
-        if (fs.existsSync(logFile)) {
-          const logContent = fs.readFileSync(logFile, 'utf8');
-          // Show last 1000 chars
-          console.error('acmeManager: certbot log (tail):\n', logContent.slice(-1000));
+    // Utiliser spawn au lieu de exec pour éviter shell injection
+    await new Promise((resolve, reject) => {
+      const args = [
+        'certonly',
+        '--webroot',
+        '-w', webroot,
+        '-d', cleanDomain,
+        '--agree-tos',
+        '--non-interactive',
+        '-m', ACME_EMAIL
+      ];
+      
+      const proc = spawn('certbot', args, {
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+      
+      const logStream = fs.createWriteStream(logFile);
+      proc.stdout.pipe(logStream);
+      proc.stderr.pipe(logStream);
+      
+      let stderr = '';
+      proc.stderr.on('data', d => stderr += d);
+      
+      proc.on('close', code => {
+        logStream.end();
+        if (code === 0) {
+          console.log('acmeManager: certbot output logged to', logFile);
+          resolve();
+        } else {
+          console.error('acmeManager: certbot failed; see log:', logFile);
+          try {
+            if (fs.existsSync(logFile)) {
+              const logContent = fs.readFileSync(logFile, 'utf8');
+              console.error('acmeManager: certbot log (tail):\n', logContent.slice(-1000));
+            }
+          } catch (e) { }
+          reject(new Error(`certbot failed with code ${code}: ${stderr}`));
         }
-      } catch (e) { }
-      throw err;
-    }
+      });
+      
+      proc.on('error', (err) => {
+        console.error('acmeManager: failed to spawn certbot:', err);
+        reject(err);
+      });
+      
+      // Timeout de sécurité (2 minutes max)
+      setTimeout(() => {
+        proc.kill('SIGTERM');
+        reject(new Error('certbot timeout after 2 minutes'));
+      }, 120000);
+    });
 
     // Wait a bit for files to appear
-    const dir = path.join(CERT_DIR, domain);
+    const dir = path.join(CERT_DIR, cleanDomain);
     let found = false;
     for (let i = 0; i < 30; i++) {
       if (fs.existsSync(path.join(dir, 'fullchain.pem')) && fs.existsSync(path.join(dir, 'privkey.pem'))) { found = true; break; }
       await new Promise(r => setTimeout(r, 1000));
     }
     if (!found) {
-      console.error(`acmeManager: certificate for ${domain} not found after certbot run; check ${logFile}`);
+      console.error(`acmeManager: certificate for ${cleanDomain} not found after certbot run; check ${logFile}`);
     } else {
-      console.log(`acmeManager: certificate for ${domain} obtained`);
+      console.log(`acmeManager: certificate for ${cleanDomain} obtained`);
     }
   } catch (e) {
-    console.error('acmeManager.ensureCert error', e && e.err ? e.err : e);
+    console.error('acmeManager.ensureCert error', e && e.message ? e.message : e);
   } finally {
-    running.delete(domain);
-    // Do NOT restart Node automatically here. The proxy loads new certificates
-    // dynamically via SNI callback; restarting the whole process caused SSH/VSCode
-    // disruptions in this environment. If you prefer an automatic restart, add
-    // a controlled deploy/renew hook that safely restarts the service.
+    running.delete(cleanDomain);
   }
 }
 

@@ -64,8 +64,21 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
             
             if (fs.existsSync(challengePath)) {
                 let html = fs.readFileSync(challengePath, 'utf8');
-                // Inject the challenge code into the HTML
-                html = html.replace('{{CHALLENGE_CODE}}', challengeData.code);
+                
+                // Protection XSS : échapper le code avant injection
+                const escapeHtml = (str) => {
+                    return String(str).replace(/[&<>"']/g, char => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#39;'
+                    })[char]);
+                };
+                
+                const safeCode = escapeHtml(challengeData.code);
+                html = html.replace('{{CHALLENGE_CODE}}', safeCode);
+                
                 res.writeHead(200, { 
                     'Content-Type': 'text/html; charset=utf-8',
                     'Content-Length': Buffer.byteLength(html)
