@@ -9,7 +9,7 @@ async function setVaultUnprotected() {
     try {
         // Mettre vault.paxcia.net en mode unprotected
         const result = await db.query(
-            `UPDATE domains 
+            `UPDATE domain_mappings 
              SET bot_protection = 'unprotected' 
              WHERE hostname = $1`,
             ['vault.paxcia.net']
@@ -22,7 +22,7 @@ async function setVaultUnprotected() {
             
             // Vérifier si le domaine existe
             const check = await db.query(
-                'SELECT hostname, bot_protection FROM domains WHERE hostname LIKE $1',
+                'SELECT hostname, bot_protection FROM domain_mappings WHERE hostname LIKE $1',
                 ['%vault%']
             );
             
@@ -36,7 +36,7 @@ async function setVaultUnprotected() {
         // Afficher tous les domaines paxcia.net
         const paxciaDomains = await db.query(
             `SELECT hostname, bot_protection 
-             FROM domains 
+             FROM domain_mappings 
              WHERE hostname LIKE '%paxcia.net' 
              ORDER BY hostname`
         );
