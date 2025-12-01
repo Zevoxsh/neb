@@ -516,15 +516,30 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
               const path = require('path');
               const challengePath = path.join(__dirname, '..', '..', 'public', 'challenge.html');
               
+              console.log(`[ProxyManager] Serving challenge to IP ${clientIp}, file path: ${challengePath}`);
+              
               if (fs.existsSync(challengePath)) {
-                const html = fs.readFileSync(challengePath, 'utf8');
-                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-                res.end(html);
+                try {
+                  const html = fs.readFileSync(challengePath, 'utf8');
+                  console.log(`[ProxyManager] Challenge HTML loaded (${html.length} bytes)`);
+                  res.writeHead(200, { 
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Content-Length': Buffer.byteLength(html)
+                  });
+                  res.end(html);
+                } catch (e) {
+                  console.error('[ProxyManager] Error reading challenge file:', e);
+                  res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
+                  res.end('<h1>Error loading challenge</h1>');
+                }
               } else {
+                console.warn(`[ProxyManager] Challenge file not found at ${challengePath}`);
                 // Fallback inline HTML if file not found
                 const fallbackHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Vérification</title></head>
-<body><h1>Challenge requis</h1><p>Veuillez accéder à /challenge.html</p></body></html>`;
+<body style="font-family:sans-serif;padding:50px;text-align:center">
+<h1>Challenge requis</h1>
+<p>Fichier challenge.html non trouvé: ${challengePath}</p></body></html>`;
                 res.writeHead(503, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end(fallbackHtml);
               }
