@@ -429,7 +429,7 @@ class ProxyManager {
       const https = require('https');
       const selfsigned = require('selfsigned');
 
-      const forwardRequest = (req, res) => {
+      const forwardRequest = async (req, res) => {
         const startTime = Date.now();
         const hostname = req.headers && req.headers.host ? req.headers.host.split(':')[0] : null;
         
@@ -540,10 +540,31 @@ class ProxyManager {
                             skipExtensions.some(ext => req.url.includes(ext));
           
           if (!shouldSkip) {
-            botProtection.trackRequest(clientIp);
-            
             // Get domain from Host header
             const domain = req.headers.host ? req.headers.host.split(':')[0] : null;
+            
+            // Generate SSL certificate BEFORE bot challenge verification
+            if (domain) {
+              try {
+                const db = require('../config/db');
+                const certResult = await db.query('SELECT * FROM certificates WHERE domain = $1', [domain]);
+                
+                if (certResult.rows.length === 0) {
+                  console.log(`[ProxyManager] Generating SSL certificate for ${domain} before bot challenge...`);
+                  const acmeManager = require('./acmeManager');
+                  try {
+                    await acmeManager.requestCertificate(domain);
+                    console.log(`[ProxyManager] SSL certificate generated for ${domain}`);
+                  } catch (certError) {
+                    console.error(`[ProxyManager] Failed to generate certificate for ${domain}:`, certError.message);
+                  }
+                }
+              } catch (e) {
+                console.error(`[ProxyManager] Error checking certificate:`, e.message);
+              }
+            }
+            
+            botProtection.trackRequest(clientIp);
             
             // Log request asynchronously
             if (domain) {

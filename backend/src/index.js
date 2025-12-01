@@ -230,20 +230,47 @@ async function initDbAndStart() {
       console.error('Failed to load security config', e);
     }
 
-    // Load bot protection domain lists
+    // Load bot protection domain lists and generate SSL certificates
     try {
       const botProtection = require('./services/botProtection');
       const domainModel = require('./models/domainModel');
+      const db = require('./config/db');
       const domains = await domainModel.listDomainMappings();
       
-      domains.forEach(d => {
+      for (const d of domains) {
         const protection = d.bot_protection || 'default';
+        
+        // Check if domain needs SSL certificate (protected or unprotected)
+        if (protection === 'protected' || protection === 'unprotected') {
+          try {
+            // Check if certificate exists
+            const certResult = await db.query(
+              'SELECT * FROM certificates WHERE domain = $1',
+              [d.hostname]
+            );
+            
+            if (certResult.rows.length === 0) {
+              // Certificate doesn't exist, generate it
+              console.log(`[Init] Generating SSL certificate for domain: ${d.hostname}`);
+              try {
+                await acmeManager.requestCertificate(d.hostname);
+                console.log(`[Init] SSL certificate generated for: ${d.hostname}`);
+              } catch (certError) {
+                console.error(`[Init] Failed to generate certificate for ${d.hostname}:`, certError.message);
+              }
+            }
+          } catch (certCheckError) {
+            console.error(`[Init] Error checking certificate for ${d.hostname}:`, certCheckError.message);
+          }
+        }
+        
+        // Add to bot protection lists
         if (protection === 'protected') {
           botProtection.addProtectedDomain(d.hostname);
         } else if (protection === 'unprotected') {
           botProtection.addUnprotectedDomain(d.hostname);
         }
-      });
+      }
       
       console.log('Loaded bot protection domain lists');
     } catch (e) {
