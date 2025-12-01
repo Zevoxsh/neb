@@ -510,17 +510,19 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
             }
             
             if (challengeStatus) {
-              botProtection.generateChallenge(clientIp);
+              const challengeData = botProtection.generateChallenge(clientIp);
               // Serve challenge page directly
               const fs = require('fs');
               const path = require('path');
               const challengePath = path.join(__dirname, '..', '..', 'public', 'challenge.html');
               
-              console.log(`[ProxyManager] Serving challenge to IP ${clientIp}, file path: ${challengePath}`);
+              console.log(`[ProxyManager] Serving challenge to IP ${clientIp}, code: ${challengeData.code}`);
               
               if (fs.existsSync(challengePath)) {
                 try {
-                  const html = fs.readFileSync(challengePath, 'utf8');
+                  let html = fs.readFileSync(challengePath, 'utf8');
+                  // Inject the challenge code into the HTML
+                  html = html.replace('{{CHALLENGE_CODE}}', challengeData.code);
                   console.log(`[ProxyManager] Challenge HTML loaded (${html.length} bytes)`);
                   res.writeHead(200, { 
                     'Content-Type': 'text/html; charset=utf-8',
