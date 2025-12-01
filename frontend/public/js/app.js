@@ -397,15 +397,26 @@
   async function initDomainsPage() {
     await populateDomainSelects();
     await loadDomains();
-    const form = document.getElementById('createDomainForm');
-    if (form) form.addEventListener('submit', createDomainFromForm);
+    const createForm = document.getElementById('createDomainForm');
+    const editForm = document.getElementById('editDomainForm');
+    if (createForm) createForm.addEventListener('submit', createDomainFromForm);
+    if (editForm) editForm.addEventListener('submit', updateDomainFromForm);
 
     document.addEventListener('click', async (ev) => {
       if ((document.body.dataset.page || '') !== 'domains') return;
-      const btn = ev.target.closest && ev.target.closest('.delete-domain');
-      if (!btn || !btn.dataset.id) return;
+      
+      // Handle edit button
+      const editBtn = ev.target.closest && ev.target.closest('.edit-domain');
+      if (editBtn && editBtn.dataset.id) {
+        await openEditDomainPanel(editBtn.dataset.id);
+        return;
+      }
+      
+      // Handle delete button
+      const deleteBtn = ev.target.closest && ev.target.closest('.delete-domain');
+      if (!deleteBtn || !deleteBtn.dataset.id) return;
       if (!confirm('Supprimer ce domaine ?')) return;
-      const res = await window.api.requestJson(`/api/domains/${btn.dataset.id}`, { method: 'DELETE' });
+      const res = await window.api.requestJson(`/api/domains/${deleteBtn.dataset.id}`, { method: 'DELETE' });
       if (res && (res.status === 200 || res.status === 204)) {
         showToast('Domaine supprime');
         await loadDomains();
@@ -854,12 +865,32 @@
         const backendLabel = backend
           ? `${escapeHtml(backend.name || '')} (${escapeHtml(backend.targetHost || backend.target_host || '')}:${backend.targetPort || backend.target_port})`
           : `${escapeHtml(d.target_host || '')}:${d.target_port || ''}`;
+        
+        // Bot protection status
+        const botProtection = d.bot_protection || 'default';
+        let protectionBadge = '';
+        let protectionText = '';
+        if (botProtection === 'protected') {
+          protectionBadge = 'warning';
+          protectionText = '🔒 Protégé';
+        } else if (botProtection === 'unprotected') {
+          protectionBadge = 'success';
+          protectionText = '✓ Ouvert';
+        } else {
+          protectionBadge = 'muted';
+          protectionText = 'Par défaut';
+        }
+        
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${escapeHtml(d.hostname || '')}</strong></td>
           <td>${proxy ? escapeHtml(proxy.name || '') : `Proxy #${d.proxy_id}`}</td>
           <td>${backendLabel}</td>
-          <td><button class="btn ghost small delete-domain" data-id="${d.id}">Supprimer</button></td>
+          <td><span class="status-badge ${protectionBadge}"><span class="status-dot"></span>${protectionText}</span></td>
+          <td>
+            <button class="btn ghost small edit-domain" data-id="${d.id}">Modifier</button>
+            <button class="btn ghost small delete-domain" data-id="${d.id}">Supprimer</button>
+          </td>
         `;
         tbody.appendChild(tr);
       });
@@ -1002,6 +1033,120 @@
     } catch (e) {
       console.error('[Domains] Create error:', e);
       showToast('Creation impossible', 'error');
+    }
+  }
+
+  async function openEditDomainPanel(domainId) {
+    try {
+      const res = await window.api.requestJson('/api/domains');
+      if (!res || res.status !== 200) throw new Error('Failed to load domains');
+      const domains = Array.isArray(res.body) ? res.body : [];
+      const domain = domains.find(d => String(d.id) === String(domainId));
+      if (!domain) {
+        showToast('Domaine introuvable', 'error');
+        return;
+      }
+      
+      // Populate edit selects
+      const editProxySelect = document.getElementById('editDomainProxySelect');
+      const editBackendSelect = document.getElementById('editDomainBackendSelect');
+      if (editProxySelect && editBackendSelect) {
+        editProxySelect.innerHTML = '';
+        editBackendSelect.innerHTML = '<option value="">Selectionner...</option>';
+        
+        const proxies = cache.proxies.length ? cache.proxies : await fetchAndCache('/api/proxies', 'proxies');
+        const backends = cache.backends.length ? cache.backends : await fetchAndCache('/api/backends', 'backends');
+        
+        proxies.forEach((p) => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = `${p.name} (${p.listen_host}:${p.listen_port})`;
+          editProxySelect.appendChild(opt);
+        });
+        
+        backends.forEach((b) => {
+          const opt = document.createElement('option');
+          opt.value = b.id;
+          opt.textContent = `${b.name} (${b.target_host}:${b.target_port})`;
+          editBackendSelect.appendChild(opt);
+        });
+      }
+      
+      // Fill form with domain data
+      document.getElementById('editDomainId').value = domain.id;
+      document.getElementById('editDomainHostname').value = domain.hostname;
+      document.getElementById('editDomainProxySelect').value = domain.proxy_id;
+      document.getElementById('editDomainBackendSelect').value = domain.backend_id;
+      document.getElementById('editDomainBotProtection').value = domain.bot_protection || 'default';
+      
+      togglePanel('editDomainPanel', true);
+    } catch (e) {
+      console.error('[Domains] Failed to open edit panel:', e);
+      showToast('Erreur lors du chargement', 'error');
+    }
+  }
+
+  async function updateDomainFromForm(ev) {
+    ev.preventDefault();
+    const form = ev.target;
+    const payload = formDataToObject(new FormData(form));
+    const domainId = payload.id;
+    
+    if (!payload.backendId) {
+      showToast('Choisissez un backend', 'error');
+      return;
+    }
+    
+    const botProtection = payload.botProtection || 'default';
+    const hostname = payload.hostname;
+    delete payload.id;
+    delete payload.botProtection;
+    
+    try {
+      const res = await window.api.requestJson(`/api/domains/${domainId}`, { 
+        method: 'PUT', 
+        body: { ...payload, botProtection }
+      });
+      
+      if (res && (res.status === 200 || res.status === 201)) {
+        // Update bot protection lists
+        // First remove from both lists
+        try {
+          await window.api.requestJson('/api/bot-protection/protected-domains/remove', {
+            method: 'POST',
+            body: { domain: hostname }
+          });
+          await window.api.requestJson('/api/bot-protection/unprotected-domains/remove', {
+            method: 'POST',
+            body: { domain: hostname }
+          });
+        } catch (e) {
+          // Ignore errors for removal
+        }
+        
+        // Then add to appropriate list
+        if (botProtection === 'protected') {
+          await window.api.requestJson('/api/bot-protection/protected-domains/add', {
+            method: 'POST',
+            body: { domain: hostname }
+          });
+        } else if (botProtection === 'unprotected') {
+          await window.api.requestJson('/api/bot-protection/unprotected-domains/add', {
+            method: 'POST',
+            body: { domain: hostname }
+          });
+        }
+        
+        showToast('Domaine mis à jour');
+        form.reset();
+        await loadDomains();
+        togglePanel('editDomainPanel', false);
+      } else {
+        showToast('Mise à jour impossible', 'error');
+      }
+    } catch (e) {
+      console.error('[Domains] Update error:', e);
+      showToast('Mise à jour impossible', 'error');
     }
   }
 
