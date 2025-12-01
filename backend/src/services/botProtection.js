@@ -109,6 +109,12 @@ class BotProtection {
         if (requestsInLast10Sec > this.burstLimit) {
             console.log(`[BotProtection] IP ${ip} burst limited: ${requestsInLast10Sec} requests in 10s (limit: ${this.burstLimit})`);
             
+            // Auto-ban if extreme burst (more than 3x the limit)
+            if (requestsInLast10Sec > this.burstLimit * 3) {
+                console.log(`[BotProtection] IP ${ip} auto-banned for extreme burst: ${requestsInLast10Sec} req/10s`);
+                this.banIP(ip, 600000); // Ban for 10 minutes
+            }
+            
             // Create alert for burst attack
             const alertService = require('./alertService');
             alertService.createSecurityAlert({
@@ -151,6 +157,9 @@ class BotProtection {
             
             if (exceededPercent > 100) {
                 severity = 'critical'; // More than double the limit
+                // Auto-ban for extreme abuse (more than 2x limit)
+                console.log(`[BotProtection] IP ${ip} auto-banned for extreme rate: ${requestsInLastMinute} req/min`);
+                this.banIP(ip, 600000); // Ban for 10 minutes
             } else if (exceededPercent > 50) {
                 severity = 'high';
             }
