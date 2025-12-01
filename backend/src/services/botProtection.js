@@ -19,7 +19,7 @@ class BotProtection {
         // Strict rate limits
         this.perIpLimit = 60; // Max requests per IP per minute (reduced from 100)
         this.perIpLimitProtected = 30; // Max requests per IP per minute for protected domains
-        this.verifiedIpLimit = 120; // Higher limit for verified IPs
+        this.verifiedIpLimit = 600; // Higher limit for verified IPs (10 req/s)
         this.burstLimit = 10; // Max requests in 10 seconds
         
         this.challengeFirstVisit = false; // DISABLED by default - only on proxy HTTPS
