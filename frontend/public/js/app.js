@@ -1117,127 +1117,6 @@
     }
   }
 
-  async function loadDomainCertificate() {
-    const hostnameField = document.getElementById('editDomainHostname');
-    if (!hostnameField) return;
-    
-    const hostname = hostnameField.value;
-    if (!hostname) return;
-
-    const certInfo = document.getElementById('domainCertInfo');
-    const certEmpty = document.getElementById('domainCertEmpty');
-    
-    if (!certInfo || !certEmpty) return;
-    
-    try {
-      const res = await window.api.requestJson('/api/certificates');
-      if (!res || res.status !== 200) throw new Error('loadCerts');
-      const certs = Array.isArray(res.body) ? res.body : [];
-      const cert = certs.find(c => c.hostname === hostname);
-      
-      if (cert) {
-        const status = (cert.status || '').toLowerCase();
-        let badge = 'muted';
-        let statusText = cert.status || 'inconnu';
-        if (status.includes('valid')) badge = 'success';
-        else if (status.includes('pending')) badge = 'warning';
-        
-        const validUntil = cert.valid_until ? new Date(cert.valid_until).toLocaleString() : 'N/A';
-        
-        document.getElementById('domainCertStatus').innerHTML = 
-          `<span class="status-badge ${badge}"><span class="status-dot"></span>${escapeHtml(statusText)}</span>`;
-        document.getElementById('domainCertExpiry').textContent = validUntil;
-        
-        certInfo.hidden = false;
-        certEmpty.hidden = true;
-      } else {
-        certInfo.hidden = true;
-        certEmpty.hidden = false;
-      }
-    } catch (e) {
-      console.error('[Domain Cert] Failed to load:', e);
-      certInfo.hidden = true;
-      certEmpty.hidden = false;
-    }
-  }
-
-  function openDomainCertRequest() {
-    const hostname = document.getElementById('editDomainHostname').value;
-    document.getElementById('certRequestDomain').value = hostname;
-    document.getElementById('certRequestDomainDisplay').value = hostname;
-    togglePanel('domainCertRequestPanel', true);
-  }
-
-  function openDomainCertImport() {
-    const hostname = document.getElementById('editDomainHostname').value;
-    document.getElementById('certImportDomain').value = hostname;
-    document.getElementById('certImportDomainDisplay').value = hostname;
-    togglePanel('domainCertImportPanel', true);
-  }
-
-  async function requestDomainCertificate(ev) {
-    ev.preventDefault();
-    const form = ev.target;
-    const payload = formDataToObject(new FormData(form));
-    
-    try {
-      const res = await window.api.requestJson('/api/certificates/request', { method: 'POST', body: payload });
-      if (res && (res.status === 200 || res.status === 201)) {
-        showToast('Demande de certificat lancée');
-        form.reset();
-        togglePanel('domainCertRequestPanel', false);
-        await loadDomainCertificate();
-      } else {
-        showToast('Demande impossible', 'error');
-      }
-    } catch (e) {
-      console.error('[Domain Cert] Request error:', e);
-      showToast('Demande impossible', 'error');
-    }
-  }
-
-  async function importDomainCertificate(ev) {
-    ev.preventDefault();
-    const form = ev.target;
-    const payload = formDataToObject(new FormData(form));
-    
-    try {
-      const res = await window.api.requestJson('/api/certificates/manual', { method: 'POST', body: payload });
-      if (res && (res.status === 200 || res.status === 201)) {
-        showToast('Certificat importé');
-        form.reset();
-        togglePanel('domainCertImportPanel', false);
-        await loadDomainCertificate();
-      } else {
-        showToast('Import impossible', 'error');
-      }
-    } catch (e) {
-      console.error('[Domain Cert] Import error:', e);
-      showToast('Import impossible', 'error');
-    }
-  }
-
-  async function renewDomainCertificate() {
-    const hostname = document.getElementById('editDomainHostname').value;
-    if (!confirm(`Renouveler le certificat pour "${hostname}" ?`)) return;
-    
-    try {
-      const res = await window.api.requestJson('/api/certificates/renew', { 
-        method: 'POST', 
-        body: { domain: hostname } 
-      });
-      if (res && (res.status === 200 || res.status === 201)) {
-        showToast('Renouvellement lancé');
-        await loadDomainCertificate();
-      } else {
-        showToast('Renouvellement impossible', 'error');
-      }
-    } catch (e) {
-      console.error('[Domain Cert] Renew error:', e);
-      showToast('Renouvellement impossible', 'error');
-    }
-  }
-
   async function loadDomainDetail() {
     const urlParams = new URLSearchParams(window.location.search);
     const domainId = urlParams.get('id');
@@ -1531,7 +1410,6 @@
 
   async function initDomainDetail() {
     await loadDomainDetail();
-    await loadDomainCertificate();
     
     const saveBtn = document.getElementById('btnSaveDomain');
     if (saveBtn) {
@@ -1541,31 +1419,6 @@
     const deleteBtn = document.getElementById('btnDeleteDomain');
     if (deleteBtn) {
       deleteBtn.addEventListener('click', deleteDomainDetail);
-    }
-
-    const requestCertBtn = document.getElementById('btnRequestCert');
-    if (requestCertBtn) {
-      requestCertBtn.addEventListener('click', openDomainCertRequest);
-    }
-
-    const importCertBtn = document.getElementById('btnImportCert');
-    if (importCertBtn) {
-      importCertBtn.addEventListener('click', openDomainCertImport);
-    }
-
-    const renewCertBtn = document.getElementById('btnRenewDomainCert');
-    if (renewCertBtn) {
-      renewCertBtn.addEventListener('click', renewDomainCertificate);
-    }
-
-    const certRequestForm = document.getElementById('domainCertRequestForm');
-    if (certRequestForm) {
-      certRequestForm.addEventListener('submit', requestDomainCertificate);
-    }
-
-    const certImportForm = document.getElementById('domainCertImportForm');
-    if (certImportForm) {
-      certImportForm.addEventListener('submit', importDomainCertificate);
     }
   }
 
