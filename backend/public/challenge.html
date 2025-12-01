@@ -38,6 +38,7 @@
             align-items: center;
             justify-content: center;
             font-size: 2rem;
+            overflow: hidden;
         }
         .logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
         h1 { font-size: 1.125rem; font-weight: 500; margin-bottom: 0.5rem; }
@@ -113,7 +114,7 @@
 <body>
     <div class="card">
         <div class="logo">
-            <img src="/public/image.png" alt="Logo" onerror="this.textContent='🛡️'">
+            <img src="/public/image.png" alt="Nebula" onerror="this.style.display='none'; this.parentElement.textContent='🛡️'">
         </div>
         <h1>Vérification Humaine</h1>
         <p>Veuillez recopier le code ci-dessous pour continuer</p>

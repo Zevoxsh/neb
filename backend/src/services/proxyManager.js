@@ -454,6 +454,24 @@ class ProxyManager {
             }
           }
 
+          // Serve logo image for challenge page
+          if (req.url === '/public/image.png') {
+            const fs = require('fs');
+            const path = require('path');
+            const imagePath = path.join(__dirname, '..', '..', 'public', 'image.png');
+            
+            if (fs.existsSync(imagePath)) {
+              const image = fs.readFileSync(imagePath);
+              res.writeHead(200, { 'Content-Type': 'image/png' });
+              res.end(image);
+              return;
+            } else {
+              res.writeHead(404);
+              res.end('Not found');
+              return;
+            }
+          }
+
           // Handle challenge verification
           if (req.url === '/verify-challenge' && req.method === 'POST') {
             let body = '';
