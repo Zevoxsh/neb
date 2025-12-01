@@ -64,7 +64,15 @@ const get = asyncHandler(async (req, res) => {
     logger.debug('Getting certificate', { domain });
 
     const content = acmeManager.getCertContent(domain);
-    if (!content) throw new AppError('Certificate not found', 404);
+    if (!content) {
+        // Return status instead of error
+        const s = acmeManager.getCertStatus(domain);
+        return res.json({
+            exists: false,
+            status: 'missing',
+            message: 'Certificate not found for this domain'
+        });
+    }
 
     res.json(content);
 });
