@@ -76,6 +76,9 @@ async function testEmailConnection() {
             user: smtpConfig.user,
             pass: smtpConfig.pass
         } : undefined,
+        connectionTimeout: 10000, // 10 seconds timeout
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
         debug: true, // Enable debug output
         logger: true // Log to console
     });
