@@ -961,29 +961,35 @@
     
     // Handle bot protection setting
     const botProtection = payload.botProtection || 'default';
+    const hostname = payload.hostname;
     delete payload.botProtection;
     
     try {
       const res = await window.api.requestJson('/api/domains', { method: 'POST', body: payload });
       if (res && (res.status === 200 || res.status === 201)) {
-        const data = await res.json();
-        const domain = data.hostname || payload.hostname;
-        
-        console.log(`[Domains] Created domain: ${domain}, protection: ${botProtection}`);
+        console.log(`[Domains] Created domain: ${hostname}, protection: ${botProtection}`);
         
         // Apply bot protection setting
         if (botProtection === 'protected') {
-          const protRes = await window.api.requestJson('/api/bot-protection/protected-domains/add', {
-            method: 'POST',
-            body: { domain }
-          });
-          console.log('[Domains] Added to protected list:', protRes.status);
+          try {
+            const protRes = await window.api.requestJson('/api/bot-protection/protected-domains/add', {
+              method: 'POST',
+              body: { domain: hostname }
+            });
+            console.log('[Domains] Added to protected list:', protRes ? protRes.status : 'no response');
+          } catch (e) {
+            console.error('[Domains] Failed to add to protected list:', e);
+          }
         } else if (botProtection === 'unprotected') {
-          const unprotRes = await window.api.requestJson('/api/bot-protection/unprotected-domains/add', {
-            method: 'POST',
-            body: { domain }
-          });
-          console.log('[Domains] Added to unprotected list:', unprotRes.status);
+          try {
+            const unprotRes = await window.api.requestJson('/api/bot-protection/unprotected-domains/add', {
+              method: 'POST',
+              body: { domain: hostname }
+            });
+            console.log('[Domains] Added to unprotected list:', unprotRes ? unprotRes.status : 'no response');
+          } catch (e) {
+            console.error('[Domains] Failed to add to unprotected list:', e);
+          }
         }
         
         showToast('Domaine cree');
