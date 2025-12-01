@@ -180,8 +180,13 @@ Nebula Reverse Proxy - System Test
         } else if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT') {
             console.error('\n💡 Suggestions:');
             console.error('   - Vérifiez l\'adresse du serveur SMTP');
-            console.error('   - Vérifiez le port (465 pour SSL, 587 pour TLS)');
-            console.error('   - Vérifiez votre pare-feu et connexion Internet');
+            console.error('   - Vérifiez le port:');
+            console.error('     • Port 465: SSL/TLS (connexion chiffrée dès le départ)');
+            console.error('     • Port 587: STARTTLS (recommandé, démarrage en clair puis chiffrement)');
+            console.error('     • Port 25: Non chiffré (déconseillé)');
+            console.error('   - Vérifiez que le port n\'est pas bloqué par un pare-feu');
+            console.error('   - Testez avec telnet: telnet mail.paxcia.net 465');
+            console.error('   - Essayez le port 587 dans les paramètres du panel');
         }
         
         await pool.end();
