@@ -162,6 +162,14 @@ async function initDbAndStart() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_certificates_domain ON certificates(domain);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_certificates_expires_at ON certificates(expires_at);`);
 
+    // Clean up whitespace in domain_mappings hostnames
+    try {
+      await pool.query(`UPDATE domain_mappings SET hostname = TRIM(hostname) WHERE hostname != TRIM(hostname);`);
+      console.log('Cleaned whitespace from domain hostnames');
+    } catch (e) {
+      console.warn('Failed to clean domain hostnames:', e.message);
+    }
+
     const adminUser = process.env.DEFAULT_ADMIN_USER || 'admin';
     const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
     const res = await pool.query('SELECT id FROM users WHERE username = $1', [adminUser]);
@@ -253,10 +261,12 @@ async function initDbAndStart() {
       
       domains.forEach(d => {
         const protection = d.bot_protection || 'default';
+        // Trim whitespace from hostname
+        const hostname = d.hostname ? d.hostname.trim() : d.hostname;
         if (protection === 'protected') {
-          botProtection.addProtectedDomain(d.hostname);
+          botProtection.addProtectedDomain(hostname);
         } else if (protection === 'unprotected') {
-          botProtection.addUnprotectedDomain(d.hostname);
+          botProtection.addUnprotectedDomain(hostname);
         }
       });
       

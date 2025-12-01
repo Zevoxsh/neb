@@ -2,9 +2,10 @@ const pool = require('../config/db');
 
 async function createDomainMapping(data) {
   const botProtection = data.botProtection || 'default';
+  const hostname = data.hostname ? data.hostname.trim() : data.hostname;
   const res = await pool.query(
     'INSERT INTO domain_mappings (hostname, proxy_id, backend_id, bot_protection) VALUES ($1,$2,$3,$4) RETURNING id, hostname, proxy_id, backend_id, bot_protection',
-    [data.hostname, data.proxyId, data.backendId, botProtection]
+    [hostname, data.proxyId, data.backendId, botProtection]
   );
   return res.rows[0];
 }
@@ -23,9 +24,10 @@ async function listMappingsForProxy(proxyId) {
 
 async function updateDomainMapping(id, data) {
   const botProtection = data.botProtection || 'default';
+  const hostname = data.hostname ? data.hostname.trim() : data.hostname;
   const res = await pool.query(
     'UPDATE domain_mappings SET hostname = $1, proxy_id = $2, backend_id = $3, bot_protection = $4 WHERE id = $5 RETURNING id, hostname, proxy_id, backend_id, bot_protection',
-    [data.hostname, data.proxyId, data.backendId, botProtection, id]
+    [hostname, data.proxyId, data.backendId, botProtection, id]
   );
   return res.rows[0];
 }
@@ -36,7 +38,8 @@ async function deleteDomainMapping(id) {
 
 async function domainExists(hostname) {
   if (!hostname) return false;
-  const res = await pool.query('SELECT 1 FROM domain_mappings WHERE hostname = $1 LIMIT 1', [hostname]);
+  const cleanHostname = hostname.trim();
+  const res = await pool.query('SELECT 1 FROM domain_mappings WHERE hostname = $1 LIMIT 1', [cleanHostname]);
   return res && res.rowCount > 0;
 }
 
