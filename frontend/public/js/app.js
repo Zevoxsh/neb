@@ -18,13 +18,16 @@
   document.addEventListener('partials-loaded', () => {
     const path = window.location.pathname;
     
-    if (/^\/proxies\/\d+$/i.test(path)) {
-      initProxyDetail();
-    } else if (/^\/domain\.html/i.test(path)) {
-      initDomainDetail();
-    } else if (/^\/backend\.html/i.test(path)) {
-      initBackendDetail();
-    }
+    // Use requestAnimationFrame to ensure DOM is fully rendered
+    requestAnimationFrame(() => {
+      if (/^\/proxies\/\d+$/i.test(path)) {
+        initProxyDetail();
+      } else if (/^\/domain\.html/i.test(path)) {
+        initDomainDetail();
+      } else if (/^\/backend\.html/i.test(path)) {
+        initBackendDetail();
+      }
+    });
   });
 
   document.addEventListener('DOMContentLoaded', () => {
