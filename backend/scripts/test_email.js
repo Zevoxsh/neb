@@ -49,6 +49,11 @@ async function testEmailConnection() {
     console.log(`  Pass: ${smtpConfig.pass ? '***' + smtpConfig.pass.slice(-3) : '(non configuré)'}`);
     console.log(`  From: ${smtpConfig.from || '(non configuré)'}`);
     console.log(`  To: ${smtpConfig.to || '(non configuré)'}`);
+    
+    // Suggest alternative port if 465 fails
+    if (smtpConfig.port === 465) {
+        console.log(`\n  💡 Si le port 465 ne fonctionne pas, essayez le port 587 (STARTTLS)`);
+    }
     console.log();
 
     // Validate configuration
