@@ -29,11 +29,14 @@ function getTransporter() {
   transporter = nodemailer.createTransport({
     host: currentSettings.host,
     port: Number(currentSettings.port) || 465,
-    secure: true,
+    secure: Number(currentSettings.port) === 465,
     auth: currentSettings.user ? {
       user: currentSettings.user,
       pass: currentSettings.pass || ''
-    } : undefined
+    } : undefined,
+    tls: {
+      rejectUnauthorized: false // Accept self-signed certificates
+    }
   });
   return transporter;
 }
@@ -129,14 +132,7 @@ async function createSecurityAlert({ type, severity, ipAddress, hostname, messag
       details
     });
     
-    // Send email only if throttle allows it
-    if (shouldSendEmail(type, ipAddress, severity)) {
-      const occurrences = recent ? recent.count : 1;
-      await sendTrafficAlert(
-        `[NEBULA] ${severity.toUpperCase()} Security Alert: ${type}`,
-        `${message}\n\nIP: ${ipAddress || 'N/A'}\nHostname: ${hostname || 'N/A'}\nTime: ${new Date().toISOString()}\nOccurrences: ${occurrences}\n\nDetails: ${JSON.stringify(details, null, 2)}`
-      );
-    }
+    // Email sending disabled
     
     return true;
   } catch (error) {
