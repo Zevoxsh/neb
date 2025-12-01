@@ -560,7 +560,7 @@ animation:spin 1s linear infinite;margin:30px auto}
             }
           }
 
-          // Handle challenge verification
+          // Handle challenge verification - DO NOT TRACK REQUESTS
           if (req.url === '/verify-challenge' && req.method === 'POST') {
             let body = '';
             req.on('data', chunk => { body += chunk.toString(); });
@@ -600,12 +600,13 @@ animation:spin 1s linear infinite;margin:30px auto}
             return;
           }
           
-          // Skip challenge for API endpoints and static assets
+          // Skip tracking and challenge for API endpoints, static assets, and challenge-related paths
           const skipPaths = ['/api/', '/public/', '/verify-challenge', '/challenge.html', '/.well-known/'];
           const skipExtensions = ['.css', '.js', '.png', '.jpg', '.jpeg', '.svg', '.woff', '.woff2', '.ttf', '.ico'];
           const shouldSkip = skipPaths.some(path => req.url.startsWith(path)) || 
                             skipExtensions.some(ext => req.url.includes(ext));
           
+          // Only track requests that are not challenge-related
           if (!shouldSkip) {
             botProtection.trackRequest(clientIp);
             
