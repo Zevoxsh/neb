@@ -258,6 +258,7 @@
               type: 'linear',
               display: true,
               position: 'left',
+              beginAtZero: true,
               grid: {
                 color: 'rgba(255, 255, 255, 0.08)',
                 drawBorder: false
@@ -276,6 +277,7 @@
               type: 'linear',
               display: true,
               position: 'right',
+              beginAtZero: true,
               grid: {
                 drawOnChartArea: false
               },
