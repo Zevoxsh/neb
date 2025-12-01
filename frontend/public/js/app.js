@@ -967,19 +967,23 @@
       const res = await window.api.requestJson('/api/domains', { method: 'POST', body: payload });
       if (res && (res.status === 200 || res.status === 201)) {
         const data = await res.json();
-        const domain = data.domain || payload.hostname;
+        const domain = data.hostname || payload.hostname;
+        
+        console.log(`[Domains] Created domain: ${domain}, protection: ${botProtection}`);
         
         // Apply bot protection setting
         if (botProtection === 'protected') {
-          await window.api.requestJson('/api/bot-protection/protected-domains/add', {
+          const protRes = await window.api.requestJson('/api/bot-protection/protected-domains/add', {
             method: 'POST',
             body: { domain }
           });
+          console.log('[Domains] Added to protected list:', protRes.status);
         } else if (botProtection === 'unprotected') {
-          await window.api.requestJson('/api/bot-protection/unprotected-domains/add', {
+          const unprotRes = await window.api.requestJson('/api/bot-protection/unprotected-domains/add', {
             method: 'POST',
             body: { domain }
           });
+          console.log('[Domains] Added to unprotected list:', unprotRes.status);
         }
         
         showToast('Domaine cree');
@@ -990,6 +994,7 @@
         showToast('Creation impossible', 'error');
       }
     } catch (e) {
+      console.error('[Domains] Create error:', e);
       showToast('Creation impossible', 'error');
     }
   }
