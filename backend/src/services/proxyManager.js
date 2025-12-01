@@ -451,6 +451,55 @@ class ProxyManager {
         const startTime = Date.now();
         const hostname = req.headers && req.headers.host ? req.headers.host.split(':')[0] : null;
         
+        // Check if SSL certificate exists for this domain
+        if (hostname && !isIpAddress(hostname)) {
+          const certDir = `/etc/letsencrypt/live/${hostname}`;
+          const privkey = path.join(certDir, 'privkey.pem');
+          
+          if (!fs.existsSync(privkey)) {
+            // Certificate doesn't exist, show waiting page and trigger generation
+            console.log(`[HTTPS] Certificate not found for ${hostname}, showing waiting page...`);
+            
+            // Trigger certificate generation asynchronously
+            if (!pm.pendingAcme.has(hostname)) {
+              pm.pendingAcme.add(hostname);
+              const acmeManager = require('./acmeManager');
+              acmeManager.ensureCert(hostname).finally(() => {
+                pm.pendingAcme.delete(hostname);
+              });
+            }
+            
+            // Show waiting page that auto-refreshes
+            const waitingHtml = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta http-equiv="refresh" content="5">
+<title>Génération du certificat SSL...</title>
+<style>
+body{font-family:sans-serif;background:#0a0a0a;color:#fff;text-align:center;padding:50px}
+.box{background:#111;border:1px solid #333;border-radius:12px;padding:40px;max-width:600px;margin:0 auto}
+h1{color:#4CAF50;margin-bottom:20px}
+p{color:#888;line-height:1.6;margin:15px 0}
+.spinner{border:4px solid #333;border-top:4px solid #4CAF50;border-radius:50%;width:50px;height:50px;
+animation:spin 1s linear infinite;margin:30px auto}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+.note{font-size:14px;color:#666;margin-top:30px}
+</style></head><body><div class="box">
+<h1>🔒 Génération du certificat SSL en cours...</h1>
+<div class="spinner"></div>
+<p>Votre connexion sécurisée est en cours de configuration.</p>
+<p>Cette page se rafraîchira automatiquement dans quelques secondes.</p>
+<p class="note">Domaine: <strong>${hostname}</strong></p>
+<p class="note">Cette opération ne prend généralement que 10-30 secondes.</p>
+</div></body></html>`;
+            
+            res.writeHead(503, { 
+              'Content-Type': 'text/html; charset=utf-8',
+              'Retry-After': '5'
+            });
+            res.end(waitingHtml);
+            return;
+          }
+        }
+        
         // Log request
         const clientIp = normalizeIp(
           req.headers['cf-connecting-ip'] ||
