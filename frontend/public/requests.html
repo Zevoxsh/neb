@@ -16,56 +16,67 @@
     <div class="app-main">
       <header class="topbar">
         <div class="page-heading">
-          <h1>📊 Journal des requêtes</h1>
-          <p class="subtitle">Vue d'ensemble des requêtes par IP et domaine</p>
+          <div>
+            <div class="page-breadcrumb">TRACKING</div>
+            <h1>Journal des requêtes</h1>
+            <p class="subtitle">Vue d'ensemble des requêtes par IP et domaine</p>
+          </div>
         </div>
       </header>
 
       <main class="page-content">
-
-      <div class="filters-bar" style="margin-bottom: 24px; display: flex; gap: 16px; align-items: center;">
-        <label style="display: flex; align-items: center; gap: 8px;">
-          <span style="color: rgba(255,255,255,0.7);">Période:</span>
-          <select id="periodFilter" style="background: #0a0a0a; color: #fff; border: 1px solid #333; border-radius: 6px; padding: 8px 12px;">
-            <option value="7">7 derniers jours</option>
-            <option value="30" selected>30 derniers jours</option>
-            <option value="90">90 derniers jours</option>
-          </select>
-        </label>
-        <button id="refreshBtn" class="btn btn-secondary">🔄 Rafraîchir</button>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <h2>Requêtes par IP</h2>
-          <div id="totalCount" style="color: rgba(255,255,255,0.6); font-size: 14px;"></div>
+        <div class="filters-section" style="margin-bottom: 24px; display: flex; gap: 16px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: rgba(255,255,255,0.7); font-size: 14px;">Période:</span>
+            <select id="periodFilter" style="background: #0a0a0a; color: #fff; border: 1px solid #333; border-radius: 6px; padding: 8px 12px; font-size: 14px;">
+              <option value="7">7 derniers jours</option>
+              <option value="30" selected>30 derniers jours</option>
+              <option value="90">90 derniers jours</option>
+            </select>
+          </label>
+          <button id="refreshBtn" class="btn-icon" title="Rafraîchir">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>
+            </svg>
+          </button>
         </div>
-        <div class="card-body">
-          <div class="table-wrapper">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>IP Cliente</th>
-                  <th>Domaine</th>
-                  <th>Nombre de requêtes</th>
-                  <th>Première visite</th>
-                  <th>Dernière visite</th>
-                </tr>
-              </thead>
-              <tbody id="requestLogsTable">
-                <tr>
-                  <td colspan="5" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">
-                    Chargement...
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-eyebrow">INVENTAIRE</div>
+              <h2 class="card-title">Requêtes par IP</h2>
+            </div>
+            <div id="totalCount" class="card-meta"></div>
           </div>
-          
-          <div id="pagination" style="margin-top: 24px; display: flex; justify-content: center; gap: 12px; align-items: center;">
-            <button id="prevBtn" class="btn btn-secondary" disabled>← Précédent</button>
-            <span id="pageInfo" style="color: rgba(255,255,255,0.7); font-size: 14px;"></span>
-            <button id="nextBtn" class="btn btn-secondary">Suivant →</button>
+          <div class="card-body">
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>IP CLIENTE</th>
+                    <th>DOMAINE</th>
+                    <th>NOMBRE DE REQUÊTES</th>
+                    <th>PREMIÈRE VISITE</th>
+                    <th>DERNIÈRE VISITE</th>
+                  </tr>
+                </thead>
+                <tbody id="requestLogsTable">
+                  <tr>
+                    <td colspan="5" class="table-empty">
+                      <div class="spinner"></div>
+                      <p>Chargement...</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div id="pagination" class="table-pagination">
+              <button id="prevBtn" class="btn btn-secondary" disabled>← Précédent</button>
+              <span id="pageInfo" class="pagination-info"></span>
+              <button id="nextBtn" class="btn btn-secondary">Suivant →</button>
+            </div>
           </div>
         </div>
       </main>
