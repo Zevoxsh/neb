@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Nebula Console - Backend</title>
+  <link rel="stylesheet" href="/public/styles.css">
+  <script src="/public/js/theme.js"></script>
+  <script src="/public/js/api.js" defer></script>
+  <script src="/public/js/include-partials.js" defer></script>
+  <script src="/public/js/app.js" defer></script>
+</head>
+
+<body data-page="backend-detail">
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+    <div class="app-main">
+      <header class="topbar">
+        <div class="page-heading">
+          <p class="eyebrow">Backends</p>
+          <h1>Détails du backend</h1>
+          <p class="muted">Modifier les paramètres du service backend.</p>
+        </div>
+        <div class="topbar-actions">
+          <a class="btn ghost" href="/backends.html">Retour</a>
+        </div>
+      </header>
+      <section class="page-content">
+        <article class="card">
+          <form id="editBackendForm">
+            <input type="hidden" id="editBackendId" name="id">
+            <div class="form-grid">
+              <div class="form-field">
+                <label for="editBackendName">Nom</label>
+                <input id="editBackendName" name="name" placeholder="api-cluster" required>
+              </div>
+              <div class="form-field">
+                <label for="editBackendHost">Hôte cible</label>
+                <input id="editBackendHost" name="targetHost" placeholder="10.2.0.5" required>
+              </div>
+              <div class="form-field">
+                <label for="editBackendPort">Port cible</label>
+                <input id="editBackendPort" type="number" name="targetPort" value="8080" required>
+              </div>
+              <div class="form-field">
+                <label for="editBackendProtocol">Protocole</label>
+                <select id="editBackendProtocol" name="targetProtocol">
+                  <option value="http">HTTP</option>
+                  <option value="https">HTTPS</option>
+                  <option value="tcp">TCP</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn ghost" type="button" id="btnDeleteBackend">Supprimer</button>
+              <button class="btn primary" type="button" id="btnSaveBackend">Enregistrer</button>
+            </div>
+          </form>
+        </article>
+      </section>
+      <div id="footer-placeholder"></div>
+    </div>
+  </div>
+</body>
+
+</html>

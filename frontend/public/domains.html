@@ -91,47 +91,6 @@
             </form>
           </div>
         </div>
-        <div class="panel-overlay" id="editDomainPanel" hidden>
-          <div class="panel-card">
-            <div class="panel-head">
-              <div>
-                <p class="eyebrow">Modification</p>
-                <h2>Modifier un domaine</h2>
-              </div>
-              <button class="btn ghost small" type="button" data-panel-close="editDomainPanel">Fermer</button>
-            </div>
-            <form id="editDomainForm">
-              <input type="hidden" id="editDomainId" name="id">
-              <div class="form-grid">
-                <div class="form-field">
-                  <label for="editDomainHostname">Nom d'hote</label>
-                  <input id="editDomainHostname" name="hostname" placeholder="app.example.com" required>
-                </div>
-                <div class="form-field">
-                  <label for="editDomainProxySelect">Proxy</label>
-                  <select id="editDomainProxySelect" name="proxyId" required></select>
-                </div>
-                <div class="form-field">
-                  <label for="editDomainBackendSelect">Backend</label>
-                  <select id="editDomainBackendSelect" name="backendId" required>
-                    <option value="">Selectionner</option>
-                  </select>
-                </div>
-                <div class="form-field">
-                  <label for="editDomainBotProtection">Protection CAPTCHA</label>
-                  <select id="editDomainBotProtection" name="botProtection">
-                    <option value="unprotected">Non protégé (accès libre)</option>
-                    <option value="protected">Protégé (CAPTCHA obligatoire)</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-actions">
-                <button class="btn ghost" type="button" data-panel-close="editDomainPanel">Annuler</button>
-                <button class="btn primary" type="submit">Mettre à jour</button>
-              </div>
-            </form>
-          </div>
-        </div>
       </div>
     </div>
   </body>

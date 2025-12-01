@@ -27,6 +27,16 @@
       initProxyDetail();
       return;
     }
+    
+    if (/^\/domain\.html/i.test(path)) {
+      initDomainDetail();
+      return;
+    }
+    
+    if (/^\/backend\.html/i.test(path)) {
+      initBackendDetail();
+      return;
+    }
 
     switch (page) {
       case 'dashboard':
@@ -321,13 +331,6 @@
     document.addEventListener('click', async (ev) => {
       if ((document.body.dataset.page || '') !== 'backends') return;
 
-      const editBtn = ev.target.closest && ev.target.closest('.edit-backend');
-      if (editBtn && editBtn.dataset.id) {
-        ev.preventDefault();
-        await openBackendEditor(editBtn.dataset.id);
-        return;
-      }
-
       const btn = ev.target.closest && ev.target.closest('.delete-backend');
       if (!btn || !btn.dataset.id) return;
       if (!confirm('Supprimer ce backend ?')) return;
@@ -341,53 +344,21 @@
     });
   }
 
-  async function openBackendEditor(id) {
-    const backend = (cache.backends || []).find(b => String(b.id) === String(id));
-    if (!backend) return;
-
-    const form = document.getElementById('createBackendForm');
-    if (!form) return;
-
-    form.reset();
-    document.getElementById('backendId').value = backend.id;
-    document.getElementById('backendName').value = backend.name || '';
-    document.getElementById('backendHost').value = backend.targetHost || backend.target_host || '';
-    document.getElementById('backendPort').value = backend.targetPort || backend.target_port || '';
-    document.getElementById('backendProtocol').value = backend.targetProtocol || backend.target_protocol || 'http';
-
-    document.getElementById('backendFormTitle').textContent = 'Modifier le backend';
-    const btn = form.querySelector('button[type="submit"]');
-    if (btn) btn.textContent = 'Enregistrer';
-
-    togglePanel('backendFormPanel', true);
-  }
-
   async function createBackendFromForm(ev) {
     ev.preventDefault();
     const form = ev.target;
     const data = new FormData(form);
     const payload = formDataToObject(data);
-    const id = payload.id;
-    delete payload.id;
-
-    const method = id ? 'PUT' : 'POST';
-    const url = id ? `/api/backends/${id}` : '/api/backends';
-    const successMsg = id ? 'Backend mis a jour' : 'Backend cree';
 
     try {
-      const res = await window.api.requestJson(url, { method, body: payload });
+      const res = await window.api.requestJson('/api/backends', { method: 'POST', body: payload });
       if (res && (res.status === 200 || res.status === 201)) {
-        showToast(successMsg);
+        showToast('Backend cree');
         form.reset();
-        document.getElementById('backendId').value = '';
-        document.getElementById('backendFormTitle').textContent = 'Ajouter un backend';
-        const btn = form.querySelector('button[type="submit"]');
-        if (btn) btn.textContent = 'Creer le backend';
-
         togglePanel('backendFormPanel', false);
         await loadBackends();
       } else {
-        showToast('Operation impossible', 'error');
+        showToast('Creation impossible', 'error');
       }
     } catch (e) {
       showToast('Erreur technique', 'error');
@@ -398,19 +369,10 @@
     await populateDomainSelects();
     await loadDomains();
     const createForm = document.getElementById('createDomainForm');
-    const editForm = document.getElementById('editDomainForm');
     if (createForm) createForm.addEventListener('submit', createDomainFromForm);
-    if (editForm) editForm.addEventListener('submit', updateDomainFromForm);
 
     document.addEventListener('click', async (ev) => {
       if ((document.body.dataset.page || '') !== 'domains') return;
-      
-      // Handle edit button
-      const editBtn = ev.target.closest && ev.target.closest('.edit-domain');
-      if (editBtn && editBtn.dataset.id) {
-        await openEditDomainPanel(editBtn.dataset.id);
-        return;
-      }
       
       // Handle delete button
       const deleteBtn = ev.target.closest && ev.target.closest('.delete-domain');
@@ -833,7 +795,7 @@
           <td class="mono">${escapeHtml(b.targetHost || b.target_host || '')}:${b.targetPort || b.target_port}</td>
           <td>${escapeHtml((b.targetProtocol || b.target_protocol || '').toUpperCase())}</td>
           <td>
-            <button class="btn ghost small edit-backend" data-id="${b.id}">Modifier</button>
+            <a class="btn ghost small" href="/backend.html?id=${b.id}">Modifier</a>
             <button class="btn ghost small delete-backend" data-id="${b.id}">Supprimer</button>
           </td>
         `;
@@ -885,7 +847,7 @@
           <td>${backendLabel}</td>
           <td><span class="status-badge ${protectionBadge}"><span class="status-dot"></span>${protectionText}</span></td>
           <td>
-            <button class="btn ghost small edit-domain" data-id="${d.id}">Modifier</button>
+            <a class="btn ghost small" href="/domain.html?id=${d.id}">Modifier</a>
             <button class="btn ghost small delete-domain" data-id="${d.id}">Supprimer</button>
           </td>
         `;
@@ -1033,23 +995,33 @@
     }
   }
 
-  async function openEditDomainPanel(domainId) {
+  async function loadDomainDetail() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const domainId = urlParams.get('id');
+    if (!domainId) {
+      showToast('ID de domaine manquant', 'error');
+      window.location.href = '/domains.html';
+      return;
+    }
+
     try {
+      // Load domain data
       const res = await window.api.requestJson('/api/domains');
       if (!res || res.status !== 200) throw new Error('Failed to load domains');
       const domains = Array.isArray(res.body) ? res.body : [];
       const domain = domains.find(d => String(d.id) === String(domainId));
       if (!domain) {
         showToast('Domaine introuvable', 'error');
+        window.location.href = '/domains.html';
         return;
       }
-      
-      // Populate edit selects
-      const editProxySelect = document.getElementById('editDomainProxySelect');
-      const editBackendSelect = document.getElementById('editDomainBackendSelect');
-      if (editProxySelect && editBackendSelect) {
-        editProxySelect.innerHTML = '';
-        editBackendSelect.innerHTML = '<option value="">Selectionner...</option>';
+
+      // Populate selects
+      const proxySelect = document.getElementById('editDomainProxySelect');
+      const backendSelect = document.getElementById('editDomainBackendSelect');
+      if (proxySelect && backendSelect) {
+        proxySelect.innerHTML = '';
+        backendSelect.innerHTML = '<option value="">Sélectionner...</option>';
         
         const proxies = cache.proxies.length ? cache.proxies : await fetchAndCache('/api/proxies', 'proxies');
         const backends = cache.backends.length ? cache.backends : await fetchAndCache('/api/backends', 'backends');
@@ -1058,34 +1030,32 @@
           const opt = document.createElement('option');
           opt.value = p.id;
           opt.textContent = `${p.name} (${p.listen_host}:${p.listen_port})`;
-          editProxySelect.appendChild(opt);
+          proxySelect.appendChild(opt);
         });
         
         backends.forEach((b) => {
           const opt = document.createElement('option');
           opt.value = b.id;
           opt.textContent = `${b.name} (${b.target_host}:${b.target_port})`;
-          editBackendSelect.appendChild(opt);
+          backendSelect.appendChild(opt);
         });
       }
-      
+
       // Fill form with domain data
       document.getElementById('editDomainId').value = domain.id;
       document.getElementById('editDomainHostname').value = domain.hostname;
       document.getElementById('editDomainProxySelect').value = domain.proxy_id;
       document.getElementById('editDomainBackendSelect').value = domain.backend_id;
-      document.getElementById('editDomainBotProtection').value = domain.bot_protection || 'default';
-      
-      togglePanel('editDomainPanel', true);
+      document.getElementById('editDomainBotProtection').value = domain.bot_protection || 'unprotected';
     } catch (e) {
-      console.error('[Domains] Failed to open edit panel:', e);
+      console.error('[Domain Detail] Failed to load:', e);
       showToast('Erreur lors du chargement', 'error');
     }
   }
 
-  async function updateDomainFromForm(ev) {
+  async function saveDomainDetail(ev) {
     ev.preventDefault();
-    const form = ev.target;
+    const form = document.getElementById('editDomainForm');
     const payload = formDataToObject(new FormData(form));
     const domainId = payload.id;
     
@@ -1107,7 +1077,6 @@
       
       if (res && (res.status === 200 || res.status === 201)) {
         // Update bot protection lists
-        // First remove from both lists
         try {
           await window.api.requestJson('/api/bot-protection/protected-domains/remove', {
             method: 'POST',
@@ -1121,7 +1090,7 @@
           // Ignore errors for removal
         }
         
-        // Then add to appropriate list
+        // Add to appropriate list
         if (botProtection === 'protected') {
           await window.api.requestJson('/api/bot-protection/protected-domains/add', {
             method: 'POST',
@@ -1135,19 +1104,386 @@
         }
         
         showToast('Domaine mis à jour');
-        form.reset();
-        
-        // Wait a bit for backend to sync
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        await loadDomains();
-        togglePanel('editDomainPanel', false);
+        window.location.href = '/domains.html';
       } else {
         showToast('Mise à jour impossible', 'error');
       }
     } catch (e) {
-      console.error('[Domains] Update error:', e);
+      console.error('[Domain Detail] Update error:', e);
       showToast('Mise à jour impossible', 'error');
+    }
+  }
+
+  async function deleteDomainDetail() {
+    const domainId = document.getElementById('editDomainId').value;
+    const hostname = document.getElementById('editDomainHostname').value;
+    if (!confirm(`Supprimer le domaine "${hostname}" ?`)) return;
+    
+    try {
+      const res = await window.api.requestJson(`/api/domains/${domainId}`, { method: 'DELETE' });
+      if (res && (res.status === 200 || res.status === 204)) {
+        // Clean up bot protection lists
+        try {
+          await window.api.requestJson('/api/bot-protection/protected-domains/remove', {
+            method: 'POST',
+            body: { domain: hostname }
+          });
+          await window.api.requestJson('/api/bot-protection/unprotected-domains/remove', {
+            method: 'POST',
+            body: { domain: hostname }
+          });
+        } catch (e) {
+          // Ignore errors
+        }
+        
+        showToast('Domaine supprime');
+        window.location.href = '/domains.html';
+      } else {
+        showToast('Suppression impossible', 'error');
+      }
+    } catch (e) {
+      console.error('[Domain Detail] Delete error:', e);
+      showToast('Suppression impossible', 'error');
+    }
+  }
+
+  async function loadBackendDetail() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const backendId = urlParams.get('id');
+    if (!backendId) {
+      showToast('ID de backend manquant', 'error');
+      window.location.href = '/backends.html';
+      return;
+    }
+
+    try {
+      const backends = await fetchAndCache('/api/backends', 'backends');
+      const backend = backends.find(b => String(b.id) === String(backendId));
+      if (!backend) {
+        showToast('Backend introuvable', 'error');
+        window.location.href = '/backends.html';
+        return;
+      }
+
+      document.getElementById('editBackendId').value = backend.id;
+      document.getElementById('editBackendName').value = backend.name || '';
+      document.getElementById('editBackendHost').value = backend.targetHost || backend.target_host || '';
+      document.getElementById('editBackendPort').value = backend.targetPort || backend.target_port || '';
+      document.getElementById('editBackendProtocol').value = backend.targetProtocol || backend.target_protocol || 'http';
+    } catch (e) {
+      console.error('[Backend Detail] Failed to load:', e);
+      showToast('Erreur lors du chargement', 'error');
+    }
+  }
+
+  async function saveBackendDetail() {
+    const form = document.getElementById('editBackendForm');
+    const payload = formDataToObject(new FormData(form));
+    const backendId = payload.id;
+    delete payload.id;
+
+    try {
+      const res = await window.api.requestJson(`/api/backends/${backendId}`, { 
+        method: 'PUT', 
+        body: payload 
+      });
+      
+      if (res && (res.status === 200 || res.status === 201)) {
+        showToast('Backend mis à jour');
+        window.location.href = '/backends.html';
+      } else {
+        showToast('Mise à jour impossible', 'error');
+      }
+    } catch (e) {
+      console.error('[Backend Detail] Update error:', e);
+      showToast('Mise à jour impossible', 'error');
+    }
+  }
+
+  async function deleteBackendDetail() {
+    const backendId = document.getElementById('editBackendId').value;
+    const backendName = document.getElementById('editBackendName').value;
+    if (!confirm(`Supprimer le backend "${backendName}" ?`)) return;
+    
+    try {
+      const res = await window.api.requestJson(`/api/backends/${backendId}`, { method: 'DELETE' });
+      if (res && (res.status === 200 || res.status === 204)) {
+        showToast('Backend supprime');
+        window.location.href = '/backends.html';
+      } else {
+        showToast('Suppression impossible', 'error');
+      }
+    } catch (e) {
+      console.error('[Backend Detail] Delete error:', e);
+      showToast('Suppression impossible', 'error');
+    }
+  }
+
+  async function loadDomainCertificate() {
+    const hostname = document.getElementById('editDomainHostname').value;
+    if (!hostname) return;
+
+    const certInfo = document.getElementById('domainCertInfo');
+    const certEmpty = document.getElementById('domainCertEmpty');
+    
+    try {
+      const res = await window.api.requestJson('/api/certificates');
+      if (!res || res.status !== 200) throw new Error('loadCerts');
+      const certs = Array.isArray(res.body) ? res.body : [];
+      const cert = certs.find(c => c.hostname === hostname);
+      
+      if (cert) {
+        const status = (cert.status || '').toLowerCase();
+        let badge = 'muted';
+        let statusText = cert.status || 'inconnu';
+        if (status.includes('valid')) badge = 'success';
+        else if (status.includes('pending')) badge = 'warning';
+        
+        const validUntil = cert.valid_until ? new Date(cert.valid_until).toLocaleString() : 'N/A';
+        
+        document.getElementById('domainCertStatus').innerHTML = 
+          `<span class="status-badge ${badge}"><span class="status-dot"></span>${escapeHtml(statusText)}</span>`;
+        document.getElementById('domainCertExpiry').textContent = validUntil;
+        
+        certInfo.hidden = false;
+        certEmpty.hidden = true;
+      } else {
+        certInfo.hidden = true;
+        certEmpty.hidden = false;
+      }
+    } catch (e) {
+      console.error('[Domain Cert] Failed to load:', e);
+      certInfo.hidden = true;
+      certEmpty.hidden = false;
+    }
+  }
+
+  function openDomainCertRequest() {
+    const hostname = document.getElementById('editDomainHostname').value;
+    document.getElementById('certRequestDomain').value = hostname;
+    document.getElementById('certRequestDomainDisplay').value = hostname;
+    togglePanel('domainCertRequestPanel', true);
+  }
+
+  function openDomainCertImport() {
+    const hostname = document.getElementById('editDomainHostname').value;
+    document.getElementById('certImportDomain').value = hostname;
+    document.getElementById('certImportDomainDisplay').value = hostname;
+    togglePanel('domainCertImportPanel', true);
+  }
+
+  async function requestDomainCertificate(ev) {
+    ev.preventDefault();
+    const form = ev.target;
+    const payload = formDataToObject(new FormData(form));
+    
+    try {
+      const res = await window.api.requestJson('/api/certificates/request', { method: 'POST', body: payload });
+      if (res && (res.status === 200 || res.status === 201)) {
+        showToast('Demande de certificat lancée');
+        form.reset();
+        togglePanel('domainCertRequestPanel', false);
+        await loadDomainCertificate();
+      } else {
+        showToast('Demande impossible', 'error');
+      }
+    } catch (e) {
+      console.error('[Domain Cert] Request error:', e);
+      showToast('Demande impossible', 'error');
+    }
+  }
+
+  async function importDomainCertificate(ev) {
+    ev.preventDefault();
+    const form = ev.target;
+    const payload = formDataToObject(new FormData(form));
+    
+    try {
+      const res = await window.api.requestJson('/api/certificates/manual', { method: 'POST', body: payload });
+      if (res && (res.status === 200 || res.status === 201)) {
+        showToast('Certificat importé');
+        form.reset();
+        togglePanel('domainCertImportPanel', false);
+        await loadDomainCertificate();
+      } else {
+        showToast('Import impossible', 'error');
+      }
+    } catch (e) {
+      console.error('[Domain Cert] Import error:', e);
+      showToast('Import impossible', 'error');
+    }
+  }
+
+  async function renewDomainCertificate() {
+    const hostname = document.getElementById('editDomainHostname').value;
+    if (!confirm(`Renouveler le certificat pour "${hostname}" ?`)) return;
+    
+    try {
+      const res = await window.api.requestJson('/api/certificates/renew', { 
+        method: 'POST', 
+        body: { domain: hostname } 
+      });
+      if (res && (res.status === 200 || res.status === 201)) {
+        showToast('Renouvellement lancé');
+        await loadDomainCertificate();
+      } else {
+        showToast('Renouvellement impossible', 'error');
+      }
+    } catch (e) {
+      console.error('[Domain Cert] Renew error:', e);
+      showToast('Renouvellement impossible', 'error');
+    }
+  }
+
+  async function loadDomainDetail() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const domainId = urlParams.get('id');
+    if (!domainId) {
+      showToast('ID de domaine manquant', 'error');
+      window.location.href = '/domains.html';
+      return;
+    }
+
+    try {
+      // Load domain data
+      const res = await window.api.requestJson('/api/domains');
+      if (!res || res.status !== 200) throw new Error('Failed to load domains');
+      const domains = Array.isArray(res.body) ? res.body : [];
+      const domain = domains.find(d => String(d.id) === String(domainId));
+      if (!domain) {
+        showToast('Domaine introuvable', 'error');
+        window.location.href = '/domains.html';
+        return;
+      }
+
+      // Populate selects
+      const proxySelect = document.getElementById('editDomainProxySelect');
+      const backendSelect = document.getElementById('editDomainBackendSelect');
+      if (proxySelect && backendSelect) {
+        proxySelect.innerHTML = '';
+        backendSelect.innerHTML = '<option value="">Sélectionner...</option>';
+        
+        const proxies = cache.proxies.length ? cache.proxies : await fetchAndCache('/api/proxies', 'proxies');
+        const backends = cache.backends.length ? cache.backends : await fetchAndCache('/api/backends', 'backends');
+        
+        proxies.forEach((p) => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = `${p.name} (${p.listen_host}:${p.listen_port})`;
+          proxySelect.appendChild(opt);
+        });
+        
+        backends.forEach((b) => {
+          const opt = document.createElement('option');
+          opt.value = b.id;
+          opt.textContent = `${b.name} (${b.target_host}:${b.target_port})`;
+          backendSelect.appendChild(opt);
+        });
+      }
+
+      // Fill form with domain data
+      document.getElementById('editDomainId').value = domain.id;
+      document.getElementById('editDomainHostname').value = domain.hostname;
+      document.getElementById('editDomainProxySelect').value = domain.proxy_id;
+      document.getElementById('editDomainBackendSelect').value = domain.backend_id;
+      document.getElementById('editDomainBotProtection').value = domain.bot_protection || 'unprotected';
+    } catch (e) {
+      console.error('[Domain Detail] Failed to load:', e);
+      showToast('Erreur lors du chargement', 'error');
+    }
+  }
+
+  async function saveDomainDetail(ev) {
+    ev.preventDefault();
+    const form = document.getElementById('editDomainForm');
+    const payload = formDataToObject(new FormData(form));
+    const domainId = payload.id;
+    
+    if (!payload.backendId) {
+      showToast('Choisissez un backend', 'error');
+      return;
+    }
+    
+    const botProtection = payload.botProtection || 'unprotected';
+    const hostname = payload.hostname;
+    delete payload.id;
+    delete payload.botProtection;
+    
+    try {
+      const res = await window.api.requestJson(`/api/domains/${domainId}`, { 
+        method: 'PUT', 
+        body: { ...payload, botProtection }
+      });
+      
+      if (res && (res.status === 200 || res.status === 201)) {
+        // Update bot protection lists
+        try {
+          await window.api.requestJson('/api/bot-protection/protected-domains/remove', {
+            method: 'POST',
+            body: { domain: hostname }
+          });
+          await window.api.requestJson('/api/bot-protection/unprotected-domains/remove', {
+            method: 'POST',
+            body: { domain: hostname }
+          });
+        } catch (e) {
+          // Ignore errors for removal
+        }
+        
+        // Add to appropriate list
+        if (botProtection === 'protected') {
+          await window.api.requestJson('/api/bot-protection/protected-domains/add', {
+            method: 'POST',
+            body: { domain: hostname }
+          });
+        } else if (botProtection === 'unprotected') {
+          await window.api.requestJson('/api/bot-protection/unprotected-domains/add', {
+            method: 'POST',
+            body: { domain: hostname }
+          });
+        }
+        
+        showToast('Domaine mis à jour');
+        window.location.href = '/domains.html';
+      } else {
+        showToast('Mise à jour impossible', 'error');
+      }
+    } catch (e) {
+      console.error('[Domain Detail] Update error:', e);
+      showToast('Mise à jour impossible', 'error');
+    }
+  }
+
+  async function deleteDomainDetail() {
+    const domainId = document.getElementById('editDomainId').value;
+    const hostname = document.getElementById('editDomainHostname').value;
+    if (!confirm(`Supprimer le domaine "${hostname}" ?")) return;
+    
+    try {
+      const res = await window.api.requestJson(`/api/domains/${domainId}`, { method: 'DELETE' });
+      if (res && (res.status === 200 || res.status === 204)) {
+        // Clean up bot protection lists
+        try {
+          await window.api.requestJson('/api/bot-protection/protected-domains/remove', {
+            method: 'POST',
+            body: { domain: hostname }
+          });
+          await window.api.requestJson('/api/bot-protection/unprotected-domains/remove', {
+            method: 'POST',
+            body: { domain: hostname }
+          });
+        } catch (e) {
+          // Ignore errors
+        }
+        
+        showToast('Domaine supprime');
+        window.location.href = '/domains.html';
+      } else {
+        showToast('Suppression impossible', 'error');
+      }
+    } catch (e) {
+      console.error('[Domain Detail] Delete error:', e);
+      showToast('Suppression impossible', 'error');
     }
   }
 
@@ -1265,6 +1601,60 @@
       }
     } catch (e) {
       showToast('Chargement du proxy impossible', 'error');
+    }
+  }
+
+  async function initDomainDetail() {
+    await loadDomainDetail();
+    await loadDomainCertificate();
+    
+    const saveBtn = document.getElementById('btnSaveDomain');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', saveDomainDetail);
+    }
+
+    const deleteBtn = document.getElementById('btnDeleteDomain');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', deleteDomainDetail);
+    }
+
+    const requestCertBtn = document.getElementById('btnRequestCert');
+    if (requestCertBtn) {
+      requestCertBtn.addEventListener('click', openDomainCertRequest);
+    }
+
+    const importCertBtn = document.getElementById('btnImportCert');
+    if (importCertBtn) {
+      importCertBtn.addEventListener('click', openDomainCertImport);
+    }
+
+    const renewCertBtn = document.getElementById('btnRenewDomainCert');
+    if (renewCertBtn) {
+      renewCertBtn.addEventListener('click', renewDomainCertificate);
+    }
+
+    const certRequestForm = document.getElementById('domainCertRequestForm');
+    if (certRequestForm) {
+      certRequestForm.addEventListener('submit', requestDomainCertificate);
+    }
+
+    const certImportForm = document.getElementById('domainCertImportForm');
+    if (certImportForm) {
+      certImportForm.addEventListener('submit', importDomainCertificate);
+    }
+  }
+
+  async function initBackendDetail() {
+    await loadBackendDetail();
+    
+    const saveBtn = document.getElementById('btnSaveBackend');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', saveBackendDetail);
+    }
+
+    const deleteBtn = document.getElementById('btnDeleteBackend');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', deleteBackendDetail);
     }
   }
 
