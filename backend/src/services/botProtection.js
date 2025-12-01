@@ -108,6 +108,7 @@ class BotProtection {
     shouldChallenge(ip, forceNewVisitor = false, domain = null) {
         // Check if domain is unprotected (bypass all checks)
         if (domain && this.unprotectedDomains.has(domain)) {
+            console.log(`[BotProtection] Domain ${domain} is unprotected - bypassing challenge for IP ${ip}`);
             return false;
         }
 
@@ -124,6 +125,10 @@ class BotProtection {
 
         // If domain is specified and in protected list, force challenge
         const isDomainProtected = domain && this.protectedDomains.size > 0 && this.protectedDomains.has(domain);
+        
+        if (isDomainProtected) {
+            console.log(`[BotProtection] Domain ${domain} is protected - forcing challenge for IP ${ip}`);
+        }
 
         // Challenge if:
         // 1. Domain is in protected list
