@@ -99,6 +99,17 @@ class BotProtection {
         const expiration = Date.now() + durationMs;
         this.bannedIPs.set(ip, expiration);
         console.log(`[BotProtection] IP ${ip} banned until ${new Date(expiration).toISOString()}`);
+        
+        // Create security alert
+        const alertService = require('./alertService');
+        alertService.createSecurityAlert({
+            type: 'IP_BANNED',
+            severity: 'high',
+            ipAddress: ip,
+            hostname: null,
+            message: `IP ${ip} has been banned for ${Math.round(durationMs / 60000)} minutes`,
+            details: { duration: durationMs, expiresAt: new Date(expiration).toISOString() }
+        });
     }
 
     isUnderAttack() {

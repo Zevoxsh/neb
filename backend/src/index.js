@@ -131,6 +131,22 @@ async function initDbAndStart() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_request_logs_timestamp ON request_logs(timestamp);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_request_logs_ip_hostname ON request_logs(client_ip, hostname);`);
 
+    // Security alerts table
+    await pool.query(`CREATE TABLE IF NOT EXISTS security_alerts(
+      id SERIAL PRIMARY KEY,
+      alert_type VARCHAR(50) NOT NULL,
+      severity VARCHAR(20) NOT NULL,
+      ip_address VARCHAR(191),
+      hostname VARCHAR(255),
+      message TEXT NOT NULL,
+      details JSONB,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    ); `);
+    
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_security_alerts_created_at ON security_alerts(created_at);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_security_alerts_type ON security_alerts(alert_type);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_security_alerts_severity ON security_alerts(severity);`);
+
     const adminUser = process.env.DEFAULT_ADMIN_USER || 'admin';
     const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
     const res = await pool.query('SELECT id FROM users WHERE username = $1', [adminUser]);

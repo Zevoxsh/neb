@@ -50,6 +50,33 @@ async function sendTrafficAlert(subject, message) {
   }
 }
 
+async function createSecurityAlert({ type, severity, ipAddress, hostname, message, details }) {
+  try {
+    const alertModel = require('../models/alertModel');
+    await alertModel.createAlert({
+      type,
+      severity,
+      ipAddress,
+      hostname,
+      message,
+      details
+    });
+    
+    // Send email for critical/high severity alerts
+    if (severity === 'critical' || severity === 'high') {
+      await sendTrafficAlert(
+        `[NEBULA] ${severity.toUpperCase()} Security Alert: ${type}`,
+        `${message}\n\nIP: ${ipAddress || 'N/A'}\nHostname: ${hostname || 'N/A'}\nTime: ${new Date().toISOString()}\n\nDetails: ${JSON.stringify(details, null, 2)}`
+      );
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to create security alert:', error);
+    return false;
+  }
+}
+
 configure(currentSettings);
 
-module.exports = { sendTrafficAlert, configure };
+module.exports = { sendTrafficAlert, configure, createSecurityAlert };

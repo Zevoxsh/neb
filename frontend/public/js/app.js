@@ -96,6 +96,9 @@
       case 'requests':
         initRequestsPage();
         break;
+      case 'alerts':
+        initAlertsPage();
+        break;
       default:
         break;
     }
@@ -2260,6 +2263,176 @@
       .map(char => 127397 + char.charCodeAt(0));
     
     return String.fromCodePoint(...codePoints);
+  }
+
+  // ========== ALERTS PAGE ==========
+  let alertsState = {
+    offset: 0,
+    limit: 50,
+    total: 0,
+    severity: 'all',
+    autoRefreshTimer: null
+  };
+
+  function initAlertsPage() {
+    const refreshBtn = document.getElementById('refreshBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const filterBadges = document.querySelectorAll('.filter-badge');
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        alertsState.offset = 0;
+        loadAlerts();
+      });
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        if (alertsState.offset > 0) {
+          alertsState.offset = Math.max(0, alertsState.offset - alertsState.limit);
+          loadAlerts();
+        }
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        if (alertsState.offset + alertsState.limit < alertsState.total) {
+          alertsState.offset += alertsState.limit;
+          loadAlerts();
+        }
+      });
+    }
+
+    filterBadges.forEach(badge => {
+      badge.addEventListener('click', () => {
+        filterBadges.forEach(b => b.classList.remove('active'));
+        badge.classList.add('active');
+        alertsState.severity = badge.dataset.severity;
+        alertsState.offset = 0;
+        loadAlerts();
+      });
+    });
+
+    loadAlerts();
+    
+    // Auto-refresh every 10 seconds
+    alertsState.autoRefreshTimer = setInterval(() => {
+      loadAlerts(true);
+    }, 10000);
+  }
+
+  async function loadAlerts(silent = false) {
+    const alertsList = document.getElementById('alertsList');
+    const totalCount = document.getElementById('totalCount');
+    const pageInfo = document.getElementById('pageInfo');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    if (!alertsList) return;
+
+    if (!silent) {
+      alertsList.innerHTML = '<div class="alert-item-loading"><div class="spinner"></div><p>Chargement...</p></div>';
+    }
+
+    try {
+      const res = await window.api.requestJson(
+        `/api/security-alerts?limit=${alertsState.limit}&offset=${alertsState.offset}`
+      );
+
+      if (!res || res.status !== 200) throw new Error('Fetch failed');
+
+      const data = res.body;
+      alertsState.total = data.total || 0;
+
+      if (totalCount) {
+        totalCount.textContent = `Total: ${formatNumber(alertsState.total)} alertes`;
+      }
+
+      if (!data.alerts || data.alerts.length === 0) {
+        alertsList.innerHTML = '<div class="alert-item-empty"><p>😌 Aucune alerte de sécurité</p></div>';
+        if (pageInfo) pageInfo.textContent = '';
+        if (prevBtn) prevBtn.disabled = true;
+        if (nextBtn) nextBtn.disabled = true;
+        return;
+      }
+
+      // Filter by severity if not "all"
+      let filteredAlerts = data.alerts;
+      if (alertsState.severity !== 'all') {
+        filteredAlerts = data.alerts.filter(alert => alert.severity === alertsState.severity);
+      }
+
+      alertsList.innerHTML = filteredAlerts.map(alert => {
+        const createdAt = new Date(alert.created_at);
+        const severityIcon = getSeverityIcon(alert.severity);
+        const typeLabel = getAlertTypeLabel(alert.alert_type);
+        
+        return `
+          <div class="alert-item ${alert.severity}">
+            <div class="alert-header">
+              <div class="alert-icon">${severityIcon}</div>
+              <div class="alert-content">
+                <div class="alert-title">${typeLabel}</div>
+                <div class="alert-message">${escapeHtml(alert.message)}</div>
+                <div class="alert-meta">
+                  <div class="alert-meta-item">
+                    <span class="severity-badge severity-${alert.severity}">${alert.severity}</span>
+                  </div>
+                  ${alert.ip_address ? `<div class="alert-meta-item">📍 ${escapeHtml(alert.ip_address)}</div>` : ''}
+                  ${alert.hostname ? `<div class="alert-meta-item">🌐 ${escapeHtml(alert.hostname)}</div>` : ''}
+                  <div class="alert-meta-item">🕒 ${formatDate(createdAt)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Update pagination
+      const currentPage = Math.floor(alertsState.offset / alertsState.limit) + 1;
+      const totalPages = Math.ceil(alertsState.total / alertsState.limit);
+      
+      if (pageInfo) {
+        pageInfo.textContent = `Page ${currentPage} sur ${totalPages}`;
+      }
+      
+      if (prevBtn) {
+        prevBtn.disabled = alertsState.offset === 0;
+      }
+      
+      if (nextBtn) {
+        nextBtn.disabled = alertsState.offset + alertsState.limit >= alertsState.total;
+      }
+
+    } catch (err) {
+      console.error('Error loading alerts:', err);
+      alertsList.innerHTML = '<div class="alert-item-empty"><p style="color: #ff4444;">❌ Erreur de chargement</p></div>';
+    }
+  }
+
+  function getSeverityIcon(severity) {
+    const icons = {
+      critical: '🔴',
+      high: '🟠',
+      medium: '🟡',
+      low: '🟢'
+    };
+    return icons[severity] || '⚪';
+  }
+
+  function getAlertTypeLabel(type) {
+    const labels = {
+      IP_BANNED: '🚫 IP Bannie',
+      RATE_LIMIT: '⚡ Limite de taux dépassée',
+      BRUTE_FORCE: '🔨 Tentative de force brute',
+      DDOS: '💥 Attaque DDoS détectée',
+      SUSPICIOUS_ACTIVITY: '👁️ Activité suspecte',
+      CHALLENGE_FAILED: '❌ Échec de défi',
+      MALICIOUS_REQUEST: '🦠 Requête malveillante'
+    };
+    return labels[type] || type;
   }
 
 })();

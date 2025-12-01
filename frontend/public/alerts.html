@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Alertes de Sécurité - Nebula Proxy</title>
+  <link rel="stylesheet" href="/public/styles.css">
+  <script src="/public/js/api.js" defer></script>
+  <script src="/public/js/include-partials.js" defer></script>
+  <script src="/public/js/ui.js" defer></script>
+  <script src="/public/js/app.js" defer></script>
+</head>
+<body data-page="alerts">
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+    <div class="app-main">
+      <header class="topbar">
+        <div class="page-heading">
+          <div>
+            <div class="page-breadcrumb">SÉCURITÉ</div>
+            <h1>Alertes de Sécurité</h1>
+            <p class="subtitle">Surveillance des événements de sécurité et menaces détectées</p>
+          </div>
+        </div>
+      </header>
+
+      <main class="page-content">
+        <div class="filters-section" style="margin-bottom: 24px; display: flex; gap: 16px; align-items: center; justify-content: space-between;">
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <button id="refreshBtn" class="btn-icon" title="Rafraîchir">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>
+              </svg>
+            </button>
+            <span id="autoRefreshIndicator" style="color: rgba(255,255,255,0.5); font-size: 13px;">
+              🔄 Actualisation automatique: 10s
+            </span>
+          </div>
+          <div style="display: flex; gap: 12px;">
+            <button class="filter-badge filter-all active" data-severity="all">
+              <span class="badge-dot" style="background: #666;"></span>
+              Toutes
+            </button>
+            <button class="filter-badge" data-severity="critical">
+              <span class="badge-dot" style="background: #dc2626;"></span>
+              Critiques
+            </button>
+            <button class="filter-badge" data-severity="high">
+              <span class="badge-dot" style="background: #f97316;"></span>
+              Élevées
+            </button>
+            <button class="filter-badge" data-severity="medium">
+              <span class="badge-dot" style="background: #eab308;"></span>
+              Moyennes
+            </button>
+            <button class="filter-badge" data-severity="low">
+              <span class="badge-dot" style="background: #22c55e;"></span>
+              Faibles
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-eyebrow">JOURNAL</div>
+              <h2 class="card-title">Événements de sécurité</h2>
+            </div>
+            <div id="totalCount" class="card-meta"></div>
+          </div>
+          <div class="card-body">
+            <div class="alerts-list" id="alertsList">
+              <div class="alert-item-loading">
+                <div class="spinner"></div>
+                <p>Chargement des alertes...</p>
+              </div>
+            </div>
+            
+            <div id="pagination" class="table-pagination">
+              <button id="prevBtn" class="btn btn-secondary" disabled>← Précédent</button>
+              <span id="pageInfo" class="pagination-info"></span>
+              <button id="nextBtn" class="btn btn-secondary">Suivant →</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  
+  <style>
+    .filter-badge {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .filter-badge:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .filter-badge.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: #3b82f6;
+      color: #fff;
+    }
+    
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    
+    .alerts-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 200px;
+    }
+    
+    .alert-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-left: 4px solid;
+      border-radius: 8px;
+      padding: 16px;
+      transition: all 0.2s;
+    }
+    
+    .alert-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+    
+    .alert-item.critical { border-left-color: #dc2626; }
+    .alert-item.high { border-left-color: #f97316; }
+    .alert-item.medium { border-left-color: #eab308; }
+    .alert-item.low { border-left-color: #22c55e; }
+    
+    .alert-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    
+    .alert-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    
+    .alert-content {
+      flex: 1;
+    }
+    
+    .alert-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    
+    .alert-message {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.5;
+    }
+    
+    .alert-meta {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .alert-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .severity-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .severity-critical { background: rgba(220, 38, 38, 0.2); color: #fca5a5; }
+    .severity-high { background: rgba(249, 115, 22, 0.2); color: #fdba74; }
+    .severity-medium { background: rgba(234, 179, 8, 0.2); color: #fde047; }
+    .severity-low { background: rgba(34, 197, 94, 0.2); color: #86efac; }
+    
+    .alert-item-loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .alert-item-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+  </style>
+</body>
+</html>
