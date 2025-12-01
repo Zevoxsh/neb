@@ -327,6 +327,7 @@ class ProxyManager {
       const server = http.createServer((req, res) => {
         try {
           const hostname = req.headers && req.headers.host ? req.headers.host.split(':')[0] : null;
+          if (hostname) requestLogger.logRequest(req.socket.remoteAddress, hostname);
           try { pm.addMetrics(id, 0, 0, 1, 0, 301, hostname); } catch (e) { }
 
           const hostHeader = req.headers && req.headers.host ? req.headers.host.split(':')[0] : entry.meta.listenHost;
@@ -354,6 +355,7 @@ class ProxyManager {
 
       const handleRequest = async (req, res) => {
         const hostname = req.headers && req.headers.host ? req.headers.host.split(':')[0] : null;
+        if (hostname) requestLogger.logRequest(req.socket.remoteAddress, hostname);
         try {
           // ACME handling
           if (req.url && req.url.startsWith('/.well-known/acme-challenge/')) {
@@ -430,6 +432,20 @@ class ProxyManager {
       const forwardRequest = (req, res) => {
         const startTime = Date.now();
         const hostname = req.headers && req.headers.host ? req.headers.host.split(':')[0] : null;
+        
+        // Log request
+        const clientIp = normalizeIp(
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+          req.connection?.remoteAddress ||
+          req.socket?.remoteAddress
+        );
+        
+        if (hostname && clientIp) {
+          requestLogger.logRequest(clientIp, hostname);
+        }
+        
         try {
           // Get client IP - prioritize Cloudflare header
           const clientIp = normalizeIp(
