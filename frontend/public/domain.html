@@ -60,6 +60,30 @@
             </div>
           </form>
         </article>
+
+        <article class="card">
+          <header>
+            <p class="eyebrow">Sécurité</p>
+            <h2>Certificat SSL/TLS</h2>
+          </header>
+          <section id="domainCertSection">
+            <div id="domainCertInfo" class="inline-panel" hidden>
+              <div class="form-grid">
+                <div class="form-field">
+                  <label>Statut</label>
+                  <div id="domainCertStatus"></div>
+                </div>
+                <div class="form-field">
+                  <label>Expiration</label>
+                  <div id="domainCertExpiry" class="mono"></div>
+                </div>
+              </div>
+            </div>
+            <div id="domainCertEmpty" class="empty-state">
+              Aucun certificat configuré pour ce domaine.
+            </div>
+          </section>
+        </article>
       </section>
       <div id="footer-placeholder"></div>
     </div>

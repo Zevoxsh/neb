@@ -1117,6 +1117,50 @@
     }
   }
 
+  async function loadDomainCertificate() {
+    const hostnameField = document.getElementById('editDomainHostname');
+    if (!hostnameField) return;
+    
+    const hostname = hostnameField.value;
+    if (!hostname) return;
+
+    const certInfo = document.getElementById('domainCertInfo');
+    const certEmpty = document.getElementById('domainCertEmpty');
+    
+    if (!certInfo || !certEmpty) return;
+    
+    try {
+      const res = await window.api.requestJson('/api/certificates');
+      if (!res || res.status !== 200) throw new Error('loadCerts');
+      const certs = Array.isArray(res.body) ? res.body : [];
+      const cert = certs.find(c => c.hostname === hostname);
+      
+      if (cert) {
+        const status = (cert.status || '').toLowerCase();
+        let badge = 'muted';
+        let statusText = cert.status || 'inconnu';
+        if (status.includes('valid')) badge = 'success';
+        else if (status.includes('pending')) badge = 'warning';
+        
+        const validUntil = cert.valid_until ? new Date(cert.valid_until).toLocaleString() : 'N/A';
+        
+        document.getElementById('domainCertStatus').innerHTML = 
+          `<span class="status-badge ${badge}"><span class="status-dot"></span>${escapeHtml(statusText)}</span>`;
+        document.getElementById('domainCertExpiry').textContent = validUntil;
+        
+        certInfo.hidden = false;
+        certEmpty.hidden = true;
+      } else {
+        certInfo.hidden = true;
+        certEmpty.hidden = false;
+      }
+    } catch (e) {
+      console.error('[Domain Cert] Failed to load:', e);
+      certInfo.hidden = true;
+      certEmpty.hidden = false;
+    }
+  }
+
   async function loadDomainDetail() {
     const urlParams = new URLSearchParams(window.location.search);
     const domainId = urlParams.get('id');
@@ -1410,6 +1454,7 @@
 
   async function initDomainDetail() {
     await loadDomainDetail();
+    await loadDomainCertificate();
     
     const saveBtn = document.getElementById('btnSaveDomain');
     if (saveBtn) {
