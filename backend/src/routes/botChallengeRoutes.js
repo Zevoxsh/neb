@@ -1,11 +1,41 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
 const botProtection = require('../services/botProtection');
 const { getClientIp } = require('../middleware/botChallenge');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { createLogger } = require('../utils/logger');
 
 const logger = createLogger('BotChallenge');
+
+// Serve challenge page with code injection
+router.get('/challenge.html', asyncHandler(async (req, res) => {
+    const ip = getClientIp(req);
+    
+    // Get or generate challenge for this IP
+    let challengeData = botProtection.getActiveChallenge(ip);
+    if (!challengeData) {
+        challengeData = botProtection.generateChallenge(ip);
+        logger.info('New challenge generated', { ip, code: challengeData.code });
+    } else {
+        logger.info('Reusing existing challenge', { ip, code: challengeData.code });
+    }
+    
+    // Read and inject challenge code into HTML
+    const challengePath = path.join(__dirname, '..', '..', 'public', 'challenge.html');
+    
+    if (!fs.existsSync(challengePath)) {
+        logger.error('Challenge file not found', { path: challengePath });
+        return res.status(404).send('Challenge page not found');
+    }
+    
+    let html = fs.readFileSync(challengePath, 'utf8');
+    html = html.replace('{{CHALLENGE_CODE}}', challengeData.code);
+    
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+}));
 
 // Verify challenge
 router.post('/verify-challenge', asyncHandler(async (req, res) => {
