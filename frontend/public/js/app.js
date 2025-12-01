@@ -367,9 +367,6 @@
     const data = dashboardState.metrics || [];
     if (!stats.requests || !stats.rps || !stats.trafficIn || !stats.trafficOut) return;
     
-    // Always hide placeholder since we'll show chart with zeros if no data
-    if (dashboardState.placeholder) dashboardState.placeholder.hidden = true;
-    
     // Calculate stats (0 if no data)
     const totalRequests = data.length ? data.reduce((sum, row) => sum + (row.rawRequests || 0), 0) : 0;
     const latest = data.length ? data[data.length - 1] : null;
@@ -385,45 +382,40 @@
     // Update Chart.js - always update, even with empty data
     if (dashboardState.chart) {
       const maxPoints = dashboardState.viewMode === 'realtime' ? 60 : 24;
+      const now = Date.now();
+      const interval = dashboardState.viewMode === 'realtime' ? 1000 : 3600000;
       
-      if (!data.length) {
-        // No data - show zeros across timeline
-        const now = Date.now();
-        const emptyData = [];
-        for (let i = 0; i < maxPoints; i++) {
-          const ts = now - ((maxPoints - i - 1) * (dashboardState.viewMode === 'realtime' ? 1000 : 3600000));
-          emptyData.push({
-            ts,
-            inRate: 0,
-            outRate: 0,
-            requestsRate: 0
-          });
-        }
-        
-        dashboardState.chart.data.labels = emptyData.map(point => {
-          const date = new Date(point.ts);
-          return dashboardState.viewMode === 'realtime' 
-            ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-            : date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        });
-        
-        dashboardState.chart.data.datasets[0].data = emptyData.map(p => p.inRate);
-        dashboardState.chart.data.datasets[1].data = emptyData.map(p => p.outRate);
-        dashboardState.chart.data.datasets[2].data = emptyData.map(p => p.requestsRate);
-      } else {
-        // Has data - show actual values
-        const chartData = data.slice(-maxPoints);
-        
-        dashboardState.chart.data.labels = chartData.map(point => {
-          const date = new Date(point.ts);
-          return dashboardState.viewMode === 'realtime' 
-            ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-            : date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        });
-        
-        dashboardState.chart.data.datasets[0].data = chartData.map(p => p.inRate);
-        dashboardState.chart.data.datasets[1].data = chartData.map(p => p.outRate);
-        dashboardState.chart.data.datasets[2].data = chartData.map(p => p.requestsRate);
+      // Generate timeline for last maxPoints intervals
+      const timeline = [];
+      for (let i = maxPoints - 1; i >= 0; i--) {
+        timeline.push(now - (i * interval));
+      }
+      
+      // Fill with zeros or actual data
+      const chartData = timeline.map(ts => {
+        const dataPoint = data.find(d => Math.abs(d.ts - ts) < interval / 2);
+        return {
+          ts,
+          inRate: dataPoint ? dataPoint.inRate : 0,
+          outRate: dataPoint ? dataPoint.outRate : 0,
+          requestsRate: dataPoint ? dataPoint.requestsRate : 0
+        };
+      });
+      
+      dashboardState.chart.data.labels = chartData.map(point => {
+        const date = new Date(point.ts);
+        return dashboardState.viewMode === 'realtime' 
+          ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+          : date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      });
+      
+      dashboardState.chart.data.datasets[0].data = chartData.map(p => p.inRate);
+      dashboardState.chart.data.datasets[1].data = chartData.map(p => p.outRate);
+      dashboardState.chart.data.datasets[2].data = chartData.map(p => p.requestsRate);
+      
+      // Hide placeholder if we have chart
+      if (dashboardState.placeholder) {
+        dashboardState.placeholder.hidden = true;
       }
       
       dashboardState.chart.update('active');
