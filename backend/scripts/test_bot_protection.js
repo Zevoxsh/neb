@@ -42,8 +42,8 @@ async function testRateLimit() {
     const startTime = Date.now();
 
     // Faire 120 requêtes avec un petit délai pour rester sous 1 minute
-    const numRequests = 120;
-    const delayMs = 400; // 400ms entre chaque requête = environ 2.5 req/s
+    const numRequests = 1200;
+    const delayMs = 1; // 400ms entre chaque requête = environ 2.5 req/s
     console.log(`📊 Envoi de ${numRequests} requêtes espacées de ${delayMs}ms...\n`);
 
     for (let i = 1; i <= numRequests; i++) {
@@ -97,13 +97,21 @@ async function testRateLimit() {
 async function testBurstRequests() {
     console.log('💥 Test de rafale (burst)');
     console.log('================================\n');
-    console.log('Envoi de 120 requêtes simultanées...\n');
+    console.log('Envoi de 120 requêtes avec léger décalage...\n');
 
     const startTime = Date.now();
     const promises = [];
+    const numRequests = 120;
 
-    for (let i = 0; i < 120; i++) {
-        promises.push(makeRequest(TARGET_URL));
+    // Envoyer les requêtes avec un tout petit décalage pour qu'elles s'accumulent
+    for (let i = 0; i < numRequests; i++) {
+        promises.push(
+            new Promise(resolve => {
+                setTimeout(() => {
+                    makeRequest(TARGET_URL).then(resolve);
+                }, i * 50); // 50ms de décalage entre chaque
+            })
+        );
     }
 
     const results = await Promise.all(promises);
@@ -111,9 +119,13 @@ async function testBurstRequests() {
 
     const challenged = results.filter(r => r.challenged).length;
     const errors = results.filter(r => r.status === 'ERROR').length;
+    const firstChallengeIdx = results.findIndex(r => r.challenged);
 
-    console.log(`✓ 120 requêtes envoyées en ${totalTime}s`);
+    console.log(`✓ ${numRequests} requêtes envoyées en ${totalTime}s`);
     console.log(`  Challenges reçus: ${challenged}`);
+    if (firstChallengeIdx >= 0) {
+        console.log(`  Premier challenge: requête #${firstChallengeIdx + 1}`);
+    }
     console.log(`  Erreurs: ${errors}`);
     console.log('\n================================\n');
 }

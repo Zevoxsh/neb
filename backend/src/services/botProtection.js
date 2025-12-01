@@ -13,7 +13,7 @@ class BotProtection {
         this.verifiedIPs = new Map(); // IP => expiration timestamp
         this.requestCounts = new Map(); // IP => count per second
         this.ipRequestHistory = new Map(); // IP => array of timestamps for rate limiting
-        this.perIpLimit = 100; // Max requests per IP per minute
+        this.perIpLimit = 50; // Max requests per IP per minute (reduced from 100)
         this.secret = process.env.BOT_SECRET || crypto.randomBytes(32).toString('hex');
 
         // Reset counters every second

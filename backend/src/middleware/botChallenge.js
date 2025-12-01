@@ -16,30 +16,31 @@ function getClientIp(req) {
 function botChallengeMiddleware(req, res, next) {
     const ip = getClientIp(req);
 
-    // Track request
-    botProtection.trackRequest(ip);
-
     // Skip challenge for:
-    // - API endpoints
+    // - API endpoints (authenticated)
     // - Static assets
     // - Challenge verification endpoint
-    if (req.path.startsWith('/api') ||
+    const shouldSkip = req.path.startsWith('/api') ||
         req.path.startsWith('/public') ||
         req.path === '/verify-challenge' ||
-        req.path === '/challenge.html') {
-        return next();
-    }
+        req.path === '/challenge.html';
 
-    // Check if we should challenge this IP
-    if (botProtection.shouldChallenge(ip)) {
-        // Generate challenge
-        const { token, timestamp } = botProtection.generateChallenge(ip);
+    // Only track requests that can be challenged
+    if (!shouldSkip) {
+        // Track request
+        botProtection.trackRequest(ip);
 
-        // Store in session/cookie for verification
-        res.cookie('challenge_ts', timestamp, { httpOnly: true, maxAge: 30000 });
+        // Check if we should challenge this IP
+        if (botProtection.shouldChallenge(ip)) {
+            // Generate challenge
+            const { token, timestamp } = botProtection.generateChallenge(ip);
 
-        // Send challenge page
-        return res.sendFile(path.join(__dirname, '..', '..', 'public', 'challenge.html'));
+            // Store in session/cookie for verification
+            res.cookie('challenge_ts', timestamp, { httpOnly: true, maxAge: 30000 });
+
+            // Send challenge page
+            return res.sendFile(path.join(__dirname, '..', '..', 'public', 'challenge.html'));
+        }
     }
 
     next();
