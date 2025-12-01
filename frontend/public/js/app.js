@@ -2210,26 +2210,34 @@
     }
     
     // Private/Local IPs
-    if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.16.') || 
-        ip.startsWith('172.17.') || ip.startsWith('172.18.') || ip.startsWith('172.19.') ||
-        ip.startsWith('172.2') || ip.startsWith('172.30.') || ip.startsWith('172.31.') ||
-        ip === '127.0.0.1' || ip === 'localhost') {
+    if (ip.startsWith('192.168.') || ip.startsWith('10.') || 
+        ip.startsWith('172.16.') || ip.startsWith('172.17.') || 
+        ip.startsWith('172.18.') || ip.startsWith('172.19.') ||
+        ip.startsWith('172.20.') || ip.startsWith('172.21.') || 
+        ip.startsWith('172.22.') || ip.startsWith('172.23.') ||
+        ip.startsWith('172.24.') || ip.startsWith('172.25.') || 
+        ip.startsWith('172.26.') || ip.startsWith('172.27.') ||
+        ip.startsWith('172.28.') || ip.startsWith('172.29.') || 
+        ip.startsWith('172.30.') || ip.startsWith('172.31.') ||
+        ip === '127.0.0.1' || ip === 'localhost' || ip === '::1') {
       ipCountryCache.set(ip, 'LOCAL');
       return 'LOCAL';
     }
     
     try {
-      // Use ip-api.com (free, no API key needed, 45 req/min limit)
-      const response = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode`, {
+      // Use ipapi.co (free, HTTPS, no API key needed)
+      const response = await fetch(`https://ipapi.co/${ip}/country_code/`, {
         method: 'GET',
         cache: 'force-cache'
       });
       
       if (response.ok) {
-        const data = await response.json();
-        const countryCode = data.countryCode || null;
-        ipCountryCache.set(ip, countryCode);
-        return countryCode;
+        const countryCode = await response.text();
+        const cleanCode = countryCode.trim();
+        if (cleanCode && cleanCode.length === 2) {
+          ipCountryCache.set(ip, cleanCode);
+          return cleanCode;
+        }
       }
     } catch (error) {
       console.warn('Failed to fetch country for IP:', ip, error);
