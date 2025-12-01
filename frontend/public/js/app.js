@@ -795,7 +795,7 @@
           <td class="mono">${escapeHtml(b.targetHost || b.target_host || '')}:${b.targetPort || b.target_port}</td>
           <td>${escapeHtml((b.targetProtocol || b.target_protocol || '').toUpperCase())}</td>
           <td>
-            <a class="btn ghost small" href="/backend.html?id=${b.id}">Modifier</a>
+            <a class="btn ghost small" href="/backend.html?id=${b.id}">Gerer</a>
             <button class="btn ghost small delete-backend" data-id="${b.id}">Supprimer</button>
           </td>
         `;
@@ -847,7 +847,7 @@
           <td>${backendLabel}</td>
           <td><span class="status-badge ${protectionBadge}"><span class="status-dot"></span>${protectionText}</span></td>
           <td>
-            <a class="btn ghost small" href="/domain.html?id=${d.id}">Modifier</a>
+            <a class="btn ghost small" href="/domain.html?id=${d.id}">Gerer</a>
             <button class="btn ghost small delete-domain" data-id="${d.id}">Supprimer</button>
           </td>
         `;
@@ -995,158 +995,6 @@
     }
   }
 
-  async function loadDomainDetail() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const domainId = urlParams.get('id');
-    if (!domainId) {
-      showToast('ID de domaine manquant', 'error');
-      window.location.href = '/domains.html';
-      return;
-    }
-
-    try {
-      // Load domain data
-      const res = await window.api.requestJson('/api/domains');
-      if (!res || res.status !== 200) throw new Error('Failed to load domains');
-      const domains = Array.isArray(res.body) ? res.body : [];
-      const domain = domains.find(d => String(d.id) === String(domainId));
-      if (!domain) {
-        showToast('Domaine introuvable', 'error');
-        window.location.href = '/domains.html';
-        return;
-      }
-
-      // Populate selects
-      const proxySelect = document.getElementById('editDomainProxySelect');
-      const backendSelect = document.getElementById('editDomainBackendSelect');
-      if (proxySelect && backendSelect) {
-        proxySelect.innerHTML = '';
-        backendSelect.innerHTML = '<option value="">Sélectionner...</option>';
-        
-        const proxies = cache.proxies.length ? cache.proxies : await fetchAndCache('/api/proxies', 'proxies');
-        const backends = cache.backends.length ? cache.backends : await fetchAndCache('/api/backends', 'backends');
-        
-        proxies.forEach((p) => {
-          const opt = document.createElement('option');
-          opt.value = p.id;
-          opt.textContent = `${p.name} (${p.listen_host}:${p.listen_port})`;
-          proxySelect.appendChild(opt);
-        });
-        
-        backends.forEach((b) => {
-          const opt = document.createElement('option');
-          opt.value = b.id;
-          opt.textContent = `${b.name} (${b.target_host}:${b.target_port})`;
-          backendSelect.appendChild(opt);
-        });
-      }
-
-      // Fill form with domain data
-      document.getElementById('editDomainId').value = domain.id;
-      document.getElementById('editDomainHostname').value = domain.hostname;
-      document.getElementById('editDomainProxySelect').value = domain.proxy_id;
-      document.getElementById('editDomainBackendSelect').value = domain.backend_id;
-      document.getElementById('editDomainBotProtection').value = domain.bot_protection || 'unprotected';
-    } catch (e) {
-      console.error('[Domain Detail] Failed to load:', e);
-      showToast('Erreur lors du chargement', 'error');
-    }
-  }
-
-  async function saveDomainDetail(ev) {
-    ev.preventDefault();
-    const form = document.getElementById('editDomainForm');
-    const payload = formDataToObject(new FormData(form));
-    const domainId = payload.id;
-    
-    if (!payload.backendId) {
-      showToast('Choisissez un backend', 'error');
-      return;
-    }
-    
-    const botProtection = payload.botProtection || 'unprotected';
-    const hostname = payload.hostname;
-    delete payload.id;
-    delete payload.botProtection;
-    
-    try {
-      const res = await window.api.requestJson(`/api/domains/${domainId}`, { 
-        method: 'PUT', 
-        body: { ...payload, botProtection }
-      });
-      
-      if (res && (res.status === 200 || res.status === 201)) {
-        // Update bot protection lists
-        try {
-          await window.api.requestJson('/api/bot-protection/protected-domains/remove', {
-            method: 'POST',
-            body: { domain: hostname }
-          });
-          await window.api.requestJson('/api/bot-protection/unprotected-domains/remove', {
-            method: 'POST',
-            body: { domain: hostname }
-          });
-        } catch (e) {
-          // Ignore errors for removal
-        }
-        
-        // Add to appropriate list
-        if (botProtection === 'protected') {
-          await window.api.requestJson('/api/bot-protection/protected-domains/add', {
-            method: 'POST',
-            body: { domain: hostname }
-          });
-        } else if (botProtection === 'unprotected') {
-          await window.api.requestJson('/api/bot-protection/unprotected-domains/add', {
-            method: 'POST',
-            body: { domain: hostname }
-          });
-        }
-        
-        showToast('Domaine mis à jour');
-        window.location.href = '/domains.html';
-      } else {
-        showToast('Mise à jour impossible', 'error');
-      }
-    } catch (e) {
-      console.error('[Domain Detail] Update error:', e);
-      showToast('Mise à jour impossible', 'error');
-    }
-  }
-
-  async function deleteDomainDetail() {
-    const domainId = document.getElementById('editDomainId').value;
-    const hostname = document.getElementById('editDomainHostname').value;
-    if (!confirm(`Supprimer le domaine "${hostname}" ?`)) return;
-    
-    try {
-      const res = await window.api.requestJson(`/api/domains/${domainId}`, { method: 'DELETE' });
-      if (res && (res.status === 200 || res.status === 204)) {
-        // Clean up bot protection lists
-        try {
-          await window.api.requestJson('/api/bot-protection/protected-domains/remove', {
-            method: 'POST',
-            body: { domain: hostname }
-          });
-          await window.api.requestJson('/api/bot-protection/unprotected-domains/remove', {
-            method: 'POST',
-            body: { domain: hostname }
-          });
-        } catch (e) {
-          // Ignore errors
-        }
-        
-        showToast('Domaine supprime');
-        window.location.href = '/domains.html';
-      } else {
-        showToast('Suppression impossible', 'error');
-      }
-    } catch (e) {
-      console.error('[Domain Detail] Delete error:', e);
-      showToast('Suppression impossible', 'error');
-    }
-  }
-
   async function loadBackendDetail() {
     const urlParams = new URLSearchParams(window.location.search);
     const backendId = urlParams.get('id');
@@ -1165,11 +1013,22 @@
         return;
       }
 
-      document.getElementById('editBackendId').value = backend.id;
-      document.getElementById('editBackendName').value = backend.name || '';
-      document.getElementById('editBackendHost').value = backend.targetHost || backend.target_host || '';
-      document.getElementById('editBackendPort').value = backend.targetPort || backend.target_port || '';
-      document.getElementById('editBackendProtocol').value = backend.targetProtocol || backend.target_protocol || 'http';
+      const idField = document.getElementById('editBackendId');
+      const nameField = document.getElementById('editBackendName');
+      const hostField = document.getElementById('editBackendHost');
+      const portField = document.getElementById('editBackendPort');
+      const protocolField = document.getElementById('editBackendProtocol');
+
+      if (!idField || !nameField || !hostField || !portField || !protocolField) {
+        console.error('[Backend Detail] Required form fields not found');
+        return;
+      }
+
+      idField.value = backend.id;
+      nameField.value = backend.name || '';
+      hostField.value = backend.targetHost || backend.target_host || '';
+      portField.value = backend.targetPort || backend.target_port || '';
+      protocolField.value = backend.targetProtocol || backend.target_protocol || 'http';
     } catch (e) {
       console.error('[Backend Detail] Failed to load:', e);
       showToast('Erreur lors du chargement', 'error');
@@ -1220,11 +1079,16 @@
   }
 
   async function loadDomainCertificate() {
-    const hostname = document.getElementById('editDomainHostname').value;
+    const hostnameField = document.getElementById('editDomainHostname');
+    if (!hostnameField) return;
+    
+    const hostname = hostnameField.value;
     if (!hostname) return;
 
     const certInfo = document.getElementById('domainCertInfo');
     const certEmpty = document.getElementById('domainCertEmpty');
+    
+    if (!certInfo || !certEmpty) return;
     
     try {
       const res = await window.api.requestJson('/api/certificates');
@@ -1382,11 +1246,22 @@
       }
 
       // Fill form with domain data
-      document.getElementById('editDomainId').value = domain.id;
-      document.getElementById('editDomainHostname').value = domain.hostname;
-      document.getElementById('editDomainProxySelect').value = domain.proxy_id;
-      document.getElementById('editDomainBackendSelect').value = domain.backend_id;
-      document.getElementById('editDomainBotProtection').value = domain.bot_protection || 'unprotected';
+      const idField = document.getElementById('editDomainId');
+      const hostnameField = document.getElementById('editDomainHostname');
+      const proxyField = document.getElementById('editDomainProxySelect');
+      const backendField = document.getElementById('editDomainBackendSelect');
+      const protectionField = document.getElementById('editDomainBotProtection');
+
+      if (!idField || !hostnameField || !proxyField || !backendField || !protectionField) {
+        console.error('[Domain Detail] Required form fields not found');
+        return;
+      }
+
+      idField.value = domain.id;
+      hostnameField.value = domain.hostname;
+      proxyField.value = domain.proxy_id;
+      backendField.value = domain.backend_id;
+      protectionField.value = domain.bot_protection || 'unprotected';
     } catch (e) {
       console.error('[Domain Detail] Failed to load:', e);
       showToast('Erreur lors du chargement', 'error');
