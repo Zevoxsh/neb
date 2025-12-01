@@ -50,4 +50,12 @@ router.post('/api/bot-protection/threshold', asyncHandler(async (req, res) => {
     res.json({ threshold });
 }));
 
+// Set per-IP limit
+router.post('/api/bot-protection/ip-limit', asyncHandler(async (req, res) => {
+    const { limit } = req.body;
+    botProtection.setPerIpLimit(limit);
+    logger.info('Per-IP limit updated', { limit });
+    res.json({ limit });
+}));
+
 module.exports = router;
