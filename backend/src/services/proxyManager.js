@@ -438,6 +438,7 @@ class ProxyManager {
           // Debug: log IP detection on first request
           if (!req.url.includes('.css') && !req.url.includes('.js') && !req.url.includes('.png')) {
             console.log(`[ProxyManager] IP Detection - CF: ${req.headers['cf-connecting-ip']}, Real: ${req.headers['x-real-ip']}, Forwarded: ${req.headers['x-forwarded-for']}, Final: ${clientIp}`);
+          }
 
           // Serve challenge page
           if (req.url === '/challenge.html') {
