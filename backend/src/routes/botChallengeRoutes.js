@@ -12,6 +12,14 @@ router.post('/verify-challenge', asyncHandler(async (req, res) => {
     const { solution, userInput } = req.body;
     const ip = getClientIp(req);
 
+    logger.info('Challenge verification request', { 
+        ip, 
+        userInput, 
+        solution,
+        body: req.body,
+        headers: req.headers['x-forwarded-for'] || req.connection.remoteAddress
+    });
+
     // Verify the CAPTCHA answer
     const result = botProtection.verifyChallengeAnswer(ip, userInput || solution);
 
