@@ -532,11 +532,26 @@ animation:spin 1s linear infinite;margin:30px auto}
           if (req.url === '/challenge.html') {
             const fs = require('fs');
             const path = require('path');
+            
+            // Get or generate challenge for this IP
+            let challengeData = botProtection.getActiveChallenge(clientIp);
+            if (!challengeData) {
+              challengeData = botProtection.generateChallenge(clientIp);
+              console.log(`[ProxyManager-HTTP] New challenge generated for IP ${clientIp}, code: ${challengeData.code}`);
+            } else {
+              console.log(`[ProxyManager-HTTP] Reusing existing challenge for IP ${clientIp}, code: ${challengeData.code}`);
+            }
+            
             const challengePath = path.join(__dirname, '..', '..', 'public', 'challenge.html');
             
             if (fs.existsSync(challengePath)) {
-              const html = fs.readFileSync(challengePath, 'utf8');
-              res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+              let html = fs.readFileSync(challengePath, 'utf8');
+              // Inject the challenge code into the HTML
+              html = html.replace('{{CHALLENGE_CODE}}', challengeData.code);
+              res.writeHead(200, { 
+                'Content-Type': 'text/html; charset=utf-8',
+                'Content-Length': Buffer.byteLength(html)
+              });
               res.end(html);
               return;
             }
