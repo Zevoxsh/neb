@@ -118,7 +118,7 @@ router.post('/api/bot-protection/protected-domains/add', asyncHandler(async (req
         if (certResult.rows.length === 0) {
             // Certificate doesn't exist, generate it
             logger.info('Certificate not found, requesting new certificate', { domain });
-            await acmeManager.requestCertificate(domain);
+            await acmeManager.ensureCert(domain);
             logger.info('SSL certificate generated successfully', { domain });
         } else {
             logger.info('SSL certificate already exists', { domain });

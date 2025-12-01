@@ -553,7 +553,7 @@ class ProxyManager {
                   console.log(`[ProxyManager] Generating SSL certificate for ${domain} before bot challenge...`);
                   const acmeManager = require('./acmeManager');
                   try {
-                    await acmeManager.requestCertificate(domain);
+                    await acmeManager.ensureCert(domain);
                     console.log(`[ProxyManager] SSL certificate generated for ${domain}`);
                   } catch (certError) {
                     console.error(`[ProxyManager] Failed to generate certificate for ${domain}:`, certError.message);
