@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Requêtes - Nebula Proxy</title>
+  <link rel="stylesheet" href="/public/styles.css">
+</head>
+<body data-page="requests">
+  <div class="app-container">
+    <div include-html="/public/partials/header.html"></div>
+    <main class="main-content">
+      <div class="page-header">
+        <h1>📊 Journal des requêtes</h1>
+        <p>Vue d'ensemble des requêtes par IP et domaine</p>
+      </div>
+
+      <div class="filters-bar" style="margin-bottom: 24px; display: flex; gap: 16px; align-items: center;">
+        <label style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: rgba(255,255,255,0.7);">Période:</span>
+          <select id="periodFilter" style="background: #0a0a0a; color: #fff; border: 1px solid #333; border-radius: 6px; padding: 8px 12px;">
+            <option value="7">7 derniers jours</option>
+            <option value="30" selected>30 derniers jours</option>
+            <option value="90">90 derniers jours</option>
+          </select>
+        </label>
+        <button id="refreshBtn" class="btn btn-secondary">🔄 Rafraîchir</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Requêtes par IP</h2>
+          <div id="totalCount" style="color: rgba(255,255,255,0.6); font-size: 14px;"></div>
+        </div>
+        <div class="card-body">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>IP Cliente</th>
+                  <th>Domaine</th>
+                  <th>Nombre de requêtes</th>
+                  <th>Première visite</th>
+                  <th>Dernière visite</th>
+                </tr>
+              </thead>
+              <tbody id="requestLogsTable">
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">
+                    Chargement...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div id="pagination" style="margin-top: 24px; display: flex; justify-content: center; gap: 12px; align-items: center;">
+            <button id="prevBtn" class="btn btn-secondary" disabled>← Précédent</button>
+            <span id="pageInfo" style="color: rgba(255,255,255,0.7); font-size: 14px;"></span>
+            <button id="nextBtn" class="btn btn-secondary">Suivant →</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <script src="/public/js/include-partials.js"></script>
+  <script src="/public/js/api.js"></script>
+  <script src="/public/js/ui.js"></script>
+  <script src="/public/js/app.js"></script>
+</body>
+</html>

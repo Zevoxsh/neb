@@ -93,6 +93,9 @@
       case 'security':
         window.initSecurityPage();
         break;
+      case 'requests':
+        initRequestsPage();
+        break;
       default:
         break;
     }
@@ -2039,5 +2042,142 @@
       loadBotStats();
     }
   }, 5000);
+
+  // ========== REQUEST LOGS PAGE ==========
+  let requestLogsState = {
+    offset: 0,
+    limit: 100,
+    days: 30,
+    total: 0
+  };
+
+  function initRequestsPage() {
+    const periodFilter = document.getElementById('periodFilter');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    if (periodFilter) {
+      periodFilter.addEventListener('change', () => {
+        requestLogsState.days = parseInt(periodFilter.value);
+        requestLogsState.offset = 0;
+        loadRequestLogs();
+      });
+    }
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        requestLogsState.offset = 0;
+        loadRequestLogs();
+      });
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        if (requestLogsState.offset > 0) {
+          requestLogsState.offset = Math.max(0, requestLogsState.offset - requestLogsState.limit);
+          loadRequestLogs();
+        }
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        if (requestLogsState.offset + requestLogsState.limit < requestLogsState.total) {
+          requestLogsState.offset += requestLogsState.limit;
+          loadRequestLogs();
+        }
+      });
+    }
+
+    loadRequestLogs();
+  }
+
+  async function loadRequestLogs() {
+    const table = document.getElementById('requestLogsTable');
+    const totalCount = document.getElementById('totalCount');
+    const pageInfo = document.getElementById('pageInfo');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    if (!table) return;
+
+    table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">Chargement...</td></tr>';
+
+    try {
+      const res = await window.api.requestJson(
+        `/api/request-logs?limit=${requestLogsState.limit}&offset=${requestLogsState.offset}&days=${requestLogsState.days}`
+      );
+
+      if (!res || res.status !== 200) throw new Error('Fetch failed');
+
+      const data = res.body;
+      requestLogsState.total = data.total || 0;
+
+      if (totalCount) {
+        totalCount.textContent = `Total: ${formatNumber(requestLogsState.total)} combinaisons IP/domaine`;
+      }
+
+      if (!data.logs || data.logs.length === 0) {
+        table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">Aucune requête trouvée</td></tr>';
+        if (pageInfo) pageInfo.textContent = '';
+        if (prevBtn) prevBtn.disabled = true;
+        if (nextBtn) nextBtn.disabled = true;
+        return;
+      }
+
+      table.innerHTML = data.logs.map(log => {
+        const firstSeen = new Date(log.first_seen);
+        const lastSeen = new Date(log.last_seen);
+        
+        return `
+          <tr>
+            <td><code style="color: #3b82f6;">${escapeHtml(log.client_ip)}</code></td>
+            <td><strong>${escapeHtml(log.hostname || 'N/A')}</strong></td>
+            <td><span style="color: #22c55e; font-weight: 600;">${formatNumber(log.request_count)}</span></td>
+            <td style="color: rgba(255,255,255,0.6); font-size: 13px;">${formatDate(firstSeen)}</td>
+            <td style="color: rgba(255,255,255,0.6); font-size: 13px;">${formatDate(lastSeen)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // Update pagination
+      const currentPage = Math.floor(requestLogsState.offset / requestLogsState.limit) + 1;
+      const totalPages = Math.ceil(requestLogsState.total / requestLogsState.limit);
+      
+      if (pageInfo) {
+        pageInfo.textContent = `Page ${currentPage} sur ${totalPages}`;
+      }
+      
+      if (prevBtn) {
+        prevBtn.disabled = requestLogsState.offset === 0;
+      }
+      
+      if (nextBtn) {
+        nextBtn.disabled = requestLogsState.offset + requestLogsState.limit >= requestLogsState.total;
+      }
+
+    } catch (err) {
+      console.error('Error loading request logs:', err);
+      table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #ff4444;">Erreur de chargement</td></tr>';
+    }
+  }
+
+  function formatDate(date) {
+    return date.toLocaleDateString('fr-FR', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
 })();
 

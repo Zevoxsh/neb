@@ -13,6 +13,7 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const securityRoutes = require('./routes/securityRoutes');
 const backupRoutes = require('./routes/backupRoutes');
 const botChallengeRoutes = require('./routes/botChallengeRoutes');
+const requestLogsRoutes = require('./routes/requestLogsRoutes');
 const { botChallengeMiddleware } = require('./middleware/botChallenge');
 const debugRoutes = require('./routes/debugRoutes');
 
@@ -46,6 +47,7 @@ function createApp() {
   app.use(securityRoutes);
   app.use(backupRoutes);
   app.use(botChallengeRoutes);
+  app.use(requestLogsRoutes);
   app.use(debugRoutes);
 
   // Simple profile route
@@ -69,6 +71,7 @@ function createApp() {
   app.get('/login', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'login.html')));
   app.get('/domain.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'domain.html')));
   app.get('/backend.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'backend.html')));
+  app.get('/requests.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'requests.html')));
 
   // SPA Fallback: serve the correct top-level page for known client routes so
   // direct links / refresh on deep routes work (e.g. /proxies/3 -> proxies.html)

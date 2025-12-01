@@ -119,6 +119,18 @@ async function initDbAndStart() {
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS error_page_html TEXT;");
     await pool.query("ALTER TABLE domain_mappings ADD COLUMN IF NOT EXISTS bot_protection VARCHAR(20) DEFAULT 'unprotected';");
 
+    // Request logs table for tracking all requests
+    await pool.query(`CREATE TABLE IF NOT EXISTS request_logs(
+      id SERIAL PRIMARY KEY,
+      client_ip VARCHAR(191) NOT NULL,
+      hostname VARCHAR(255),
+      timestamp TIMESTAMP WITH TIME ZONE DEFAULT now()
+    ); `);
+    
+    // Index for faster queries
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_request_logs_timestamp ON request_logs(timestamp);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_request_logs_ip_hostname ON request_logs(client_ip, hostname);`);
+
     const adminUser = process.env.DEFAULT_ADMIN_USER || 'admin';
     const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
     const res = await pool.query('SELECT id FROM users WHERE username = $1', [adminUser]);

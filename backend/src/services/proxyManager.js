@@ -13,6 +13,7 @@ const blockedIpModel = require('../models/blockedIpModel');
 const trustedIpModel = require('../models/trustedIpModel');
 const alertService = require('./alertService');
 const botProtection = require('./botProtection');
+const requestLogger = require('../utils/requestLogger');
 
 // simple helper to detect IP addresses (IPv4 or IPv6 heuristics)
 function isIpAddress(host) {
@@ -527,6 +528,11 @@ class ProxyManager {
             
             // Get domain from Host header
             const domain = req.headers.host ? req.headers.host.split(':')[0] : null;
+            
+            // Log request asynchronously
+            if (domain) {
+              requestLogger.logRequest(clientIp, domain);
+            }
             
             // Force challenge for new IPs on HTTPS proxy, pass domain for filtering
             const challengeStatus = botProtection.shouldChallenge(clientIp, true, domain);
