@@ -528,8 +528,6 @@ class ProxyManager {
             // Get domain from Host header
             const domain = req.headers.host ? req.headers.host.split(':')[0] : null;
             
-            console.log(`[ProxyManager] Checking bot protection for domain: ${domain}, IP: ${clientIp}`);
-            
             // Force challenge for new IPs on HTTPS proxy, pass domain for filtering
             const challengeStatus = botProtection.shouldChallenge(clientIp, true, domain);
             

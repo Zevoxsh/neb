@@ -366,40 +366,65 @@
     const stats = dashboardState.stats || {};
     const data = dashboardState.metrics || [];
     if (!stats.requests || !stats.rps || !stats.trafficIn || !stats.trafficOut) return;
-    if (!data.length) {
-      stats.requests.textContent = '0';
-      stats.rps.textContent = '0/s';
-      stats.trafficIn.textContent = '0 B/s';
-      stats.trafficOut.textContent = '0 B/s';
-      if (dashboardState.placeholder) dashboardState.placeholder.hidden = false;
-      return;
-    }
+    
+    // Always hide placeholder since we'll show chart with zeros if no data
     if (dashboardState.placeholder) dashboardState.placeholder.hidden = true;
-    const totalRequests = data.reduce((sum, row) => sum + (row.rawRequests || 0), 0);
-    const latest = data[data.length - 1];
+    
+    // Calculate stats (0 if no data)
+    const totalRequests = data.length ? data.reduce((sum, row) => sum + (row.rawRequests || 0), 0) : 0;
+    const latest = data.length ? data[data.length - 1] : null;
     const rpsValue = latest ? latest.requestsRate || 0 : 0;
     const inValue = latest ? latest.inRate || 0 : 0;
     const outValue = latest ? latest.outRate || 0 : 0;
+    
     stats.requests.textContent = formatNumber(totalRequests);
     stats.rps.textContent = `${formatNumber(rpsValue >= 100 ? Math.round(rpsValue) : Number(rpsValue.toFixed(1)))} /s`;
     stats.trafficIn.textContent = `${formatBytes(inValue)}/s`;
     stats.trafficOut.textContent = `${formatBytes(outValue)}/s`;
     
-    // Update Chart.js
-    if (dashboardState.chart && data.length) {
+    // Update Chart.js - always update, even with empty data
+    if (dashboardState.chart) {
       const maxPoints = dashboardState.viewMode === 'realtime' ? 60 : 24;
-      const chartData = data.slice(-maxPoints);
       
-      dashboardState.chart.data.labels = chartData.map(point => {
-        const date = new Date(point.ts);
-        return dashboardState.viewMode === 'realtime' 
-          ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-          : date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-      });
-      
-      dashboardState.chart.data.datasets[0].data = chartData.map(p => p.inRate);
-      dashboardState.chart.data.datasets[1].data = chartData.map(p => p.outRate);
-      dashboardState.chart.data.datasets[2].data = chartData.map(p => p.requestsRate);
+      if (!data.length) {
+        // No data - show zeros across timeline
+        const now = Date.now();
+        const emptyData = [];
+        for (let i = 0; i < maxPoints; i++) {
+          const ts = now - ((maxPoints - i - 1) * (dashboardState.viewMode === 'realtime' ? 1000 : 3600000));
+          emptyData.push({
+            ts,
+            inRate: 0,
+            outRate: 0,
+            requestsRate: 0
+          });
+        }
+        
+        dashboardState.chart.data.labels = emptyData.map(point => {
+          const date = new Date(point.ts);
+          return dashboardState.viewMode === 'realtime' 
+            ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            : date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        });
+        
+        dashboardState.chart.data.datasets[0].data = emptyData.map(p => p.inRate);
+        dashboardState.chart.data.datasets[1].data = emptyData.map(p => p.outRate);
+        dashboardState.chart.data.datasets[2].data = emptyData.map(p => p.requestsRate);
+      } else {
+        // Has data - show actual values
+        const chartData = data.slice(-maxPoints);
+        
+        dashboardState.chart.data.labels = chartData.map(point => {
+          const date = new Date(point.ts);
+          return dashboardState.viewMode === 'realtime' 
+            ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            : date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        });
+        
+        dashboardState.chart.data.datasets[0].data = chartData.map(p => p.inRate);
+        dashboardState.chart.data.datasets[1].data = chartData.map(p => p.outRate);
+        dashboardState.chart.data.datasets[2].data = chartData.map(p => p.requestsRate);
+      }
       
       dashboardState.chart.update('active');
     }
