@@ -102,8 +102,39 @@ router.post('/api/bot-protection/verification-duration', asyncHandler(async (req
 // Add protected domain
 router.post('/api/bot-protection/protected-domains/add', asyncHandler(async (req, res) => {
     const { domain } = req.body;
+    
+    // First, generate SSL certificate for the domain
+    try {
+        const acmeManager = require('../services/acmeManager');
+        logger.info('Generating SSL certificate for protected domain', { domain });
+        
+        // Check if certificate already exists
+        const db = require('../config/db');
+        const certResult = await db.query(
+            'SELECT * FROM certificates WHERE domain = $1',
+            [domain]
+        );
+        
+        if (certResult.rows.length === 0) {
+            // Certificate doesn't exist, generate it
+            logger.info('Certificate not found, requesting new certificate', { domain });
+            await acmeManager.requestCertificate(domain);
+            logger.info('SSL certificate generated successfully', { domain });
+        } else {
+            logger.info('SSL certificate already exists', { domain });
+        }
+    } catch (certError) {
+        logger.error('Failed to generate SSL certificate', { domain, error: certError.message });
+        return res.status(500).json({ 
+            success: false, 
+            error: 'Échec de la génération du certificat SSL',
+            details: certError.message 
+        });
+    }
+    
+    // Then add to bot protection
     botProtection.addProtectedDomain(domain);
-    logger.info('Protected domain added', { domain });
+    logger.info('Protected domain added with SSL certificate', { domain });
     res.json({ success: true, domain });
 }));
 
