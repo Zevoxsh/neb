@@ -10,7 +10,8 @@
     placeholder: null,
     buttons: {},
     stats: {},
-    domainStatsTimer: null
+    domainStatsTimer: null,
+    timeline: null
   };
   let currentErrorPageProxyId = null;
 
@@ -296,6 +297,7 @@
   function setDashboardViewMode(mode) {
     if (dashboardState.viewMode === mode) return;
     dashboardState.viewMode = mode;
+    dashboardState.timeline = null; // Reset timeline when changing mode
     updateDashboardToggle();
     fetchDashboardMetrics();
   }
@@ -378,14 +380,21 @@
       const now = Date.now();
       const interval = dashboardState.viewMode === 'realtime' ? 1000 : 3600000;
       
-      // Generate timeline for last maxPoints intervals
-      const timeline = [];
-      for (let i = maxPoints - 1; i >= 0; i--) {
-        timeline.push(now - (i * interval));
+      // Initialize or shift existing timeline
+      if (!dashboardState.timeline) {
+        // First time - generate full timeline
+        dashboardState.timeline = [];
+        for (let i = maxPoints - 1; i >= 0; i--) {
+          dashboardState.timeline.push(now - (i * interval));
+        }
+      } else {
+        // Shift timeline: remove oldest, add newest
+        dashboardState.timeline.shift();
+        dashboardState.timeline.push(now);
       }
       
       // Fill with zeros or actual data
-      const chartData = timeline.map(ts => {
+      const chartData = dashboardState.timeline.map(ts => {
         const dataPoint = data.find(d => Math.abs(d.ts - ts) < interval / 2);
         return {
           ts,
