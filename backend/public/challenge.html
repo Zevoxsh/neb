@@ -1,68 +1,32 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vérification Humaine - Nebula</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-deep: #000000;
-            --bg-surface: #080808;
-            --border: #1a1a1a;
-            --text-main: #ffffff;
-            --text-muted: #666666;
-            --primary-glow: rgba(255, 255, 255, 0.15);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: var(--bg-deep);
-            background-image: radial-gradient(circle at 50% 0%, #111111, #000000 80%);
-            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #000;
+            background-image: radial-gradient(circle at 50% 0%, #111, #000 80%);
+            color: #fff;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 1rem;
         }
-
-        .challenge-container {
-            position: relative;
-            width: 100%;
-            max-width: 480px;
-        }
-
-        .challenge-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
+        .card {
+            background: #080808;
+            border: 1px solid #1a1a1a;
             border-radius: 16px;
             padding: 2.5rem 2rem;
             text-align: center;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
         }
-
-        .challenge-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-        }
-
         .logo {
             width: 64px;
             height: 64px;
@@ -73,38 +37,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            position: relative;
-            overflow: hidden;
+            font-size: 2rem;
         }
-
-        .logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .logo::after {
-            content: '';
-            position: absolute;
-            inset: -1px;
-            border-radius: 12px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent);
-            pointer-events: none;
-        h1 {
-            font-size: 1.125rem;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.02em;
-        }
-
-        p {
-            color: var(--text-muted);
-            font-size: 0.8125rem;
-            line-height: 1.5;
-            margin-bottom: 1.5rem;
-        }
-
+        .logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+        h1 { font-size: 1.125rem; font-weight: 500; margin-bottom: 0.5rem; }
+        p { color: #666; font-size: 0.8125rem; margin-bottom: 1.5rem; }
         .captcha-box {
             background: #0a0a0a;
             border: 1px solid #222;
@@ -112,26 +49,12 @@
             padding: 1.25rem;
             margin-bottom: 1.25rem;
         }
-
         .captcha-canvas {
-            width: 100%;
-            height: 70px;
             background: #000;
             border-radius: 6px;
             margin-bottom: 0.875rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
         }
-
-        #captchaImage {
-            border-radius: 6px;
-            width: 100%;
-            height: 100%;
-        }captchaImage {
-            border-radius: 6px;
+        #captchaImage { width: 100%; height: 70px; border-radius: 6px; }
         .refresh-btn {
             background: transparent;
             border: 1px solid #333;
@@ -140,48 +63,31 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.6875rem;
-            transition: all 0.2s;
         }
-
-        .refresh-btn:hover {
-            border-color: #555;
-            color: #fff;
-        }
-
-        .input-group {
-            margin-bottom: 1.25rem;
-        }
-
-        .input-group label {
+        .refresh-btn:hover { border-color: #555; color: #fff; }
+        label {
             display: block;
             text-align: left;
             font-size: 0.8125rem;
-            color: var(--text-muted);
+            color: #666;
             margin-bottom: 0.5rem;
         }
-
-        .captcha-input {
+        input {
             width: 100%;
             background: #0a0a0a;
             border: 1px solid #222;
             color: #fff;
-            padding: 0.75rem 0.875rem;
+            padding: 0.75rem;
             border-radius: 8px;
             font-size: 0.9375rem;
             font-family: 'Courier New', monospace;
             letter-spacing: 0.4em;
             text-align: center;
             text-transform: uppercase;
-            transition: all 0.2s;
+            margin-bottom: 1.25rem;
         }
-
-        .captcha-input:focus {
-            outline: none;
-            border-color: #444;
-            background: #0d0d0d;
-        }
-
-        .submit-btn {
+        input:focus { outline: none; border-color: #444; background: #0d0d0d; }
+        button {
             width: 100%;
             background: #fff;
             color: #000;
@@ -191,86 +97,47 @@
             font-weight: 600;
             font-size: 0.8125rem;
             cursor: pointer;
-            transition: all 0.2s;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
         }
-
-        .submit-btn:hover:not(:disabled) {
-            background: #e0e0e0;
-            transform: translateY(-1px);
-        }
-
-        .submit-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .error-msg {
-            color: #ff4444;
-            font-size: 0.6875rem;
-            margin-top: 0.5rem;
-            display: none;
-        }
-
-        .error-msg.show {
-            display: block;
-        }
-
-        .footer {
-            margin-top: 1.5rem;
-            text-align: center;
-            font-size: 0.625rem;
-            color: #333;
-            letter-spacing: 0.05em;
-        }
-
-        /* Responsive */
+        button:hover:not(:disabled) { background: #e0e0e0; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .error { color: #ff4444; font-size: 0.6875rem; margin-top: 0.5rem; display: none; }
+        .error.show { display: block; }
+        .footer { margin-top: 1.5rem; font-size: 0.625rem; color: #333; }
         @media (max-width: 480px) {
-            .challenge-card {
-                padding: 2rem 1.5rem;
-            }
-
-    <div class="challenge-container">
-        <div class="challenge-card">
-            <div class="logo">
-                <img src="/public/image.png" alt="Logo" onerror="this.style.display='none'">
-            </div>
-
-            <h1>Vérification Humaine</h1>
-            <p>Veuillez recopier le code ci-dessous pour continuer</p>
-            }
-
-            .captcha-box {
-                padding: 1rem;
-            }
-
-            .captcha-canvas {
-                height: 60px;
-            }
-
-            .captcha-input {
-                font-size: 0.875rem;
-                padding: 0.625rem;
-                letter-spacing: 0.3em;
-            }
-
-            .submit-btn {
-                padding: 0.75rem;
-                font-size: 0.75rem;
-            }
-                <button type="submit" class="submit-btn" id="submitBtn">Vérifier</button>
-            </form>
-
-            <div class="footer">
-                NEBULA CONTROL
-            </div>
+            .card { padding: 2rem 1.5rem; }
+            #captchaImage { height: 60px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">
+            <img src="/public/image.png" alt="Logo" onerror="this.textContent='🛡️'">
         </div>
-    </div>lass="challenge-container">
-        <div class="challenge-card">
-            <div class="logo">🛡️</div>
+        <h1>Vérification Humaine</h1>
+        <p>Veuillez recopier le code ci-dessous pour continuer</p>
+        
+        <div class="captcha-box">
+            <div class="captcha-canvas">
+                <canvas id="captchaImage"></canvas>
+            </div>
+            <button class="refresh-btn" onclick="generateCaptcha()">🔄 Nouveau code</button>
+        </div>
+        
+        <form onsubmit="return submitChallenge(event)">
+            <label>Entrez le code :</label>
+            <input type="text" id="captchaInput" maxlength="6" required autocomplete="off">
+            <button type="submit" id="submitBtn">Vérifier</button>
+            <div class="error" id="errorMsg">Code incorrect</div>
+        </form>
+        
+        <div class="footer">NEBULA CONTROL</div>
+    </div>
 
-            <h1>Vérification Humaine</h1>
+    <script>
+        let currentCaptcha = '';
+
         function generateCaptcha() {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             currentCaptcha = '';
@@ -281,21 +148,14 @@
             const canvas = document.getElementById('captchaImage');
             const ctx = canvas.getContext('2d');
             
-            // Adjust canvas size for responsiveness
-            const container = canvas.parentElement;
-            canvas.width = container.offsetWidth;
+            canvas.width = canvas.parentElement.offsetWidth;
             canvas.height = window.innerWidth <= 480 ? 60 : 70;
 
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Background
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Add noise lines
             for (let i = 0; i < 5; i++) {
-                ctx.strokeStyle = `rgba(255, 255, 255, ${Math.random() * 0.1})`;
+                ctx.strokeStyle = `rgba(255,255,255,${Math.random() * 0.1})`;
                 ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
@@ -303,7 +163,6 @@
                 ctx.stroke();
             }
 
-            // Draw CAPTCHA text
             const fontSize = window.innerWidth <= 480 ? 36 : 44;
             ctx.font = `bold ${fontSize}px Courier New`;
             ctx.textBaseline = 'middle';
@@ -312,13 +171,10 @@
             
             for (let i = 0; i < currentCaptcha.length; i++) {
                 ctx.save();
-                
                 const x = spacing * (i + 1);
                 const y = canvas.height / 2 + (Math.random() - 0.5) * 8;
-                const rotation = (Math.random() - 0.5) * 0.25;
-                
                 ctx.translate(x, y);
-                ctx.rotate(rotation);
+                ctx.rotate((Math.random() - 0.5) * 0.25);
                 
                 const gradient = ctx.createLinearGradient(0, -15, 0, 15);
                 gradient.addColorStop(0, '#fff');
@@ -329,55 +185,9 @@
                 ctx.restore();
             }
 
-            // Add noise dots
             for (let i = 0; i < 40; i++) {
-                ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.3})`;
-                ctx.fillRect(
-                    Math.random() * canvas.width,
-                    Math.random() * canvas.height,
-                    2,
-                    2
-                );
-            }
-        }
-
-        // Regenerate CAPTCHA on window resize
-        window.addEventListener('resize', () => {
-            if (currentCaptcha) {
-                generateCaptcha();
-            }
-        });   
-            const spacing = canvas.width / (currentCaptcha.length + 1);
-            
-            for (let i = 0; i < currentCaptcha.length; i++) {
-                ctx.save();
-                
-                const x = spacing * (i + 1);
-                const y = canvas.height / 2 + (Math.random() - 0.5) * 10;
-                const rotation = (Math.random() - 0.5) * 0.3;
-                
-                ctx.translate(x, y);
-                ctx.rotate(rotation);
-                
-                // Gradient color
-                const gradient = ctx.createLinearGradient(0, -20, 0, 20);
-                gradient.addColorStop(0, '#fff');
-                gradient.addColorStop(1, '#aaa');
-                ctx.fillStyle = gradient;
-                
-                ctx.fillText(currentCaptcha[i], 0, 0);
-                ctx.restore();
-            }
-
-            // Add noise dots
-            for (let i = 0; i < 50; i++) {
-                ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.3})`;
-                ctx.fillRect(
-                    Math.random() * canvas.width,
-                    Math.random() * canvas.height,
-                    2,
-                    2
-                );
+                ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.3})`;
+                ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
             }
         }
 
@@ -401,29 +211,18 @@
             submitBtn.textContent = 'Vérification...';
 
             try {
-                const cookies = document.cookie.split(';').reduce((acc, cookie) => {
-                    const [key, value] = cookie.trim().split('=');
-                    acc[key] = value;
-                    return acc;
-                }, {});
-
-                const timestamp = parseInt(cookies.challenge_ts || Date.now());
-
                 const response = await fetch('/verify-challenge', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        solution: currentCaptcha, 
-                        timestamp,
+                        solution: currentCaptcha,
                         userInput: input.value.toUpperCase()
                     })
                 });
 
                 if (response.ok) {
                     submitBtn.textContent = '✓ Accès autorisé';
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 500);
+                    setTimeout(() => window.location.href = '/', 500);
                 } else {
                     errorMsg.textContent = 'Erreur de vérification';
                     errorMsg.classList.add('show');
@@ -438,16 +237,12 @@
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Vérifier';
             }
-
             return false;
         }
 
-        // Generate CAPTCHA on load
         generateCaptcha();
-
-        // Focus input
         document.getElementById('captchaInput').focus();
+        window.addEventListener('resize', () => currentCaptcha && generateCaptcha());
     </script>
 </body>
-
 </html>
