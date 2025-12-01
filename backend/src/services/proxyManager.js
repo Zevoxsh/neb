@@ -503,7 +503,8 @@ class ProxyManager {
           if (!shouldSkip) {
             botProtection.trackRequest(clientIp);
             
-            const challengeStatus = botProtection.shouldChallenge(clientIp);
+            // Force challenge for new IPs on HTTPS proxy
+            const challengeStatus = botProtection.shouldChallenge(clientIp, true);
             
             if (challengeStatus === 'banned') {
               const bannedHtml = `<!DOCTYPE html>

@@ -102,7 +102,7 @@ class BotProtection {
         return this.enabled || this.requestsPerSecond > this.threshold;
     }
 
-    shouldChallenge(ip) {
+    shouldChallenge(ip, forceNewVisitor = false) {
         // Check if IP is banned
         if (this.isBanned(ip)) {
             return 'banned';
@@ -117,10 +117,10 @@ class BotProtection {
         // Challenge if:
         // 1. Under attack mode is enabled
         // 2. IP is rate limited (too many requests)
-        // 3. First visit and challengeFirstVisit is enabled
+        // 3. First visit and (challengeFirstVisit is enabled OR forceNewVisitor is true)
         const isRateLimited = this.isRateLimited(ip);
         const isUnderAttack = this.isUnderAttack();
-        const isNewVisitor = this.challengeFirstVisit && !this.verifiedIPs.has(ip);
+        const isNewVisitor = (this.challengeFirstVisit || forceNewVisitor) && !this.verifiedIPs.has(ip);
         
         const shouldBlock = isUnderAttack || isRateLimited || isNewVisitor;
         
