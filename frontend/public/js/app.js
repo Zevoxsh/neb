@@ -1139,6 +1139,10 @@
         
         showToast('Domaine mis à jour');
         form.reset();
+        
+        // Wait a bit for backend to sync
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         await loadDomains();
         togglePanel('editDomainPanel', false);
       } else {

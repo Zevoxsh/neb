@@ -90,9 +90,9 @@ const update = asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) throw new AppError('Invalid ID', 400);
 
-  const { hostname, proxyId, backendId, useProxyTarget } = req.body;
+  const { hostname, proxyId, backendId, useProxyTarget, botProtection } = req.body;
 
-  logger.debug('Updating domain mapping', { id, hostname });
+  logger.debug('Updating domain mapping', { id, hostname, botProtection });
 
   if (!hostname || !proxyId) {
     throw new AppError('Missing required fields: hostname, proxyId', 400);
@@ -127,7 +127,8 @@ const update = asyncHandler(async (req, res) => {
   const mapping = await domainModel.updateDomainMapping(id, {
     hostname,
     proxyId: parseInt(proxyId, 10),
-    backendId: finalBackendId
+    backendId: finalBackendId,
+    botProtection
   });
 
   if (!mapping) throw new AppError('Domain mapping not found', 404);
