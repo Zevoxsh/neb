@@ -1,7 +1,7 @@
 {
-  "name": "express-jwt-mysql-auth",
+  "name": "neb-reverse-proxy",
   "version": "1.0.0",
-  "description": "Simple Express backend with JWT auth and MySQL for a web login page",
+  "description": "Reverse proxy with automatic SSL/TLS management",
   "main": "backend/src/index.js",
   "scripts": {
     "start": "node backend/src/index.js",
@@ -14,7 +14,6 @@
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.0",
-    "node-mocks-http": "^1.17.2",
     "pg": "^8.11.0",
     "selfsigned": "^2.4.1",
     "nodemailer": "^6.9.1"

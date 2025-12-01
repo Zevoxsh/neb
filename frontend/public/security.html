@@ -1,32 +1,108 @@
 <!doctype html>
 <html lang="fr">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Nebula Console - Securite</title>
-    <link rel="stylesheet" href="/public/styles.css">
-    <script src="/public/js/api.js" defer></script>
-    <script src="/public/js/include-partials.js" defer></script>
-    <script src="/public/js/app.js" defer></script>
-  </head>
-  <body data-page="security">
-    <div class="app-shell">
-      <div id="sidebar-placeholder"></div>
-      <div class="app-main">
-        <header class="topbar">
-          <div class="page-heading">
-            <p class="eyebrow">Protection</p>
-            <h1>Centre de securite</h1>
-            <p class="muted">Gerer les IP bloquees/de confiance, les alertes email et les seuils anti-DDoS.</p>
-          </div>
-        </header>
-        <section class="page-content">
-          <article class="card table-card">
-            <header>
-              <p class="eyebrow">Filtrage</p>
-              <h2>IPs bloquees</h2>
-            </header>
-            <section>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Nebula Console - Sécurité</title>
+  <link rel="stylesheet" href="/public/styles.css">
+  <script src="/public/js/theme.js"></script>
+  <script src="/public/js/api.js" defer></script>
+  <script src="/public/js/include-partials.js" defer></script>
+  <script src="/public/js/app.js" defer></script>
+  <style>
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .tab-btn {
+      padding: 0.75rem 1.5rem;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      cursor: pointer;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-color);
+    }
+
+    .tab-btn.active {
+      color: var(--primary-color);
+      border-bottom-color: var(--primary-color);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .details-section {
+      margin-top: 2rem;
+    }
+
+    .details-toggle {
+      background: var(--bg-secondary);
+      padding: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .details-toggle:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .details-content {
+      display: none;
+    }
+
+    .details-content.open {
+      display: block;
+    }
+  </style>
+</head>
+
+<body data-page="security">
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+    <div class="app-main">
+      <header class="topbar">
+        <div class="page-heading">
+          <p class="eyebrow">Protection</p>
+          <h1>Sécurité</h1>
+          <p class="muted">Gérer le filtrage IP et la protection anti-abus</p>
+        </div>
+      </header>
+
+      <section class="page-content">
+        <!-- IP Management Section -->
+        <article class="card">
+          <header>
+            <p class="eyebrow">Filtrage</p>
+            <h2>Gestion des IPs</h2>
+          </header>
+          <section>
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="blocked">IPs Bloquées</button>
+              <button class="tab-btn" data-tab="trusted">IPs Approuvées</button>
+            </div>
+
+            <!-- Blocked IPs Tab -->
+            <div class="tab-content active" id="tab-blocked">
               <form id="blockedIpForm" class="form-inline">
                 <input name="ip" placeholder="192.168.1.10" required>
                 <input name="reason" placeholder="Raison (optionnel)">
@@ -37,22 +113,17 @@
                   <tr>
                     <th>IP</th>
                     <th>Raison</th>
-                    <th>Ajoutee</th>
+                    <th>Ajoutée</th>
                     <th aria-label="actions"></th>
                   </tr>
                 </thead>
                 <tbody></tbody>
               </table>
-              <div id="blockedIpsEmpty" class="empty-state" hidden>Aucune IP bloquee.</div>
-            </section>
-          </article>
+              <div id="blockedIpsEmpty" class="empty-state" hidden>Aucune IP bloquée.</div>
+            </div>
 
-          <article class="card table-card">
-            <header>
-              <p class="eyebrow">Confiance</p>
-              <h2>IPs approuvees</h2>
-            </header>
-            <section>
+            <!-- Trusted IPs Tab -->
+            <div class="tab-content" id="tab-trusted">
               <form id="trustedIpForm" class="form-inline">
                 <input name="ip" placeholder="10.0.0.5" required>
                 <input name="label" placeholder="Description">
@@ -63,24 +134,84 @@
                   <tr>
                     <th>IP</th>
                     <th>Label</th>
-                    <th>Ajoutee</th>
+                    <th>Ajoutée</th>
                     <th aria-label="actions"></th>
                   </tr>
                 </thead>
                 <tbody></tbody>
               </table>
-              <div id="trustedIpsEmpty" class="empty-state" hidden>Aucune IP approuvee.</div>
-            </section>
-          </article>
+              <div id="trustedIpsEmpty" class="empty-state" hidden>Aucune IP approuvée.</div>
+            </div>
+          </section>
+        </article>
 
-          <article class="card">
-            <div class="card-header">
-              <div>
-                <p class="eyebrow">Alertes</p>
-                <h2>Serveur mail</h2>
+        <!-- Protection Auto Section -->
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Defense</p>
+              <h2>Protection automatique</h2>
+            </div>
+          </div>
+          <form id="securityConfigForm" class="form-grid">
+            <label class="form-check">
+              <input type="checkbox" id="autoBlockIps" name="autoBlockIps">
+              Bloquer automatiquement les IPs abusives
+            </label>
+            <label class="form-check">
+              <input type="checkbox" id="autoAlertDomains" name="autoAlertDomains">
+              Envoyer des alertes email pour les domaines gourmands
+            </label>
+
+            <!-- Advanced Settings (collapsible) -->
+            <div class="details-section">
+              <div class="details-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
+                <span><strong>Seuils avancés</strong> (optionnel)</span>
+                <span>▼</span>
+              </div>
+              <div class="details-content">
+                <div class="form-grid" style="margin-top: 1rem;">
+                  <div class="form-field">
+                    <label for="ipBytesThreshold">Seuil IP (octets)</label>
+                    <input id="ipBytesThreshold" name="ipBytesThreshold" type="number" placeholder="52428800">
+                    <p class="form-hint">Trafic max par IP (défaut: 50 MB)</p>
+                  </div>
+                  <div class="form-field">
+                    <label for="ipRequestsThreshold">Seuil IP (requêtes)</label>
+                    <input id="ipRequestsThreshold" name="ipRequestsThreshold" type="number" placeholder="1000">
+                    <p class="form-hint">Requêtes max par IP (défaut: 1000)</p>
+                  </div>
+                  <div class="form-field">
+                    <label for="domainBytesThreshold">Seuil domaine (octets)</label>
+                    <input id="domainBytesThreshold" name="domainBytesThreshold" type="number" placeholder="104857600">
+                    <p class="form-hint">Trafic max par domaine (défaut: 100 MB)</p>
+                  </div>
+                  <div class="form-field">
+                    <label for="domainRequestsThreshold">Seuil domaine (requêtes)</label>
+                    <input id="domainRequestsThreshold" name="domainRequestsThreshold" type="number" placeholder="5000">
+                    <p class="form-hint">Requêtes max par domaine (défaut: 5000)</p>
+                  </div>
+                </div>
               </div>
             </div>
-            <form id="smtpForm" class="form-grid">
+
+            <div class="form-actions">
+              <button class="btn primary" type="submit">Appliquer</button>
+            </div>
+          </form>
+        </article>
+
+        <!-- SMTP Alerts (collapsible) -->
+        <article class="card">
+          <div class="details-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
+            <div>
+              <p class="eyebrow">Alertes</p>
+              <h2>Configuration SMTP (optionnel)</h2>
+            </div>
+            <span>▼</span>
+          </div>
+          <div class="details-content">
+            <form id="smtpForm" class="form-grid" style="margin-top: 1rem;">
               <div class="form-field">
                 <label for="smtpHost">SMTP host</label>
                 <input id="smtpHost" name="host" placeholder="smtp.exemple.com">
@@ -109,49 +240,58 @@
                 <button class="btn primary" type="submit">Sauvegarder</button>
               </div>
             </form>
-          </article>
+          </div>
+        </article>
 
-          <article class="card">
-            <div class="card-header">
-              <div>
-                <p class="eyebrow">Defense</p>
-                <h2>Seuils & autoblocage</h2>
-              </div>
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Protection</p>
+              <h2>Mode "Under Attack"</h2>
+              <p class="muted">Affiche un challenge anti-bot quand le serveur reçoit trop de requêtes</p>
             </div>
-            <form id="securityConfigForm" class="form-grid">
-              <div class="form-field">
-                <label for="ipBytesThreshold">Seuil IP (octets)</label>
-                <input id="ipBytesThreshold" name="ipBytesThreshold" type="number">
-                <p class="form-hint">Taille cumulée avant alerte/bannissement.</p>
-              </div>
-              <div class="form-field">
-                <label for="ipRequestsThreshold">Seuil IP (requêtes)</label>
-                <input id="ipRequestsThreshold" name="ipRequestsThreshold" type="number">
-              </div>
-              <div class="form-field">
-                <label for="domainBytesThreshold">Seuil domaine (octets)</label>
-                <input id="domainBytesThreshold" name="domainBytesThreshold" type="number">
-              </div>
-              <div class="form-field">
-                <label for="domainRequestsThreshold">Seuil domaine (requêtes)</label>
-                <input id="domainRequestsThreshold" name="domainRequestsThreshold" type="number">
-              </div>
-              <label class="form-check">
-                <input type="checkbox" id="autoBlockIps" name="autoBlockIps">
-                Autobloquer les IP dépassant les seuils
-              </label>
-              <label class="form-check">
-                <input type="checkbox" id="autoAlertDomains" name="autoAlertDomains">
-                Envoyer des alertes pour les domaines gourmands
-              </label>
-              <div class="form-actions">
-                <button class="btn primary" type="submit">Appliquer</button>
-              </div>
-            </form>
-          </article>
-        </section>
-        <div id="footer-placeholder"></div>
-      </div>
+          </div>
+          <div class="form-grid">
+            <label class="form-check">
+              <input type="checkbox" id="underAttackMode">
+              Activer le mode "Under Attack"
+            </label>
+            <div class="form-field">
+              <label for="botThreshold">Seuil (requêtes/sec)</label>
+              <input id="botThreshold" type="number" value="100" min="10">
+              <p class="form-hint">Déclenche le challenge si dépassé</p>
+            </div>
+            <div class="form-field">
+              <button class="btn primary" id="saveBotConfig">Sauvegarder</button>
+            </div>
+          </div>
+          <div id="botStats"
+            style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <p><strong>Statistiques:</strong></p>
+            <p>Requêtes/sec: <span id="statsRps">0</span></p>
+            <p>IPs vérifiées: <span id="statsVerified">0</span></p>
+            <p>Status: <span id="statsStatus">Normal</span></p>
+          </div>
+        </article>
+
+      </section>
+
+      <div id="footer-placeholder"></div>
     </div>
-  </body>
+  </div>
+
+  <script>
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${tab}`).classList.add('active');
+      });
+    });
+  </script>
+</body>
+
 </html>

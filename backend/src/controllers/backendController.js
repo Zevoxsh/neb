@@ -1,47 +1,56 @@
+/**
+ * Backend Controller (Refactored with utilities)
+ */
+
 const backendModel = require('../models/backendModel');
 const proxyManager = require('../services/proxyManager');
+const { createCRUDController } = require('../utils/controllerFactory');
 
-async function list(req, res) {
-  try {
-    const rows = await backendModel.listBackends();
-    res.json(rows);
-  } catch (e) { console.error(e); res.status(500).send('Server error'); }
-}
+// Create base CRUD controller with factory
+const baseCRUD = createCRUDController(
+  backendModel,
+  'Backend',
+  {
+    listMethod: 'listBackends',
+    createMethod: 'createBackend',
+    updateMethod: 'updateBackend',
+    deleteMethod: 'deleteBackend',
+    getByIdMethod: 'getBackendById',
 
-async function create(req, res) {
-  const { name, targetHost, targetPort, targetProtocol } = req.body;
-  console.log('backendController.create called with body:', req.body);
-  if (!name || !targetHost || !targetPort) return res.status(400).send('Missing fields');
-  try {
-    const b = await backendModel.createBackend({ name, targetHost, targetPort: parseInt(targetPort, 10), targetProtocol: targetProtocol || 'http' });
-    console.log('backendController.create inserted:', b);
-    res.json(b);
-    (async () => { try { await proxyManager.reloadAllProxies(); } catch (e) { console.error('backendController: failed to reload proxies', e); } })();
-  } catch (e) { console.error(e); res.status(500).send('Server error'); }
-}
+    // Validation hooks
+    validateCreate: (data) => {
+      if (!data.name || !data.targetHost || !data.targetPort) {
+        return { valid: false, message: 'Missing required fields: name, targetHost, targetPort' };
+      }
+      return { valid: true };
+    },
 
-async function remove(req, res) {
-  const id = parseInt(req.params.id, 10);
-  if (!id) return res.status(400).send('Invalid id');
-  try {
-    await backendModel.deleteBackend(id);
-    res.sendStatus(204);
-    (async () => { try { await proxyManager.reloadAllProxies(); } catch (e) { console.error('backendController: failed to reload proxies after delete', e); } })();
-  } catch (e) { console.error(e); res.status(500).send('Server error'); }
-}
+    validateUpdate: (data) => {
+      if (!data.name || !data.targetHost || !data.targetPort) {
+        return { valid: false, message: 'Missing required fields: name, targetHost, targetPort' };
+      }
+      return { valid: true };
+    },
 
-async function update(req, res) {
-  const id = parseInt(req.params.id, 10);
-  const { name, targetHost, targetPort, targetProtocol } = req.body;
-  console.log('backendController.update called id=', id, 'body=', req.body);
-  if (!id || !name || !targetHost || !targetPort) return res.status(400).send('Missing fields');
-  try {
-    const updated = await backendModel.updateBackend(id, { name, targetHost, targetPort: parseInt(targetPort, 10), targetProtocol: targetProtocol || 'http' });
-    console.log('backendController.update result:', updated);
-    if (!updated) return res.status(404).send('Backend not found');
-    res.json(updated);
-    (async () => { try { await proxyManager.reloadAllProxies(); } catch (e) { console.error('backendController: failed to reload proxies after update', e); } })();
-  } catch (e) { console.error(e); res.status(500).send('Server error'); }
-}
+    // Post-action hooks - reload proxies after any backend change
+    onAfterCreate: async (resource) => {
+      await proxyManager.reloadAllProxies();
+    },
 
-module.exports = { list, create, remove, update };
+    onAfterUpdate: async (resource, id) => {
+      await proxyManager.reloadAllProxies();
+    },
+
+    onAfterDelete: async (id) => {
+      await proxyManager.reloadAllProxies();
+    }
+  }
+);
+
+// Export controller methods
+module.exports = {
+  list: baseCRUD.list,
+  create: baseCRUD.create,
+  update: baseCRUD.update,
+  remove: baseCRUD.remove
+};

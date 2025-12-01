@@ -657,7 +657,7 @@
 
   // expose initSecurityPage to global scope so the DOMContentLoaded switch can call it
   window.initSecurityPage = async function initSecurityPage() {
-    await Promise.all([loadBlockedIps(), loadTrustedIps(), loadSecurityConfig()]);
+    await Promise.all([loadBlockedIps(), loadTrustedIps(), loadSecurityConfig(), loadBotStats()]);
     const blockedForm = document.getElementById('blockedIpForm');
     if (blockedForm) blockedForm.addEventListener('submit', submitBlockedIp);
     const trustedForm = document.getElementById('trustedIpForm');
@@ -783,6 +783,28 @@
       showToast('Suppression impossible', 'error');
     }
   }
+  // === BOT PROTECTION MANAGEMENT ===
+  window.loadBotStats = async function () {
+    try {
+      const res = await window.api.requestJson('/api/bot-protection/stats');
+      if (res && res.status === 200) {
+        const stats = res.body;
+        const rpsEl = document.getElementById('statsRps');
+        const verifiedEl = document.getElementById('statsVerified');
+        const statusEl = document.getElementById('statsStatus');
+        const modeEl = document.getElementById('underAttackMode');
+        const thresholdEl = document.getElementById('botThreshold');
+
+        if (rpsEl) rpsEl.textContent = stats.requestsPerSecond;
+        if (verifiedEl) verifiedEl.textContent = stats.verifiedIPs;
+        if (statusEl) statusEl.textContent = stats.isUnderAttack ? '🔴 Under Attack' : '🟢 Normal';
+        if (modeEl) modeEl.checked = stats.enabled;
+        if (thresholdEl) thresholdEl.value = stats.threshold;
+      }
+    } catch (e) {
+      console.error('Failed to load bot stats', e);
+    }
+  };
 
   async function loadBackends() {
     const tbody = document.querySelector('#backendsTable tbody');
@@ -1430,5 +1452,29 @@
       showToast('Impossible de sauvegarder', 'error');
     }
   }
+  // Bot protection save button
+  document.addEventListener('click', async (e) => {
+    if (e.target.id === 'saveBotConfig') {
+      const enabled = document.getElementById('underAttackMode').checked;
+      const threshold = parseInt(document.getElementById('botThreshold').value);
+
+      try {
+        await window.api.requestJson('/api/bot-protection/toggle', { method: 'POST', body: { enabled } });
+        await window.api.requestJson('/api/bot-protection/threshold', { method: 'POST', body: { threshold } });
+        showToast('Configuration sauvegardée');
+        if (typeof loadBotStats === 'function') loadBotStats();
+      } catch (err) {
+        console.error('Bot config error:', err);
+        showToast('Erreur: ' + err.message, 'error');
+      }
+    }
+  });
+
+  // Refresh bot stats every 5s on security page
+  setInterval(() => {
+    if (document.body.dataset.page === 'security' && typeof loadBotStats === 'function') {
+      loadBotStats();
+    }
+  }, 5000);
 })();
- 
+

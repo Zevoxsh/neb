@@ -1,112 +1,167 @@
+/**
+ * Domain Controller (Refactored with factory + custom methods)
+ */
+
 const domainModel = require('../models/domainModel');
 const proxyModel = require('../models/proxyModel');
 const backendModel = require('../models/backendModel');
-const acmeManager = require('../services/acmeManager');
 const proxyManager = require('../services/proxyManager');
+const { asyncHandler, AppError } = require('../middleware/errorHandler');
+const { createLogger } = require('../utils/logger');
 
-async function list(req, res) {
-  try {
-    const rows = await domainModel.listDomainMappings();
-    res.json(rows);
-  } catch (e) { console.error(e); res.status(500).send('Server error'); }
-}
+const logger = createLogger('DomainController');
 
-async function listForProxy(req, res) {
+// List all domain mappings
+const list = asyncHandler(async (req, res) => {
+  logger.debug('Listing domain mappings');
+  const rows = await domainModel.listDomainMappings();
+  res.json(rows || []);
+});
+
+// List mappings for specific proxy
+const listForProxy = asyncHandler(async (req, res) => {
   const proxyId = parseInt(req.params.id, 10);
-  if (!proxyId) return res.status(400).send('Invalid proxy id');
-  try {
-    const rows = await domainModel.listMappingsForProxy(proxyId);
-    res.json(rows);
-  } catch (e) { console.error(e); res.status(500).send('Server error'); }
-}
+  if (!proxyId || isNaN(proxyId)) throw new AppError('Invalid proxy ID', 400);
 
-async function create(req, res) {
+  logger.debug('Listing mappings for proxy', { proxyId });
+  const rows = await domainModel.listMappingsForProxy(proxyId);
+  res.json(rows || []);
+});
+
+// Create domain mapping (with backend auto-creation logic)
+const create = asyncHandler(async (req, res) => {
   const { hostname, proxyId, backendId, useProxyTarget } = req.body;
-  console.log('domainController.create called with body:', req.body);
-  if (!hostname || !proxyId) return res.status(400).send('Missing fields');
-  try {
-    let finalBackendId = null;
-    if (useProxyTarget) {
-      // get proxy target host/port and find or create backend record
-      const proxy = await proxyModel.getProxyById(parseInt(proxyId, 10));
-      if (!proxy) return res.status(400).send('Proxy not found');
-      const th = proxy.target_host;
-      const tp = proxy.target_port;
-      console.log('domainController.create: useProxyTarget -> proxy target', th, tp);
-      let b = await backendModel.findBackendByHostPort(th, tp);
-      if (!b) {
-        // create a backend entry named after proxy
-        console.log('domainController.create: creating backend for proxy target');
-        b = await backendModel.createBackend({ name: `from-proxy-${proxy.id}`, targetHost: th, targetPort: tp, targetProtocol: proxy.target_protocol || proxy.protocol || 'tcp' });
-        console.log('domainController.create: created backend', b);
-      }
-      finalBackendId = b.id;
-    } else {
-      if (!backendId) return res.status(400).send('Missing backendId');
-      finalBackendId = parseInt(backendId, 10);
+
+  logger.debug('Creating domain mapping', { hostname, proxyId, useProxyTarget });
+
+  if (!hostname || !proxyId) {
+    throw new AppError('Missing required fields: hostname, proxyId', 400);
+  }
+
+  let finalBackendId = null;
+
+  if (useProxyTarget) {
+    // Auto-create backend from proxy target
+    const proxy = await proxyModel.getProxyById(parseInt(proxyId, 10));
+    if (!proxy) throw new AppError('Proxy not found', 404);
+
+    const targetHost = proxy.target_host;
+    const targetPort = proxy.target_port;
+
+    logger.debug('Using proxy target', { targetHost, targetPort });
+
+    // Find or create backend
+    let backend = await backendModel.findBackendByHostPort(targetHost, targetPort);
+    if (!backend) {
+      backend = await backendModel.createBackend({
+        name: `from-proxy-${proxy.id}`,
+        targetHost,
+        targetPort,
+        targetProtocol: proxy.target_protocol || proxy.protocol || 'tcp'
+      });
+      logger.info('Created backend for proxy target', { backendId: backend.id });
     }
+    finalBackendId = backend.id;
+  } else {
+    if (!backendId) throw new AppError('Missing backendId', 400);
+    finalBackendId = parseInt(backendId, 10);
+  }
 
-    const m = await domainModel.createDomainMapping({ hostname, proxyId: parseInt(proxyId, 10), backendId: finalBackendId });
-    res.json(m);
+  const mapping = await domainModel.createDomainMapping({
+    hostname,
+    proxyId: parseInt(proxyId, 10),
+    backendId: finalBackendId
+  });
 
-    // Reload proxy configuration so new domain mapping is active immediately
-    (async () => {
-      try {
-        await proxyManager.reloadAllProxies();
-      } catch (e) { console.error('domainController: failed to reload proxies', e); }
-    })();
-  } catch (e) { console.error(e); res.status(500).send('Server error'); }
-}
+  logger.info('Domain mapping created', { id: mapping.id, hostname });
 
-async function update(req, res) {
+  // Reload proxies in background
+  setImmediate(() => {
+    proxyManager.reloadAllProxies().catch(err => {
+      logger.error('Failed to reload proxies', { error: err.message });
+    });
+  });
+
+  res.status(201).json(mapping);
+});
+
+// Update domain mapping
+const update = asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id, 10);
+  if (!id || isNaN(id)) throw new AppError('Invalid ID', 400);
+
   const { hostname, proxyId, backendId, useProxyTarget } = req.body;
-  console.log('domainController.update called id=', id, 'body=', req.body);
-  if (!id || !hostname || !proxyId) return res.status(400).send('Missing fields');
 
-  try {
-    let finalBackendId = null;
-    if (useProxyTarget) {
-      // get proxy target host/port and find or create backend record
-      const proxy = await proxyModel.getProxyById(parseInt(proxyId, 10));
-      if (!proxy) return res.status(400).send('Proxy not found');
-      const th = proxy.target_host;
-      const tp = proxy.target_port;
-      let b = await backendModel.findBackendByHostPort(th, tp);
-      if (!b) {
-        // create a backend entry named after proxy
-        b = await backendModel.createBackend({ name: `from-proxy-${proxy.id}`, targetHost: th, targetPort: tp, targetProtocol: proxy.target_protocol || proxy.protocol || 'tcp' });
-      }
-      finalBackendId = b.id;
-    } else {
-      if (!backendId) return res.status(400).send('Missing backendId');
-      finalBackendId = parseInt(backendId, 10);
+  logger.debug('Updating domain mapping', { id, hostname });
+
+  if (!hostname || !proxyId) {
+    throw new AppError('Missing required fields: hostname, proxyId', 400);
+  }
+
+  let finalBackendId = null;
+
+  if (useProxyTarget) {
+    // Auto-create backend from proxy target
+    const proxy = await proxyModel.getProxyById(parseInt(proxyId, 10));
+    if (!proxy) throw new AppError('Proxy not found', 404);
+
+    const targetHost = proxy.target_host;
+    const targetPort = proxy.target_port;
+
+    let backend = await backendModel.findBackendByHostPort(targetHost, targetPort);
+    if (!backend) {
+      backend = await backendModel.createBackend({
+        name: `from-proxy-${proxy.id}`,
+        targetHost,
+        targetPort,
+        targetProtocol: proxy.target_protocol || proxy.protocol || 'tcp'
+      });
+      logger.info('Created backend for proxy target', { backendId: backend.id });
     }
+    finalBackendId = backend.id;
+  } else {
+    if (!backendId) throw new AppError('Missing backendId', 400);
+    finalBackendId = parseInt(backendId, 10);
+  }
 
-    const m = await domainModel.updateDomainMapping(id, { hostname, proxyId: parseInt(proxyId, 10), backendId: finalBackendId });
-    console.log('domainController.update result:', m);
-    if (!m) return res.status(404).send('Domain not found');
-    res.json(m);
+  const mapping = await domainModel.updateDomainMapping(id, {
+    hostname,
+    proxyId: parseInt(proxyId, 10),
+    backendId: finalBackendId
+  });
 
-    // Reload proxy configuration
-    (async () => {
-      try {
-        await proxyManager.reloadAllProxies();
-      } catch (e) { console.error('domainController: failed to reload proxies after update', e); }
-    })();
-  } catch (e) { console.error(e); res.status(500).send('Server error'); }
-}
+  if (!mapping) throw new AppError('Domain mapping not found', 404);
 
-async function remove(req, res) {
+  logger.info('Domain mapping updated', { id, hostname });
+
+  // Reload proxies in background
+  setImmediate(() => {
+    proxyManager.reloadAllProxies().catch(err => {
+      logger.error('Failed to reload proxies', { error: err.message });
+    });
+  });
+
+  res.json(mapping);
+});
+
+// Delete domain mapping
+const remove = asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  if (!id) return res.status(400).send('Invalid id');
-  try {
-    await domainModel.deleteDomainMapping(id);
-    res.sendStatus(204);
-    (async () => {
-      try { await proxyManager.reloadAllProxies(); } catch (e) { console.error('domainController: failed to reload proxies after delete', e); }
-    })();
-  } catch (e) { console.error(e); res.status(500).send('Server error'); }
-}
+  if (!id || isNaN(id)) throw new AppError('Invalid ID', 400);
+
+  logger.debug('Deleting domain mapping', { id });
+
+  await domainModel.deleteDomainMapping(id);
+  logger.info('Domain mapping deleted', { id });
+
+  // Reload proxies in background
+  setImmediate(() => {
+    proxyManager.reloadAllProxies().catch(err => {
+      logger.error('Failed to reload proxies', { error: err.message });
+    });
+  });
+
+  res.sendStatus(204);
+});
 
 module.exports = { list, create, update, remove, listForProxy };

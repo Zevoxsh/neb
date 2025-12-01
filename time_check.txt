@@ -1,3 +1,0 @@
-JS Time (UTC): 2025-11-28T10:05:25.736Z
-DB Time (Local): Fri Nov 28 2025 11:05:25 GMT+0100 (heure normale d’Europe centrale)
-DB Time (UTC): Fri Nov 28 2025 10:05:25 GMT+0100 (heure normale d’Europe centrale)

@@ -11,6 +11,9 @@ const metricsRoutes = require('./routes/metricsRoutes');
 const certRoutes = require('./routes/certRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const securityRoutes = require('./routes/securityRoutes');
+const backupRoutes = require('./routes/backupRoutes');
+const botChallengeRoutes = require('./routes/botChallengeRoutes');
+const { botChallengeMiddleware } = require('./middleware/botChallenge');
 const debugRoutes = require('./routes/debugRoutes');
 
 function createApp() {
@@ -18,6 +21,9 @@ function createApp() {
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
   app.use(cookieParser());
+
+  // Bot protection middleware (must be before routes)
+  app.use(botChallengeMiddleware);
 
   // Simple request logger middleware for debugging
   app.use((req, res, next) => {
@@ -57,6 +63,8 @@ function createApp() {
   app.use(certRoutes);
   app.use(settingsRoutes);
   app.use(securityRoutes);
+  app.use(backupRoutes);
+  app.use(botChallengeRoutes);
   app.use(debugRoutes);
 
   // Simple profile route

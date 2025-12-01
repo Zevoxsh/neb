@@ -1,47 +1,78 @@
 <!doctype html>
 <html lang="fr">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Nebula Console - Settings</title>
-    <link rel="stylesheet" href="/public/styles.css">
-    <script src="/public/js/api.js" defer></script>
-    <script src="/public/js/include-partials.js" defer></script>
-    <script src="/public/js/app.js" defer></script>
-  </head>
-  <body data-page="settings">
-    <div class="app-shell">
-      <div id="sidebar-placeholder"></div>
-      <div class="app-main">
-        <header class="topbar">
-          <div class="page-heading">
-            <p class="eyebrow">Console</p>
-            <h1>Parametres</h1>
-            <p class="muted">Definissez les TLD internes et ajustez les preferences ACME.</p>
-          </div>
-        </header>
-        <section class="page-content">
-          <article class="card">
-            <div class="card-header">
-              <div>
-                <p class="eyebrow">ACME</p>
-                <h2>Suffixes locaux</h2>
-                <p class="muted">Liste separee par des virgules pour les domaines geres uniquement en interne (ex : .lan, .local).</p>
-              </div>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Nebula Console - Settings</title>
+  <link rel="stylesheet" href="/public/styles.css">
+  <script src="/public/js/theme.js"></script>
+  <script src="/public/js/api.js" defer></script>
+  <script src="/public/js/include-partials.js" defer></script>
+  <script src="/public/js/app.js" defer></script>
+  <script src="/public/js/backup.js" defer></script>
+</head>
+
+<body data-page="settings">
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+    <div class="app-main">
+      <header class="topbar">
+        <div class="page-heading">
+          <p class="eyebrow">Console</p>
+          <h1>Parametres</h1>
+          <p class="muted">Definissez les TLD internes et ajustez les preferences ACME.</p>
+        </div>
+      </header>
+      <section class="page-content">
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">ACME</p>
+              <h2>Suffixes locaux</h2>
+              <p class="muted">Liste separee par des virgules pour les domaines geres uniquement en interne (ex : .lan,
+                .local).</p>
             </div>
-            <form id="settingsForm">
-              <div class="form-field">
-                <label for="localTldsTextarea">TLDs locaux</label>
-                <textarea id="localTldsTextarea" rows="4" placeholder="local,lan"></textarea>
-              </div>
-              <div class="form-actions">
-                <button class="btn primary" id="btnSaveSettings" type="submit">Sauvegarder</button>
-              </div>
-            </form>
-          </article>
-        </section>
-        <div id="footer-placeholder"></div>
-      </div>
+          </div>
+          <form id="settingsForm">
+            <div class="form-field">
+              <label for="localTldsTextarea">TLDs locaux</label>
+              <textarea id="localTldsTextarea" rows="4" placeholder="local,lan"></textarea>
+            </div>
+            <div class="form-actions">
+              <button class="btn primary" id="btnSaveSettings" type="submit">Sauvegarder</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Sauvegarde</p>
+              <h2>Backup & Restore</h2>
+              <p class="muted">Exportez ou importez la configuration complète (proxies, backends, domaines, sécurité)
+              </p>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Exporter la configuration</label>
+              <p class="form-hint">Télécharge un fichier JSON avec toute votre configuration</p>
+              <button class="btn ghost" id="btnExportConfig" type="button">📥 Télécharger backup</button>
+            </div>
+            <div class="form-field">
+              <label for="importFile">Importer la configuration</label>
+              <p class="form-hint">⚠️ Attention : Cette action ajoutera les éléments du backup à votre configuration
+                actuelle</p>
+              <input type="file" id="importFile" accept=".json" style="display:none">
+              <button class="btn ghost" id="btnImportConfig" type="button">📤 Importer backup</button>
+            </div>
+          </div>
+        </article>
+      </section>
+      <div id="footer-placeholder"></div>
     </div>
-  </body>
+  </div>
+</body>
+
 </html>

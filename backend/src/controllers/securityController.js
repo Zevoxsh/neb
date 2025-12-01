@@ -1,119 +1,140 @@
+/**
+ * Security Controller (Refactored)
+ */
+
 const blockedIpModel = require('../models/blockedIpModel');
 const trustedIpModel = require('../models/trustedIpModel');
 const settingsModel = require('../models/settingsModel');
 const proxyManager = require('../services/proxyManager');
 const alertService = require('../services/alertService');
 const { normalizeSecurityConfig } = require('../utils/securityConfig');
+const { asyncHandler, AppError } = require('../middleware/errorHandler');
+const { createLogger } = require('../utils/logger');
 
-async function listBlocked(req, res) {
-  try {
-    const rows = await blockedIpModel.listBlockedIps();
-    res.json(rows);
-  } catch (e) {
-    console.error('security.listBlocked error', e);
-    res.status(500).send('Server error');
-  }
-}
+const logger = createLogger('SecurityController');
 
-async function createBlocked(req, res) {
-  try {
-    const { ip, reason } = req.body || {};
-    if (!ip) return res.status(400).send('IP required');
-    const entry = await blockedIpModel.blockIp(ip, reason);
-    await reloadBlockedIps();
-    res.json(entry);
-  } catch (e) {
-    console.error('security.createBlocked error', e);
-    res.status(500).send('Server error');
-  }
-}
+// ============================================================================
+// Blocked IPs
+// ============================================================================
 
-async function removeBlocked(req, res) {
-  try {
-    const { id } = req.params;
-    if (!id) return res.status(400).send('Invalid id');
-    await blockedIpModel.unblockIp(id);
-    await reloadBlockedIps();
-    res.sendStatus(204);
-  } catch (e) {
-    console.error('security.removeBlocked error', e);
-    res.status(500).send('Server error');
-  }
-}
+const listBlocked = asyncHandler(async (req, res) => {
+  logger.debug('Listing blocked IPs');
+  const rows = await blockedIpModel.listBlockedIps();
+  res.json(rows || []);
+});
 
-async function listTrusted(req, res) {
-  try {
-    const rows = await trustedIpModel.listTrustedIps();
-    res.json(rows);
-  } catch (e) {
-    console.error('security.listTrusted error', e);
-    res.status(500).send('Server error');
-  }
-}
+const createBlocked = asyncHandler(async (req, res) => {
+  const { ip, reason } = req.body || {};
 
-async function createTrusted(req, res) {
-  try {
-    const { ip, label } = req.body || {};
-    if (!ip) return res.status(400).send('IP required');
-    const entry = await trustedIpModel.addTrustedIp(ip, label);
-    await reloadTrustedIps();
-    res.json(entry);
-  } catch (e) {
-    console.error('security.createTrusted error', e);
-    res.status(500).send('Server error');
-  }
-}
+  if (!ip) throw new AppError('IP required', 400);
 
-async function removeTrusted(req, res) {
-  try {
-    const { id } = req.params;
-    if (!id) return res.status(400).send('Invalid id');
-    await trustedIpModel.removeTrustedIp(id);
-    await reloadTrustedIps();
-    res.sendStatus(204);
-  } catch (e) {
-    console.error('security.removeTrusted error', e);
-    res.status(500).send('Server error');
-  }
-}
+  logger.debug('Blocking IP', { ip, reason });
+  const entry = await blockedIpModel.blockIp(ip, reason);
 
-async function getSecurityConfig(req, res) {
-  try {
-    const raw = await settingsModel.getSetting('security_config');
-    const config = normalizeSecurityConfig(raw);
-    res.json(config);
-  } catch (e) {
-    console.error('security.getConfig error', e);
-    res.status(500).send('Server error');
-  }
-}
+  // Reload blocked IPs in proxy manager
+  await reloadBlockedIps();
 
-async function updateSecurityConfig(req, res) {
-  try {
-    const currentRaw = await settingsModel.getSetting('security_config');
-    const current = normalizeSecurityConfig(currentRaw);
-    const incoming = req.body || {};
-    const merged = normalizeSecurityConfig({
-      ...current,
-      ...incoming,
-      smtp: { ...current.smtp, ...(incoming.smtp || {}) }
-    });
-    await settingsModel.setSetting('security_config', JSON.stringify(merged));
-    proxyManager.updateSecurityConfig(merged);
-    alertService.configure(merged.smtp);
-    res.json(merged);
-  } catch (e) {
-    console.error('security.updateConfig error', e);
-    res.status(500).send('Server error');
-  }
-}
+  logger.info('IP blocked', { ip });
+  res.json(entry);
+});
+
+const removeBlocked = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) throw new AppError('Invalid ID', 400);
+
+  logger.debug('Unblocking IP', { id });
+  await blockedIpModel.unblockIp(id);
+
+  // Reload blocked IPs in proxy manager
+  await reloadBlockedIps();
+
+  logger.info('IP unblocked', { id });
+  res.sendStatus(204);
+});
+
+// ============================================================================
+// Trusted IPs
+// ============================================================================
+
+const listTrusted = asyncHandler(async (req, res) => {
+  logger.debug('Listing trusted IPs');
+  const rows = await trustedIpModel.listTrustedIps();
+  res.json(rows || []);
+});
+
+const createTrusted = asyncHandler(async (req, res) => {
+  const { ip, label } = req.body || {};
+
+  if (!ip) throw new AppError('IP required', 400);
+
+  logger.debug('Adding trusted IP', { ip, label });
+  const entry = await trustedIpModel.addTrustedIp(ip, label);
+
+  // Reload trusted IPs in proxy manager
+  await reloadTrustedIps();
+
+  logger.info('Trusted IP added', { ip });
+  res.json(entry);
+});
+
+const removeTrusted = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) throw new AppError('Invalid ID', 400);
+
+  logger.debug('Removing trusted IP', { id });
+  await trustedIpModel.removeTrustedIp(id);
+
+  // Reload trusted IPs in proxy manager
+  await reloadTrustedIps();
+
+  logger.info('Trusted IP removed', { id });
+  res.sendStatus(204);
+});
+
+// ============================================================================
+// Security Configuration
+// ============================================================================
+
+const getSecurityConfig = asyncHandler(async (req, res) => {
+  logger.debug('Getting security config');
+  const raw = await settingsModel.getSetting('security_config');
+  const config = normalizeSecurityConfig(raw);
+  res.json(config);
+});
+
+const updateSecurityConfig = asyncHandler(async (req, res) => {
+  const currentRaw = await settingsModel.getSetting('security_config');
+  const current = normalizeSecurityConfig(currentRaw);
+  const incoming = req.body || {};
+
+  const merged = normalizeSecurityConfig({
+    ...current,
+    ...incoming,
+    smtp: { ...current.smtp, ...(incoming.smtp || {}) }
+  });
+
+  logger.debug('Updating security config');
+
+  await settingsModel.setSetting('security_config', JSON.stringify(merged));
+  proxyManager.updateSecurityConfig(merged);
+  alertService.configure(merged.smtp);
+
+  logger.info('Security config updated');
+  res.json(merged);
+});
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
 
 async function reloadBlockedIps() {
   try {
     const ips = await blockedIpModel.listIpsOnly();
     proxyManager.setBlockedIps(ips);
   } catch (e) {
-    console.error('security.reloadBlockedIps error', e);
+    logger.error('Failed to reload blocked IPs', { error: e.message });
   }
 }
 
@@ -122,7 +143,7 @@ async function reloadTrustedIps() {
     const ips = await trustedIpModel.listIpsOnly();
     proxyManager.setTrustedIps(ips);
   } catch (e) {
-    console.error('security.reloadTrustedIps error', e);
+    logger.error('Failed to reload trusted IPs', { error: e.message });
   }
 }
 

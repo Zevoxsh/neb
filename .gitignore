@@ -1,4 +1,40 @@
-/.env
-/node_modules
-/package-lock.json
-/scripts
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# Logs and debug files
+*.log
+crash.log
+time_check.txt
+debug_*.js
+check_*.js
+verify_*.js
+
+# Database
+*.db
+*.sqlite
+db/*.db
+
+# Temporary files
+*.tmp
+*.temp
+HTTPS
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build outputs
+dist/
+build/
+*.min.js
+*.min.css

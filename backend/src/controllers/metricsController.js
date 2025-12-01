@@ -1,118 +1,119 @@
+/**
+ * Metrics Controller (Refactored)
+ */
+
 const metricsModel = require('../models/metricsModel');
 const proxyModel = require('../models/proxyModel');
-const proxyManager = require('../services/proxyManager');
+const { asyncHandler, AppError } = require('../middleware/errorHandler');
+const { createLogger } = require('../utils/logger');
 
-// GET /api/metrics?from=ISO&to=ISO&interval=20&proxyId=123&last=20
-async function aggregated(req, res) {
-  try {
-    const { from, to, interval, proxyId, last } = req.query;
-    let toTs = to ? new Date(to) : new Date();
-    let fromTs = from ? new Date(from) : new Date(toTs.getTime() - 24 * 3600 * 1000);
+const logger = createLogger('MetricsController');
 
-    if (last) {
-      const sec = parseInt(last, 10) || 20;
-      toTs = new Date();
-      fromTs = new Date(toTs.getTime() - sec * 1000);
-    }
+// GET /api/metrics
+const aggregated = asyncHandler(async (req, res) => {
+  const { from, to, interval, proxyId, last } = req.query;
 
-    const intervalSec = parseInt(interval, 10) || 20;
-    const pid = proxyId ? parseInt(proxyId, 10) : null;
-    const rows = await metricsModel.queryAggregated(pid, fromTs.toISOString(), toTs.toISOString(), intervalSec);
-    res.json(rows);
-  } catch (e) {
-    console.error('metrics aggregated error', e);
-    res.status(500).json({ error: 'Internal error' });
+  let toTs = to ? new Date(to) : new Date();
+  let fromTs = from ? new Date(from) : new Date(toTs.getTime() - 24 * 3600 * 1000);
+
+  if (last) {
+    const sec = parseInt(last, 10) || 20;
+    toTs = new Date();
+    fromTs = new Date(toTs.getTime() - sec * 1000);
   }
-}
 
-// GET /api/metrics/all?from=ISO&to=ISO&interval=20&last=20
-// Returns aggregated rows for all proxies in one call. Each row contains proxy_id, bucket, bytes_in, bytes_out, requests
-async function allAggregated(req, res) {
-  try {
-    const { from, to, interval, last } = req.query;
-    let toTs = to ? new Date(to) : new Date();
-    let fromTs = from ? new Date(from) : new Date(toTs.getTime() - 24 * 3600 * 1000);
+  const intervalSec = parseInt(interval, 10) || 20;
+  const pid = proxyId ? parseInt(proxyId, 10) : null;
 
-    if (last) {
-      const sec = parseInt(last, 10) || 20;
-      toTs = new Date();
-      fromTs = new Date(toTs.getTime() - sec * 1000);
-    }
+  logger.debug('Getting aggregated metrics', { proxyId: pid, interval: intervalSec });
 
-    const intervalSec = parseInt(interval, 10) || 20;
-    const rows = await metricsModel.queryAggregatedPerProxy(fromTs.toISOString(), toTs.toISOString(), intervalSec);
-    res.json(rows);
-  } catch (e) {
-    console.error('metrics allAggregated error', e);
-    res.status(500).json({ error: 'Internal error' });
+  const rows = await metricsModel.queryAggregated(pid, fromTs.toISOString(), toTs.toISOString(), intervalSec);
+  res.json(rows || []);
+});
+
+// GET /api/metrics/all
+const allAggregated = asyncHandler(async (req, res) => {
+  const { from, to, interval, last } = req.query;
+
+  let toTs = to ? new Date(to) : new Date();
+  let fromTs = from ? new Date(from) : new Date(toTs.getTime() - 24 * 3600 * 1000);
+
+  if (last) {
+    const sec = parseInt(last, 10) || 20;
+    toTs = new Date();
+    fromTs = new Date(toTs.getTime() - sec * 1000);
   }
-}
 
-// Combined endpoint: return proxy list and aggregated metrics in one response
-async function combined(req, res) {
-  try {
-    const { from, to, interval, last } = req.query;
-    let toTs = to ? new Date(to) : new Date();
-    let fromTs = from ? new Date(from) : new Date(toTs.getTime() - 24 * 3600 * 1000);
+  const intervalSec = parseInt(interval, 10) || 20;
 
-    if (last) {
-      const sec = parseInt(last, 10) || 20;
-      toTs = new Date();
-      fromTs = new Date(toTs.getTime() - sec * 1000);
-    }
+  logger.debug('Getting all aggregated metrics', { interval: intervalSec });
 
-    const intervalSec = parseInt(interval, 10) || 20;
-    const metrics = await metricsModel.queryAggregatedPerProxy(fromTs.toISOString(), toTs.toISOString(), intervalSec);
-    const proxies = await proxyModel.listProxies();
+  const rows = await metricsModel.queryAggregatedPerProxy(fromTs.toISOString(), toTs.toISOString(), intervalSec);
+  res.json(rows || []);
+});
 
-    // Return serverTime so client can align graphs correctly
-    res.json({
-      proxies,
-      metrics,
-      serverTime: toTs.toISOString(),
-      window: { from: fromTs.toISOString(), to: toTs.toISOString() }
-    });
-  } catch (e) {
-    console.error('metrics combined error', e);
-    res.status(500).json({ error: 'Internal error' });
+// GET /api/metrics/combined
+const combined = asyncHandler(async (req, res) => {
+  const { from, to, interval, last } = req.query;
+
+  let toTs = to ? new Date(to) : new Date();
+  let fromTs = from ? new Date(from) : new Date(toTs.getTime() - 24 * 3600 * 1000);
+
+  if (last) {
+    const sec = parseInt(last, 10) || 20;
+    toTs = new Date();
+    fromTs = new Date(toTs.getTime() - sec * 1000);
   }
-}
 
-async function domainInsights(req, res) {
-  try {
-    const { from, to, interval, last } = req.query;
-    let toTs = to ? new Date(to) : new Date();
-    let fromTs = from ? new Date(from) : new Date(toTs.getTime() - 24 * 3600 * 1000);
+  const intervalSec = parseInt(interval, 10) || 20;
 
-    if (last) {
-      const sec = parseInt(last, 10) || 20;
-      toTs = new Date();
-      fromTs = new Date(toTs.getTime() - sec * 1000);
-    }
+  logger.debug('Getting combined metrics', { interval: intervalSec });
 
-    const intervalSec = parseInt(interval, 10) || 300;
-    const rows = await metricsModel.queryAggregatedPerDomain(fromTs.toISOString(), toTs.toISOString(), intervalSec);
-    res.json({
-      metrics: rows,
-      window: { from: fromTs.toISOString(), to: toTs.toISOString() }
-    });
-  } catch (e) {
-    console.error('metrics domainInsights error', e);
-    res.status(500).json({ error: 'Internal error' });
+  const metrics = await metricsModel.queryAggregatedPerProxy(fromTs.toISOString(), toTs.toISOString(), intervalSec);
+  const proxies = await proxyModel.listProxies();
+
+  res.json({
+    proxies,
+    metrics,
+    serverTime: toTs.toISOString(),
+    window: { from: fromTs.toISOString(), to: toTs.toISOString() }
+  });
+});
+
+// GET /api/metrics/domains
+const domainInsights = asyncHandler(async (req, res) => {
+  const { from, to, interval, last } = req.query;
+
+  let toTs = to ? new Date(to) : new Date();
+  let fromTs = from ? new Date(from) : new Date(toTs.getTime() - 24 * 3600 * 1000);
+
+  if (last) {
+    const sec = parseInt(last, 10) || 20;
+    toTs = new Date();
+    fromTs = new Date(toTs.getTime() - sec * 1000);
   }
-}
 
-module.exports = { aggregated, allAggregated, combined, domainInsights };
+  const intervalSec = parseInt(interval, 10) || 300;
 
-// SSE stream for real-time metrics flush events
+  logger.debug('Getting domain insights', { interval: intervalSec });
+
+  const rows = await metricsModel.queryAggregatedPerDomain(fromTs.toISOString(), toTs.toISOString(), intervalSec);
+  res.json({
+    metrics: rows || [],
+    window: { from: fromTs.toISOString(), to: toTs.toISOString() }
+  });
+});
+
+// GET /api/metrics/stream (SSE)
 function streamMetrics(req, res) {
-  // authentication handled in routes via middleware
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive'
   });
   res.write(': connected\n\n');
+
+  const proxyManager = require('../services/proxyManager');
 
   const onFlush = (samples) => {
     try {
@@ -128,4 +129,10 @@ function streamMetrics(req, res) {
   });
 }
 
-module.exports.streamMetrics = streamMetrics;
+module.exports = {
+  aggregated,
+  allAggregated,
+  combined,
+  domainInsights,
+  streamMetrics
+};

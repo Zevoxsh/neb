@@ -1,84 +1,94 @@
+/**
+ * Certificate Controller (Refactored)
+ */
+
 const domainModel = require('../models/domainModel');
 const acmeManager = require('../services/acmeManager');
+const { asyncHandler, AppError } = require('../middleware/errorHandler');
+const { createLogger } = require('../utils/logger');
 
-async function list(req, res) {
-    try {
-        // Get all domains from mappings
-        // Note: domainModel.listDomainMappings returns mappings, not just unique domains.
-        // But we might have multiple mappings for same hostname? 
-        // Actually domain_mappings has unique hostname constraint.
-        const mappings = await domainModel.listDomainMappings();
+const logger = createLogger('CertController');
 
-        const results = mappings.map(m => {
-            const s = acmeManager.getCertStatus(m.hostname);
-            const status = s && s.exists ? (s.expiresSoon ? 'pending' : 'valid') : 'missing';
-            return {
-                hostname: m.hostname,
-                status,
-                valid_until: s && s.validTo ? (s.validTo instanceof Date ? s.validTo.toISOString() : new Date(s.validTo).toISOString()) : null
-            };
-        });
+// List all certificates
+const list = asyncHandler(async (req, res) => {
+    logger.debug('Listing certificates');
 
-        res.json(results);
-    } catch (e) {
-        console.error('certController list error', e);
-        res.status(500).send('Server error');
-    }
-}
+    // Get all domains from mappings
+    const mappings = await domainModel.listDomainMappings();
 
-async function generate(req, res) {
-    const { domain } = req.body;
-    if (!domain) return res.status(400).send('Domain required');
-
-    try {
-        // Check if domain exists in our system
-        const exists = await domainModel.domainExists(domain);
-        if (!exists) return res.status(404).send('Domain not managed by Nebula');
-
-        // Trigger generation (async, but we await it here to give feedback? 
-        // Or maybe just trigger? The user asked for "click to generate". 
-        // ensureCert is async and waits for certbot. It might take a few seconds.
-        // Let's await it so we can say "Success" or "Failed".
-        await acmeManager.ensureCert(domain);
-
-        // Return new status
-        const s = acmeManager.getCertStatus(domain);
-        res.json({
-            hostname: domain,
-            status: s && s.exists ? (s.expiresSoon ? 'pending' : 'valid') : 'missing',
+    const results = mappings.map(m => {
+        const s = acmeManager.getCertStatus(m.hostname);
+        const status = s && s.exists ? (s.expiresSoon ? 'pending' : 'valid') : 'missing';
+        return {
+            hostname: m.hostname,
+            status,
             valid_until: s && s.validTo ? (s.validTo instanceof Date ? s.validTo.toISOString() : new Date(s.validTo).toISOString()) : null
-        });
-    } catch (e) {
-        console.error('certController generate error', e);
-        res.status(500).send('Generation failed: ' + e.message);
-    }
-}
+        };
+    });
 
-async function get(req, res) {
+    res.json(results);
+});
+
+// Generate/request certificate for domain
+const generate = asyncHandler(async (req, res) => {
+    const { domain } = req.body;
+
+    if (!domain) throw new AppError('Domain required', 400);
+
+    logger.debug('Generating certificate', { domain });
+
+    // Check if domain exists in our system
+    const exists = await domainModel.domainExists(domain);
+    if (!exists) throw new AppError('Domain not managed by Nebula', 404);
+
+    // Trigger certificate generation
+    await acmeManager.ensureCert(domain);
+
+    logger.info('Certificate generated', { domain });
+
+    // Return new status
+    const s = acmeManager.getCertStatus(domain);
+    res.json({
+        hostname: domain,
+        status: s && s.exists ? (s.expiresSoon ? 'pending' : 'valid') : 'missing',
+        valid_until: s && s.validTo ? (s.validTo instanceof Date ? s.validTo.toISOString() : new Date(s.validTo).toISOString()) : null
+    });
+});
+
+// Get certificate content
+const get = asyncHandler(async (req, res) => {
     const { domain } = req.params;
-    if (!domain) return res.status(400).send('Domain required');
 
-    try {
-        const content = acmeManager.getCertContent(domain);
-        if (!content) return res.status(404).send('Certificate not found');
-        res.json(content);
-    } catch (e) {
-        console.error('certController get error', e);
-        res.status(500).send('Server error');
-    }
-}
+    if (!domain) throw new AppError('Domain required', 400);
 
-async function uploadManual(req, res) {
+    logger.debug('Getting certificate', { domain });
+
+    const content = acmeManager.getCertContent(domain);
+    if (!content) throw new AppError('Certificate not found', 404);
+
+    res.json(content);
+});
+
+// Upload manual certificate
+const uploadManual = asyncHandler(async (req, res) => {
     const { domain, certificate, privateKey } = req.body || {};
-    if (!domain || !certificate || !privateKey) return res.status(400).send('Domain, certificate and key required');
-    try {
-        await acmeManager.saveManualCert(domain.trim(), certificate, privateKey);
-        const s = acmeManager.getCertStatus(domain.trim());
-        res.json({ hostname: domain.trim(), status: s && s.exists ? (s.expiresSoon ? 'pending' : 'valid') : 'missing', valid_until: s && s.validTo ? (s.validTo instanceof Date ? s.validTo.toISOString() : new Date(s.validTo).toISOString()) : null });
-    } catch (e) {
-        console.error('certController uploadManual error', e);
-        res.status(500).send('Upload failed');
+
+    if (!domain || !certificate || !privateKey) {
+        throw new AppError('Domain, certificate and privateKey required', 400);
     }
-}
+
+    logger.debug('Uploading manual certificate', { domain });
+
+    await acmeManager.saveManualCert(domain.trim(), certificate, privateKey);
+
+    logger.info('Manual certificate uploaded', { domain });
+
+    const s = acmeManager.getCertStatus(domain.trim());
+    res.json({
+        hostname: domain.trim(),
+        status: s && s.exists ? (s.expiresSoon ? 'pending' : 'valid') : 'missing',
+        valid_until: s && s.validTo ? (s.validTo instanceof Date ? s.validTo.toISOString() : new Date(s.validTo).toISOString()) : null
+    });
+});
 
 module.exports = { list, generate, get, uploadManual };
