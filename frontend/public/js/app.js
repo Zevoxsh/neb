@@ -166,7 +166,8 @@
               tension: 0.4,
               fill: true,
               pointRadius: 0,
-              pointHoverRadius: 6
+              pointHoverRadius: 0,
+              pointHitRadius: 0
             },
             {
               label: 'Trafic sortant',
@@ -177,7 +178,8 @@
               tension: 0.4,
               fill: true,
               pointRadius: 0,
-              pointHoverRadius: 6
+              pointHoverRadius: 0,
+              pointHitRadius: 0
             },
             {
               label: 'Requêtes/s',
@@ -188,7 +190,8 @@
               tension: 0.4,
               fill: false,
               pointRadius: 0,
-              pointHoverRadius: 6,
+              pointHoverRadius: 0,
+              pointHitRadius: 0,
               yAxisID: 'y1'
             }
           ]
@@ -197,8 +200,14 @@
           responsive: true,
           maintainAspectRatio: false,
           animation: {
-            duration: 750,
-            easing: 'easeInOutQuart'
+            duration: 0
+          },
+          transitions: {
+            active: {
+              animation: {
+                duration: 0
+              }
+            }
           },
           interaction: {
             intersect: false,
@@ -219,25 +228,7 @@
               }
             },
             tooltip: {
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              titleColor: 'rgba(255, 255, 255, 1)',
-              bodyColor: 'rgba(255, 255, 255, 0.9)',
-              borderColor: 'rgba(255, 255, 255, 0.2)',
-              borderWidth: 1,
-              padding: 12,
-              displayColors: true,
-              callbacks: {
-                label: function(context) {
-                  let label = context.dataset.label || '';
-                  if (label) label += ': ';
-                  if (context.datasetIndex < 2) {
-                    label += formatBytes(context.parsed.y) + '/s';
-                  } else {
-                    label += formatNumber(context.parsed.y) + ' req/s';
-                  }
-                  return label;
-                }
-              }
+              enabled: false
             }
           },
           scales: {
@@ -420,7 +411,7 @@
         dashboardState.placeholder.hidden = true;
       }
       
-      dashboardState.chart.update('active');
+      dashboardState.chart.update('none');
     }
   }
 
