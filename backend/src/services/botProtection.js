@@ -132,6 +132,14 @@ class BotProtection {
         return token === expected;
     }
 
+    setEnabled(enabled) {
+        this.enabled = enabled;
+    }
+
+    setThreshold(threshold) {
+        this.threshold = threshold;
+    }
+
     setPerIpLimit(limit) {
         this.perIpLimit = limit;
     }
@@ -146,14 +154,6 @@ class BotProtection {
             threshold: this.threshold,
             perIpLimit: this.perIpLimit,
             challengeFirstVisit: this.challengeFirstVisit,
-            requestsPerSecond: this.requestsPerSecond,
-            verifiedIPs: this.verifiedIPs.size,
-            trackedIPs: this.ipRequestHistory.size,
-            isUnderAttack: this.isUnderAttack()
-        };
-    }       enabled: this.enabled,
-            threshold: this.threshold,
-            perIpLimit: this.perIpLimit,
             requestsPerSecond: this.requestsPerSecond,
             verifiedIPs: this.verifiedIPs.size,
             trackedIPs: this.ipRequestHistory.size,
