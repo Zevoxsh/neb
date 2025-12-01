@@ -14,6 +14,7 @@ class BotProtection {
         this.requestCounts = new Map(); // IP => count per second
         this.ipRequestHistory = new Map(); // IP => array of timestamps for rate limiting
         this.perIpLimit = 50; // Max requests per IP per minute (reduced from 100)
+        this.challengeFirstVisit = true; // Challenge every new IP on first visit
         this.secret = process.env.BOT_SECRET || crypto.randomBytes(32).toString('hex');
 
         // Reset counters every second
@@ -81,12 +82,20 @@ class BotProtection {
             return false;
         }
 
-        // Challenge if under attack OR if this specific IP is rate limited
-        const shouldBlock = this.isUnderAttack() || this.isRateLimited(ip);
+        // Challenge if:
+        // 1. Under attack mode is enabled
+        // 2. IP is rate limited (too many requests)
+        // 3. First visit and challengeFirstVisit is enabled
+        const isRateLimited = this.isRateLimited(ip);
+        const isUnderAttack = this.isUnderAttack();
+        const isNewVisitor = this.challengeFirstVisit && !this.verifiedIPs.has(ip);
+        
+        const shouldBlock = isUnderAttack || isRateLimited || isNewVisitor;
         
         if (shouldBlock) {
             const reqCount = this.getRequestsPerMinute(ip);
-            console.log(`[BotProtection] Challenging IP ${ip} - ${reqCount} requests in last minute (limit: ${this.perIpLimit})`);
+            const reason = isNewVisitor ? 'New visitor' : `${reqCount} requests in last minute`;
+            console.log(`[BotProtection] Challenging IP ${ip} - ${reason} (limit: ${this.perIpLimit})`);
         }
         
         return shouldBlock;
@@ -123,21 +132,26 @@ class BotProtection {
         return token === expected;
     }
 
-    setEnabled(enabled) {
-        this.enabled = enabled;
-    }
-
-    setThreshold(threshold) {
-        this.threshold = threshold;
-    }
-
     setPerIpLimit(limit) {
         this.perIpLimit = limit;
+    }
+
+    setChallengeFirstVisit(enabled) {
+        this.challengeFirstVisit = enabled;
     }
 
     getStats() {
         return {
             enabled: this.enabled,
+            threshold: this.threshold,
+            perIpLimit: this.perIpLimit,
+            challengeFirstVisit: this.challengeFirstVisit,
+            requestsPerSecond: this.requestsPerSecond,
+            verifiedIPs: this.verifiedIPs.size,
+            trackedIPs: this.ipRequestHistory.size,
+            isUnderAttack: this.isUnderAttack()
+        };
+    }       enabled: this.enabled,
             threshold: this.threshold,
             perIpLimit: this.perIpLimit,
             requestsPerSecond: this.requestsPerSecond,

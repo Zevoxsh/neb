@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Security Check - Nebula</title>
+    <title>Vérification Humaine - Nebula</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -43,7 +43,6 @@
             padding: 2rem;
         }
 
-        /* Glass card effect matching dashboard */
         .challenge-card {
             background: var(--bg-surface);
             border: 1px solid var(--border);
@@ -55,7 +54,6 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
 
-        /* Subtle glow at top of card */
         .challenge-card::before {
             content: '';
             position: absolute;
@@ -104,74 +102,117 @@
             color: var(--text-muted);
             font-size: 0.875rem;
             line-height: 1.6;
-            margin-bottom: 2.5rem;
+            margin-bottom: 2rem;
         }
 
-        /* Minimalist loader */
-        .loader-track {
+        .captcha-box {
+            background: #0a0a0a;
+            border: 1px solid #222;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .captcha-canvas {
             width: 100%;
-            height: 2px;
-            background: #1a1a1a;
-            border-radius: 2px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .loader-bar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 30%;
-            background: #fff;
-            border-radius: 2px;
-            animation: load 1.5s ease-in-out infinite;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-        }
-
-        @keyframes load {
-            0% {
-                left: -30%;
-            }
-
-            50% {
-                left: 100%;
-            }
-
-            100% {
-                left: 100%;
-            }
-        }
-
-        .status-row {
+            height: 80px;
+            background: #000;
+            border-radius: 6px;
+            margin-bottom: 1rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            margin-top: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #captchaImage {
+            border-radius: 6px;
+        }
+
+        .refresh-btn {
+            background: transparent;
+            border: 1px solid #333;
+            color: #888;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
             font-size: 0.75rem;
-            color: #444;
-            font-family: 'JetBrains Mono', monospace;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            border-color: #555;
+            color: #fff;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group label {
+            display: block;
+            text-align: left;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .captcha-input {
+            width: 100%;
+            background: #0a0a0a;
+            border: 1px solid #222;
+            color: #fff;
+            padding: 0.875rem 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.5em;
+            text-align: center;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        .captcha-input:focus {
+            outline: none;
+            border-color: #444;
+            background: #0d0d0d;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        .status-dot {
-            width: 6px;
-            height: 6px;
-            background: #333;
-            border-radius: 50%;
-            animation: blink 1s infinite alternate;
+        .submit-btn:hover:not(:disabled) {
+            background: #e0e0e0;
+            transform: translateY(-1px);
         }
 
-        @keyframes blink {
-            from {
-                background: #333;
-            }
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
 
-            to {
-                background: #fff;
-            }
+        .error-msg {
+            color: #ff4444;
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .error-msg.show {
+            display: block;
         }
 
         .footer {
@@ -190,19 +231,32 @@
 <body>
     <div class="challenge-container">
         <div class="challenge-card">
-            <div class="logo">NB</div>
+            <div class="logo">🛡️</div>
 
-            <h1>Security Check</h1>
-            <p>Analyzing your connection to ensure secure access to this resource.</p>
+            <h1>Vérification Humaine</h1>
+            <p>Veuillez recopier le code ci-dessous pour continuer</p>
 
-            <div class="loader-track">
-                <div class="loader-bar"></div>
+            <div class="captcha-box">
+                <canvas id="captchaImage" width="340" height="80"></canvas>
+                <button class="refresh-btn" onclick="generateCaptcha()">🔄 Nouveau code</button>
             </div>
 
-            <div class="status-row">
-                <div class="status-dot"></div>
-                <span id="statusText">VERIFYING</span>
-            </div>
+            <form id="challengeForm" onsubmit="return submitChallenge(event)">
+                <div class="input-group">
+                    <label for="captchaInput">Entrez le code :</label>
+                    <input 
+                        type="text" 
+                        id="captchaInput" 
+                        class="captcha-input" 
+                        maxlength="6" 
+                        autocomplete="off"
+                        required
+                    >
+                    <div class="error-msg" id="errorMsg">Code incorrect, veuillez réessayer</div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">Vérifier</button>
+            </form>
         </div>
 
         <div class="footer">
@@ -211,59 +265,139 @@
     </div>
 
     <script>
-        (function () {
-            const statusEl = document.getElementById('statusText');
-            const originalUrl = window.location.href;
+        let currentCaptcha = '';
 
-            setTimeout(() => {
-                if (statusEl) statusEl.textContent = 'ANALYZING';
-            }, 2000);
-
-            setTimeout(async () => {
-                try {
-                    const cookies = document.cookie.split(';').reduce((acc, cookie) => {
-                        const [key, value] = cookie.trim().split('=');
-                        acc[key] = value;
-                        return acc;
-                    }, {});
-
-                    const timestamp = parseInt(cookies.challenge_ts || Date.now());
-                    const solution = computeHash(timestamp.toString());
-
-                    const response = await fetch('/verify-challenge', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ solution, timestamp })
-                    });
-
-                    if (response.ok) {
-                        if (statusEl) {
-                            statusEl.textContent = 'GRANTED';
-                            statusEl.style.color = '#fff';
-                        }
-                        setTimeout(() => {
-                            window.location.href = originalUrl;
-                        }, 500);
-                    } else {
-                        if (statusEl) statusEl.textContent = 'DENIED';
-                        setTimeout(() => window.location.reload(), 2000);
-                    }
-                } catch (err) {
-                    console.error('Challenge error:', err);
-                    setTimeout(() => window.location.reload(), 2000);
-                }
-            }, 4500);
-
-            function computeHash(data) {
-                let hash = 0;
-                for (let i = 0; i < data.length; i++) {
-                    const char = data.charCodeAt(i);
-                    hash = ((hash << 5) - hash) + char;
-                    hash = hash & hash;
-                }
-                return hash.toString(16);
+        function generateCaptcha() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Sans I, O, 0, 1 pour éviter confusion
+            currentCaptcha = '';
+            for (let i = 0; i < 6; i++) {
+                currentCaptcha += chars.charAt(Math.floor(Math.random() * chars.length));
             }
-        })();
+
+            const canvas = document.getElementById('captchaImage');
+            const ctx = canvas.getContext('2d');
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Background with noise
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Add noise lines
+            for (let i = 0; i < 5; i++) {
+                ctx.strokeStyle = `rgba(255, 255, 255, ${Math.random() * 0.1})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.stroke();
+            }
+
+            // Draw CAPTCHA text
+            ctx.font = 'bold 48px Courier New';
+            ctx.textBaseline = 'middle';
+            
+            const spacing = canvas.width / (currentCaptcha.length + 1);
+            
+            for (let i = 0; i < currentCaptcha.length; i++) {
+                ctx.save();
+                
+                const x = spacing * (i + 1);
+                const y = canvas.height / 2 + (Math.random() - 0.5) * 10;
+                const rotation = (Math.random() - 0.5) * 0.3;
+                
+                ctx.translate(x, y);
+                ctx.rotate(rotation);
+                
+                // Gradient color
+                const gradient = ctx.createLinearGradient(0, -20, 0, 20);
+                gradient.addColorStop(0, '#fff');
+                gradient.addColorStop(1, '#aaa');
+                ctx.fillStyle = gradient;
+                
+                ctx.fillText(currentCaptcha[i], 0, 0);
+                ctx.restore();
+            }
+
+            // Add noise dots
+            for (let i = 0; i < 50; i++) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.3})`;
+                ctx.fillRect(
+                    Math.random() * canvas.width,
+                    Math.random() * canvas.height,
+                    2,
+                    2
+                );
+            }
+        }
+
+        async function submitChallenge(event) {
+            event.preventDefault();
+            
+            const input = document.getElementById('captchaInput');
+            const errorMsg = document.getElementById('errorMsg');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            errorMsg.classList.remove('show');
+            
+            if (input.value.toUpperCase() !== currentCaptcha) {
+                errorMsg.classList.add('show');
+                input.value = '';
+                generateCaptcha();
+                return false;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Vérification...';
+
+            try {
+                const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+                    const [key, value] = cookie.trim().split('=');
+                    acc[key] = value;
+                    return acc;
+                }, {});
+
+                const timestamp = parseInt(cookies.challenge_ts || Date.now());
+
+                const response = await fetch('/verify-challenge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        solution: currentCaptcha, 
+                        timestamp,
+                        userInput: input.value.toUpperCase()
+                    })
+                });
+
+                if (response.ok) {
+                    submitBtn.textContent = '✓ Accès autorisé';
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 500);
+                } else {
+                    errorMsg.textContent = 'Erreur de vérification';
+                    errorMsg.classList.add('show');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Vérifier';
+                    generateCaptcha();
+                }
+            } catch (err) {
+                console.error('Challenge error:', err);
+                errorMsg.textContent = 'Erreur de connexion';
+                errorMsg.classList.add('show');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Vérifier';
+            }
+
+            return false;
+        }
+
+        // Generate CAPTCHA on load
+        generateCaptcha();
+
+        // Focus input
+        document.getElementById('captchaInput').focus();
     </script>
 </body>
 

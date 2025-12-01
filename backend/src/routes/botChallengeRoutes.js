@@ -58,4 +58,12 @@ router.post('/api/bot-protection/ip-limit', asyncHandler(async (req, res) => {
     res.json({ limit });
 }));
 
+// Toggle challenge on first visit
+router.post('/api/bot-protection/challenge-first-visit', asyncHandler(async (req, res) => {
+    const { enabled } = req.body;
+    botProtection.setChallengeFirstVisit(enabled);
+    logger.info('Challenge first visit toggled', { enabled });
+    res.json({ enabled });
+}));
+
 module.exports = router;
