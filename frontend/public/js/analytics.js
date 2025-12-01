@@ -34,11 +34,9 @@
                 from = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
             }
 
-            const res = await fetch(`/api/metrics/advanced?from=${from.toISOString()}&to=${now.toISOString()}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            });
-            if (!res.ok) throw new Error('Failed to fetch metrics');
-            const data = await res.json();
+            const res = await window.api.requestJson(`/api/metrics/advanced?from=${from.toISOString()}&to=${now.toISOString()}`);
+            if (!res || res.status !== 200) throw new Error('Failed to fetch metrics');
+            const data = res.body;
             renderCharts(data);
         } catch (e) {
             console.error('Analytics load failed', e);
