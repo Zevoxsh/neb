@@ -2614,7 +2614,7 @@
 
         try {
           console.log('[IP Management] Sending POST request to /api/security/trusted-ips');
-          const res = await window.api.requestJson('/api/security/trusted-ips', 'POST', { ip, label });
+          const res = await window.api.requestJson('/api/security/trusted-ips', { method: 'POST', body: { ip, label } });
           console.log('[IP Management] Response:', res);
           console.log('[IP Management] Response status:', res?.status);
           console.log('[IP Management] Response body:', res?.body);
@@ -2651,7 +2651,7 @@
 
         try {
           console.log('[IP Management] Sending POST request to /api/security/blocked-ips');
-          const res = await window.api.requestJson('/api/security/blocked-ips', 'POST', { ip, reason });
+          const res = await window.api.requestJson('/api/security/blocked-ips', { method: 'POST', body: { ip, reason } });
           console.log('[IP Management] Response:', res);
           console.log('[IP Management] Response status:', res?.status);
           console.log('[IP Management] Response body:', res?.body);
@@ -2764,7 +2764,7 @@
     if (!confirm('Remove this IP from the whitelist?')) return;
 
     try {
-      const res = await window.api.requestJson(`/api/security/trusted-ips/${id}`, 'DELETE');
+      const res = await window.api.requestJson(`/api/security/trusted-ips/${id}`, { method: 'DELETE' });
       if (res && res.status === 200) {
         loadTrustedIps();
         showToast('✅ IP removed from whitelist', 'success');
@@ -2781,7 +2781,7 @@
     if (!confirm('Unblock this IP address?')) return;
 
     try {
-      const res = await window.api.requestJson(`/api/security/blocked-ips/${id}`, 'DELETE');
+      const res = await window.api.requestJson(`/api/security/blocked-ips/${id}`, { method: 'DELETE' });
       if (res && res.status === 200) {
         loadBlockedIps();
         showToast('✅ IP unblocked', 'success');
