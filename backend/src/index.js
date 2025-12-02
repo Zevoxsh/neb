@@ -102,7 +102,24 @@ async function initDbAndStart() {
   const createApp = require('./app');
   const app = createApp();
   
+  let dbConnected = false;
+  
   try {
+    // Test database connection first
+    const client = await pool.connect();
+    await client.query('SELECT 1');
+    client.release();
+    dbConnected = true;
+    console.log('✓ Database connection successful');
+  } catch (dbError) {
+    console.error('❌ Database connection failed:', dbError.message);
+    console.log('🔧 Starting in CONFIGURATION MODE - Database unreachable');
+    console.log('📝 You can access the admin panel to fix the database configuration');
+  }
+  
+  if (dbConnected) {
+    // Normal startup with database
+    try {
     // create tables if not exists
     await pool.query(`CREATE TABLE IF NOT EXISTS users(
       id SERIAL PRIMARY KEY,
@@ -487,12 +504,26 @@ async function initDbAndStart() {
     } catch (e) {
       console.error('Failed to start health checker', e);
     }
-
-    app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
-  } catch (err) {
-    console.error('Initialization failed', err);
-    process.exit(1);
+    
+    } catch (err) {
+      console.error('Failed to initialize with database:', err);
+      console.log('Some features may be unavailable');
+    }
+  } else {
+    // Database unavailable - degraded mode
+    console.log('⚠️  Running in CONFIGURATION MODE');
+    console.log('📝 Only configuration management is available');
+    console.log('🔧 Please fix database connection and restart the application');
   }
+
+  // Always start HTTP server (even in degraded mode)
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    if (!dbConnected) {
+      console.log('⚠️  WARNING: Database not connected - limited functionality');
+    }
+  });
+}
 }
 
 initDbAndStart();
