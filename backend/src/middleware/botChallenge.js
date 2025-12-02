@@ -21,10 +21,12 @@ function botChallengeMiddleware(req, res, next) {
     // - API endpoints (authenticated)
     // - Static assets
     // - Challenge verification endpoint
+    // - Authenticated users (check for valid JWT cookie)
     const shouldSkip = req.path.startsWith('/api') ||
         req.path.startsWith('/public') ||
         req.path === '/verify-challenge' ||
-        req.path === '/challenge.html';
+        req.path === '/challenge.html' ||
+        req.cookies?.token; // Skip if user has authentication token
 
     // Only track and check requests that can be challenged
     if (!shouldSkip) {
