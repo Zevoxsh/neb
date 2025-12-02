@@ -159,11 +159,32 @@ function createApp() {
     '/settings': 'settings.html',
     '/config': 'config.html',
     '/login': 'login.html',
-    '/install': 'install.html',
     '/domain': 'domain.html',
     '/backend': 'backend.html',
     '/requests': 'requests.html',
     '/alerts': 'alerts.html'
+  };
+
+  // Middleware pour bloquer l'accès à /install si déjà installé
+  const blockInstallIfCompleted = (req, res, next) => {
+    const fs = require('fs');
+    const envPath = path.join(__dirname, '../../.env');
+    
+    try {
+      const envContent = fs.readFileSync(envPath, 'utf8');
+      const isInstalled = envContent.includes('DB_HOST') && 
+                         envContent.includes('DB_NAME') &&
+                         envContent.includes('JWT_SECRET');
+      
+      if (isInstalled) {
+        // Installation déjà terminée, rediriger vers le dashboard
+        return res.redirect('/dashboard');
+      }
+    } catch (error) {
+      // .env n'existe pas, installation pas terminée
+    }
+    
+    next();
   };
 
   // Serve pages with and without .html extension
@@ -176,6 +197,13 @@ function createApp() {
     // Legacy URL (with .html) - redirect to clean URL
     if (route !== '/') {
       app.get(route + '.html', (req, res) => res.redirect(301, route));
+    }
+  });
+
+  // Route spéciale pour /install avec protection
+  const installPath = path.join(__dirname, '..', '..', 'frontend', 'public', 'install.html');
+  app.get('/install', blockInstallIfCompleted, (req, res) => res.sendFile(installPath));
+  app.get('/install.html', blockInstallIfCompleted, (req, res) => res.redirect(301, '/install'));
     }
   });
 
