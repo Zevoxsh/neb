@@ -40,6 +40,7 @@ const isInstalled = checkInstallation();
 if (!isInstalled) {
   console.log('🔧 Mode installation détecté...');
   process.env.JWT_SECRET = 'temporary_installation_secret_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  process.env.INSTALLATION_MODE = 'true'; // Désactiver les services qui nécessitent la DB
 }
 
 // Start installation server (minimal setup without auth)

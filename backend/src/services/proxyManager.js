@@ -67,8 +67,10 @@ class ProxyManager {
     this.backendConnectTimeoutMs = Number(process.env.BACKEND_CONNECT_TIMEOUT_MS) || 2000; // 2s
     this.healthProbeIntervalMs = Number(process.env.BACKEND_HEALTH_INTERVAL_MS) || 30000; // 30s
     this._healthProbeTimer = null;
-    // start active health probe
-    try { this._startHealthProbe(); } catch (e) { console.error('ProxyManager: failed to start health probe', e); }
+    // start active health probe (skip in installation mode)
+    if (process.env.INSTALLATION_MODE !== 'true') {
+      try { this._startHealthProbe(); } catch (e) { console.error('ProxyManager: failed to start health probe', e); }
+    }
   }
 
   async _startHealthProbe() {
