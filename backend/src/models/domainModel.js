@@ -1,6 +1,10 @@
 const pool = require('../config/db');
+const dbState = require('../utils/dbState');
 
 async function createDomainMapping(data) {
+  if (!dbState.isConnected()) {
+    throw dbState.getUnavailableError();
+  }
   const botProtection = data.botProtection || 'default';
   const hostname = data.hostname ? data.hostname.trim() : data.hostname;
   const res = await pool.query(
@@ -11,15 +15,31 @@ async function createDomainMapping(data) {
 }
 
 async function listDomainMappings() {
-  const res = await pool.query(`SELECT dm.id, dm.hostname, dm.proxy_id, dm.backend_id, dm.bot_protection, b.target_host, b.target_port, b.target_protocol
-    FROM domain_mappings dm JOIN backends b ON dm.backend_id = b.id ORDER BY dm.id`);
-  return res.rows.map(r => ({ id: r.id, hostname: r.hostname, proxy_id: r.proxy_id, backend_id: r.backend_id, bot_protection: r.bot_protection || 'default', target_host: r.target_host, target_port: r.target_port, target_protocol: r.target_protocol }));
+  if (!dbState.isConnected()) {
+    return [];
+  }
+  try {
+    const res = await pool.query(`SELECT dm.id, dm.hostname, dm.proxy_id, dm.backend_id, dm.bot_protection, b.target_host, b.target_port, b.target_protocol
+      FROM domain_mappings dm JOIN backends b ON dm.backend_id = b.id ORDER BY dm.id`);
+    return res.rows.map(r => ({ id: r.id, hostname: r.hostname, proxy_id: r.proxy_id, backend_id: r.backend_id, bot_protection: r.bot_protection || 'default', target_host: r.target_host, target_port: r.target_port, target_protocol: r.target_protocol }));
+  } catch (error) {
+    console.error('[domainModel] listDomainMappings failed:', error.message);
+    return [];
+  }
 }
 
 async function listMappingsForProxy(proxyId) {
-  const res = await pool.query(`SELECT dm.id, dm.hostname, dm.proxy_id, dm.backend_id, b.target_host, b.target_port, b.target_protocol
-    FROM domain_mappings dm JOIN backends b ON dm.backend_id = b.id WHERE dm.proxy_id = $1 ORDER BY dm.id`, [proxyId]);
-  return res.rows;
+  if (!dbState.isConnected()) {
+    return [];
+  }
+  try {
+    const res = await pool.query(`SELECT dm.id, dm.hostname, dm.proxy_id, dm.backend_id, b.target_host, b.target_port, b.target_protocol
+      FROM domain_mappings dm JOIN backends b ON dm.backend_id = b.id WHERE dm.proxy_id = $1 ORDER BY dm.id`, [proxyId]);
+    return res.rows;
+  } catch (error) {
+    console.error('[domainModel] listMappingsForProxy failed:', error.message);
+    return [];
+  }
 }
 
 async function updateDomainMapping(id, data) {

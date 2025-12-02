@@ -1,6 +1,10 @@
 const pool = require('../config/db');
+const dbState = require('../utils/dbState');
 
 async function createProxy(data) {
+  if (!dbState.isConnected()) {
+    throw dbState.getUnavailableError();
+  }
   const res = await pool.query(
     `INSERT INTO proxies (name, protocol, listen_protocol, target_protocol, listen_host, listen_port, target_host, target_port, vhosts, enabled, error_page_html)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
@@ -22,16 +26,35 @@ async function createProxy(data) {
 }
 
 async function listProxies() {
-  const res = await pool.query('SELECT id, name, protocol, listen_protocol, target_protocol, listen_host, listen_port, target_host, target_port, vhosts, enabled, created_at, error_page_html FROM proxies ORDER BY id');
-  return res.rows;
+  if (!dbState.isConnected()) {
+    return [];
+  }
+  try {
+    const res = await pool.query('SELECT id, name, protocol, listen_protocol, target_protocol, listen_host, listen_port, target_host, target_port, vhosts, enabled, created_at, error_page_html FROM proxies ORDER BY id');
+    return res.rows;
+  } catch (error) {
+    console.error('[proxyModel] listProxies failed:', error.message);
+    return [];
+  }
 }
 
 async function listEnabledProxies() {
-  const res = await pool.query('SELECT id, name, protocol, listen_protocol, target_protocol, listen_host, listen_port, target_host, target_port, vhosts, enabled, error_page_html FROM proxies WHERE enabled = true');
-  return res.rows;
+  if (!dbState.isConnected()) {
+    return [];
+  }
+  try {
+    const res = await pool.query('SELECT id, name, protocol, listen_protocol, target_protocol, listen_host, listen_port, target_host, target_port, vhosts, enabled, error_page_html FROM proxies WHERE enabled = true');
+    return res.rows;
+  } catch (error) {
+    console.error('[proxyModel] listEnabledProxies failed:', error.message);
+    return [];
+  }
 }
 
 async function deleteProxy(id) {
+  if (!dbState.isConnected()) {
+    throw dbState.getUnavailableError();
+  }
   await pool.query('DELETE FROM proxies WHERE id = $1', [id]);
 }
 

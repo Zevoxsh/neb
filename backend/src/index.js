@@ -96,6 +96,7 @@ async function initDbAndStart() {
   const trustedIpModel = require('./models/trustedIpModel');
   const { normalizeSecurityConfig, DEFAULT_SECURITY_CONFIG } = require('./utils/securityConfig');
   const { connectRedis } = require('./config/redis');
+  const dbState = require('./utils/dbState');
   
   // Continue with normal startup
   const pool = require('./config/db');
@@ -110,8 +111,10 @@ async function initDbAndStart() {
     await client.query('SELECT 1');
     client.release();
     dbConnected = true;
+    dbState.setConnected(true);
     console.log('✓ Database connection successful');
   } catch (dbError) {
+    dbState.setConnected(false);
     console.error('❌ Database connection failed:', dbError.message);
     console.log('🔧 Starting in CONFIGURATION MODE - Database unreachable');
     console.log('📝 You can access the admin panel to fix the database configuration');

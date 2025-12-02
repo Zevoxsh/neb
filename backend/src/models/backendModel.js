@@ -1,6 +1,10 @@
 const pool = require('../config/db');
+const dbState = require('../utils/dbState');
 
 async function createBackend(data) {
+  if (!dbState.isConnected()) {
+    throw dbState.getUnavailableError();
+  }
   console.log('backendModel.createBackend called with', data);
   const res = await pool.query(
     'INSERT INTO backends (name, target_host, target_port, target_protocol) VALUES ($1,$2,$3,$4) RETURNING id, name, target_host, target_port, target_protocol',
@@ -11,6 +15,9 @@ async function createBackend(data) {
 }
 
 async function listBackends() {
+  if (!dbState.isConnected()) {
+    return [];
+  }
   try {
     // Try with new columns (after migration)
     const res = await pool.query(`
@@ -29,6 +36,11 @@ async function listBackends() {
         SELECT id, name, target_host, target_port, target_protocol, created_at
         FROM backends ORDER BY id
       `);
+      return res.rows;
+    }
+    console.error('[backendModel] listBackends failed:', error.message);
+    return [];
+  }
       return res.rows;
     }
     throw error;
