@@ -1,6 +1,6 @@
 const monthlyReportModel = require('../models/monthlyReportModel');
 const monthlyReportService = require('../services/monthlyReportService');
-const logger = require('../utils/logger');
+const { logger } = require('../utils/logger');
 
 /**
  * Get all monthly reports

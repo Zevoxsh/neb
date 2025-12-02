@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const monthlyReportService = require('./monthlyReportService');
-const logger = require('../utils/logger');
+const { logger } = require('../utils/logger');
 
 class SchedulerService {
   constructor() {

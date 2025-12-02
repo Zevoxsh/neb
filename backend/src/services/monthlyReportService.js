@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 const monthlyReportModel = require('../models/monthlyReportModel');
-const logger = require('../utils/logger');
+const { logger } = require('../utils/logger');
 
 class MonthlyReportService {
   /**
