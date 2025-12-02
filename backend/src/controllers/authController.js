@@ -12,18 +12,23 @@ const logger = createLogger('AuthController');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+// Allow temporary secrets during installation
+const isInstallationMode = JWT_SECRET && JWT_SECRET.startsWith('temporary_installation_secret_');
+
 // Vérification critique du JWT secret
-if (!JWT_SECRET || JWT_SECRET.length < 32) {
+if (!JWT_SECRET || (JWT_SECRET.length < 32 && !isInstallationMode)) {
     console.error('FATAL: JWT_SECRET must be set and at least 32 characters');
     console.error('Set JWT_SECRET in your .env file with a strong random value');
     process.exit(1);
 }
 
-// Vérifier que ce n\'est pas un des secrets par défaut connus
-const BANNED_SECRETS = ['changeme', 'default-secret-change-me', 'secret', 'test', 'password'];
-if (BANNED_SECRETS.includes(JWT_SECRET)) {
-    console.error('FATAL: JWT_SECRET cannot be a default/weak value');
-    process.exit(1);
+// Vérifier que ce n'est pas un des secrets par défaut connus (skip in installation mode)
+if (!isInstallationMode) {
+    const BANNED_SECRETS = ['changeme', 'default-secret-change-me', 'secret', 'test', 'password'];
+    if (BANNED_SECRETS.includes(JWT_SECRET)) {
+        console.error('FATAL: JWT_SECRET cannot be a default/weak value');
+        process.exit(1);
+    }
 }
 
 // Helper for cookie options

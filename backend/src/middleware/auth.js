@@ -2,8 +2,12 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-if (!JWT_SECRET || JWT_SECRET.length < 32) {
+// Allow temporary secrets during installation
+const isInstallationMode = JWT_SECRET && JWT_SECRET.startsWith('temporary_installation_secret_');
+
+if (!JWT_SECRET || (JWT_SECRET.length < 32 && !isInstallationMode)) {
     console.error('FATAL: JWT_SECRET must be set and at least 32 characters');
+    console.error('Set JWT_SECRET in your .env file with a strong random value');
     process.exit(1);
 }
 

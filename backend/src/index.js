@@ -15,38 +15,35 @@ if (process.env.PG_PASSWORD !== undefined && typeof process.env.PG_PASSWORD !== 
 if (process.env.DATABASE_URL !== undefined && typeof process.env.DATABASE_URL !== 'string') {
   process.env.DATABASE_URL = String(process.env.DATABASE_URL);
 }
-const createApp = require('./app');
-const bcrypt = require('bcrypt');
-const proxyModel = require('./models/proxyModel');
-const proxyManager = require('./services/proxyManager');
-const alertService = require('./services/alertService');
-const acmeManager = require('./services/acmeManager');
-const settingsModel = require('./models/settingsModel');
-const blockedIpModel = require('./models/blockedIpModel');
-const trustedIpModel = require('./models/trustedIpModel');
-const { normalizeSecurityConfig, DEFAULT_SECURITY_CONFIG } = require('./utils/securityConfig');
-const { connectRedis } = require('./config/redis');
+
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
 
-// Check if installation is needed
+// Check if installation is needed BEFORE loading other modules
 async function checkInstallation() {
-  const fs = require('fs').promises;
   const envPath = path.join(__dirname, '../../.env');
   
   try {
-    const envContent = await fs.readFile(envPath, 'utf8');
-    const hasDbConfig = envContent.includes('DB_HOST') && envContent.includes('DB_NAME');
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const hasDbConfig = envContent.includes('DB_HOST') && 
+                       envContent.includes('DB_NAME') &&
+                       envContent.includes('JWT_SECRET');
     return hasDbConfig;
   } catch (error) {
     return false;
   }
 }
 
-// Start installation server
+// Start installation server (minimal setup without auth)
 async function startInstallationServer() {
   console.log('🔧 Installation requise - démarrage du serveur d\'installation...');
+  console.log('');
   
+  // Set a temporary JWT_SECRET for installation mode
+  process.env.JWT_SECRET = 'temporary_installation_secret_' + Math.random().toString(36);
+  
+  const createApp = require('./app');
   const app = createApp();
   const PORT = process.env.PORT || 3000;
   
@@ -66,33 +63,41 @@ async function startInstallationServer() {
   server.listen(PORT, () => {
     console.log(`✅ Serveur d'installation démarré sur http://localhost:${PORT}`);
     console.log(`📝 Ouvrez http://localhost:${PORT}/install pour configurer votre installation`);
+    console.log('');
   });
   
   return server;
 }
 
-// Initialize database connection (only after installation)
-async function initializeDatabase() {
-  const pool = require('./config/db');
-  return pool;
-}
-
 const PORT = process.env.PORT || 3000;
 
 async function initDbAndStart() {
-  // Check if installation is needed
-  const isInstalled = await checkInstallation();
+  // Check if installation is needed FIRST
+  const isInstalled = checkInstallation();
   
   if (!isInstalled) {
     await startInstallationServer();
     return;
   }
   
+  // Only load these modules after we know installation is complete
+  const bcrypt = require('bcrypt');
+  const proxyModel = require('./models/proxyModel');
+  const proxyManager = require('./services/proxyManager');
+  const alertService = require('./services/alertService');
+  const acmeManager = require('./services/acmeManager');
+  const settingsModel = require('./models/settingsModel');
+  const blockedIpModel = require('./models/blockedIpModel');
+  const trustedIpModel = require('./models/trustedIpModel');
+  const { normalizeSecurityConfig, DEFAULT_SECURITY_CONFIG } = require('./utils/securityConfig');
+  const { connectRedis } = require('./config/redis');
+  
   // Continue with normal startup
-  const pool = await initializeDatabase();
+  const pool = require('./config/db');
+  const createApp = require('./app');
   const app = createApp();
   
-  try {
+  try:
     // create tables if not exists
     await pool.query(`CREATE TABLE IF NOT EXISTS users(
       id SERIAL PRIMARY KEY,
