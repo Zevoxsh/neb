@@ -82,16 +82,14 @@ const testDatabaseConnection = asyncHandler(async (req, res) => {
     const { Pool } = require('pg');
     
     try {
-        // Récupérer la config actuelle
-        const settings = await settingsModel.listSettings();
-        const settingsMap = new Map(settings.map(s => [s.key, s.value]));
-        
+        // Toujours utiliser les variables d'environnement actuelles pour le test
+        // car si la DB est inaccessible, on ne peut pas récupérer les settings
         const dbConfig = {
-            host: settingsMap.get('database.host') || process.env.DB_HOST || 'localhost',
-            port: parseInt(settingsMap.get('database.port') || process.env.DB_PORT || '5432'),
-            user: settingsMap.get('database.user') || process.env.DB_USER || 'postgres',
-            password: settingsMap.get('database.password') || process.env.DB_PASSWORD || '',
-            database: settingsMap.get('database.name') || process.env.DB_NAME || 'nebuladb',
+            host: process.env.DB_HOST || 'localhost',
+            port: parseInt(process.env.DB_PORT || '5432'),
+            user: process.env.DB_USER || 'postgres',
+            password: process.env.DB_PASSWORD || '',
+            database: process.env.DB_NAME || 'nebuladb',
             connectionTimeoutMillis: 5000,
         };
         
