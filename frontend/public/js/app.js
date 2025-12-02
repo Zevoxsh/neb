@@ -506,13 +506,13 @@
       // Handle delete button
       const deleteBtn = ev.target.closest && ev.target.closest('.delete-domain');
       if (!deleteBtn || !deleteBtn.dataset.id) return;
-      if (!confirm('Delete ce domaine ?')) return;
+      if (!confirm('Delete this domain?')) return;
       const res = await window.api.requestJson(`/api/domains/${deleteBtn.dataset.id}`, { method: 'DELETE' });
       if (res && (res.status === 200 || res.status === 204)) {
-        showToast('Domaine supprime');
+        showToast('Domain deleted');
         await loadDomains();
       } else {
-        showToast('Suppression impossible', 'error');
+        showToast('Deletion failed', 'error');
       }
     });
   }
@@ -1509,14 +1509,14 @@
     const backendSelect = document.getElementById('createDomainBackendSelect');
     if (!proxySelect || !backendSelect) return;
     proxySelect.innerHTML = '';
-    backendSelect.innerHTML = '<option value="">Selectionner...</option>';
+    backendSelect.innerHTML = '<option value="">Select...</option>';
     try {
       const proxies = cache.proxies.length ? cache.proxies : await fetchAndCache('/api/proxies', 'proxies');
       const backends = cache.backends.length ? cache.backends : await fetchAndCache('/api/backends', 'backends');
       proxies.forEach((p) => {
         const opt = document.createElement('option');
         opt.value = p.id;
-        opt.textContent = `${p.name} (${p.listen_host}:${p.listen_Port})`;
+        opt.textContent = `${p.name} (${p.listen_host}:${p.listen_port})`;
         proxySelect.appendChild(opt);
       });
       backends.forEach((b) => {
