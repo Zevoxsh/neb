@@ -97,7 +97,7 @@ async function initDbAndStart() {
   const createApp = require('./app');
   const app = createApp();
   
-  try:
+  try {
     // create tables if not exists
     await pool.query(`CREATE TABLE IF NOT EXISTS users(
       id SERIAL PRIMARY KEY,
