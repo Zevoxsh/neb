@@ -312,16 +312,29 @@
 
         function renderCategoryFields(category) {
             const fields = configSchema[category];
-            return Object.entries(fields).map(([key, schema]) => {
+            
+            // Message spécial pour la base de données
+            let headerMessage = '';
+            if (category === 'database') {
+                headerMessage = `
+                    <div class="alert alert-info" style="margin-bottom: 20px;">
+                        ℹ️ Ces paramètres sont en lecture seule. Ils proviennent du fichier <code>.env</code> et nécessitent un redémarrage de l'application pour être modifiés.
+                    </div>
+                `;
+            }
+            
+            const fieldsHtml = Object.entries(fields).map(([key, schema]) => {
                 const value = configData[category][key];
                 const fieldId = `${category}.${key}`;
                 const required = schema.required ? '*' : '';
+                const readonly = schema.readonly ? 'readonly disabled' : '';
 
                 let inputHtml = '';
                 if (schema.type === 'boolean') {
                     inputHtml = `
                         <label style="display: flex; align-items: center; cursor: pointer;">
                             <input type="checkbox" id="${fieldId}" ${value ? 'checked' : ''}
+                                   ${schema.readonly ? 'disabled' : ''}
                                    onchange="markChanged('${category}', '${key}', this.checked)">
                             <span>${getFieldLabel(key)}</span>
                         </label>
@@ -330,6 +343,7 @@
                     inputHtml = `
                         <label>${getFieldLabel(key)}${required}</label>
                         <input type="password" id="${fieldId}" value="${value || ''}" 
+                               ${readonly}
                                placeholder="${schema.default}"
                                onchange="markChanged('${category}', '${key}', this.value)">
                     `;
@@ -338,6 +352,7 @@
                     inputHtml = `
                         <label>${getFieldLabel(key)}${required}</label>
                         <input type="number" id="${fieldId}" value="${value || schema.default}"
+                               ${readonly}
                                min="${schema.min || 0}" max="${schema.max || 999999}"
                                onchange="markChanged('${category}', '${key}', Number(this.value))"
                                placeholder="${schema.default}${unit}">
@@ -346,6 +361,7 @@
                     inputHtml = `
                         <label>${getFieldLabel(key)}${required}</label>
                         <input type="text" id="${fieldId}" 
+                               ${readonly}
                                value="${Array.isArray(value) ? value.join(', ') : ''}"
                                placeholder="Valeurs séparées par des virgules"
                                onchange="markChanged('${category}', '${key}', this.value.split(',').map(v => v.trim()))">
@@ -354,6 +370,7 @@
                     inputHtml = `
                         <label>${getFieldLabel(key)}${required}</label>
                         <input type="text" id="${fieldId}" value="${value || ''}" 
+                               ${readonly}
                                placeholder="${schema.default}"
                                onchange="markChanged('${category}', '${key}', this.value)">
                     `;
@@ -366,6 +383,8 @@
                     </div>
                 `;
             }).join('');
+            
+            return headerMessage + fieldsHtml;
         }
 
         function switchCategory(category) {

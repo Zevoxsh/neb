@@ -14,13 +14,13 @@ const logger = createLogger('ConfigController');
 
 // Définition de tous les paramètres configurables
 const CONFIG_SCHEMA = {
-    // Base de données
+    // Base de données (lecture seule - modifiable uniquement via .env)
     database: {
-        host: { type: 'string', default: 'localhost', env: 'DB_HOST', category: 'Database' },
-        port: { type: 'number', default: 5432, env: 'DB_PORT', category: 'Database' },
-        user: { type: 'string', default: 'postgres', env: 'DB_USER', category: 'Database' },
-        password: { type: 'password', default: '', env: 'DB_PASSWORD', category: 'Database' },
-        name: { type: 'string', default: 'nebuladb', env: 'DB_NAME', category: 'Database' }
+        host: { type: 'string', default: 'localhost', env: 'DB_HOST', category: 'Database', readonly: true },
+        port: { type: 'number', default: 5432, env: 'DB_PORT', category: 'Database', readonly: true },
+        user: { type: 'string', default: 'postgres', env: 'DB_USER', category: 'Database', readonly: true },
+        password: { type: 'password', default: '', env: 'DB_PASSWORD', category: 'Database', readonly: true },
+        name: { type: 'string', default: 'nebuladb', env: 'DB_NAME', category: 'Database', readonly: true }
     },
     
     // Sécurité & JWT
@@ -148,6 +148,16 @@ const getAllConfig = asyncHandler(async (req, res) => {
             config[category][key] = value;
         }
     }
+    
+    // Pour la base de données, toujours utiliser les valeurs du .env actuel
+    // car ce sont celles réellement utilisées par l'application
+    config.database = {
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT || '5432'),
+        user: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD || '',
+        name: process.env.DB_NAME || 'nebuladb'
+    };
     
     // Ajouter les valeurs actuelles du runtime
     config.botProtection.enabled = botProtection.enabled;
