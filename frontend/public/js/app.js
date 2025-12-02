@@ -909,15 +909,19 @@
   };
 
   async function loadBackends() {
+    console.log('[DEBUG] loadBackends: Starting...');
     const tbody = document.querySelector('#backendsTable tbody');
     const empty = document.getElementById('backendsEmpty');
+    console.log('[DEBUG] loadBackends: tbody=', tbody, 'empty=', empty);
     if (!tbody) return;
     tbody.innerHTML = '';
     try {
       const rows = await fetchAndCache('/api/backends', 'backends');
+      console.log('[DEBUG] loadBackends: Received rows=', rows);
       toggleEmpty(empty, rows.length > 0, 'No backend defined.');
       if (!rows.length) return;
       rows.forEach((b) => {
+        console.log('[DEBUG] loadBackends: Processing backend=', b);
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${escapeHtml(b.name || '')}</strong></td>
@@ -930,27 +934,35 @@
         `;
         tbody.appendChild(tr);
       });
+      console.log('[DEBUG] loadBackends: Done, rendered', rows.length, 'rows');
     } catch (e) {
+      console.error('[DEBUG] loadBackends: Error=', e);
       toggleEmpty(empty, false, 'Unable to load backends.');
       showToast('Backend loading failed', 'error');
     }
   }
 
   async function loadDomains() {
+    console.log('[DEBUG] loadDomains: Starting...');
     const tbody = document.querySelector('#domainsTable tbody');
     const empty = document.getElementById('domainsEmpty');
+    console.log('[DEBUG] loadDomains: tbody=', tbody, 'empty=', empty);
     if (!tbody) return;
     tbody.innerHTML = '';
     try {
       const res = await window.api.requestJson('/api/domains');
+      console.log('[DEBUG] loadDomains: API response=', res);
       if (!res || res.status !== 200) throw new Error('loadDomains');
       const rows = Array.isArray(res.body) ? res.body : [];
+      console.log('[DEBUG] loadDomains: Parsed rows=', rows);
       toggleEmpty(empty, rows.length > 0, 'No domain configured.');
       if (!rows.length) return;
       const proxyMap = new Map((cache.proxies || []).map((p) => [String(p.id), p]));
       const backendMap = new Map((cache.backends || []).map((b) => [String(b.id), b]));
+      console.log('[DEBUG] loadDomains: proxyMap=', proxyMap, 'backendMap=', backendMap);
 
       rows.forEach((d) => {
+        console.log('[DEBUG] loadDomains: Processing domain=', d);
         const proxy = proxyMap.get(String(d.proxy_id));
         const backend = backendMap.get(String(d.backend_id));
         const backendLabel = backend
@@ -1531,9 +1543,12 @@
   }
 
   async function fetchAndCache(endpoint, cacheKey) {
+    console.log('[DEBUG] fetchAndCache: endpoint=', endpoint, 'cacheKey=', cacheKey);
     const res = await window.api.requestJson(endpoint);
+    console.log('[DEBUG] fetchAndCache: response=', res);
     if (!res || res.status !== 200) throw new Error(`fetch-failed:${endpoint}`);
     const rows = Array.isArray(res.body) ? res.body : [];
+    console.log('[DEBUG] fetchAndCache: rows=', rows, 'length=', rows.length);
     if (cacheKey) cache[cacheKey] = rows;
     return rows;
   }
