@@ -6,6 +6,9 @@ const { authenticateToken } = require('../middleware/auth');
 // Récupérer toute la configuration
 router.get('/api/config', authenticateToken, configController.getAllConfig);
 
+// Tester la connexion à la base de données
+router.get('/api/config/test-db', authenticateToken, configController.testDatabaseConnection);
+
 // Mettre à jour un paramètre
 router.put('/api/config', authenticateToken, configController.updateConfig);
 

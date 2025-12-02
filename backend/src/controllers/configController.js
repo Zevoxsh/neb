@@ -77,6 +77,52 @@ const CONFIG_SCHEMA = {
     }
 };
 
+// Tester la connexion à la base de données
+const testDatabaseConnection = asyncHandler(async (req, res) => {
+    const { Pool } = require('pg');
+    
+    try {
+        // Récupérer la config actuelle
+        const settings = await settingsModel.listSettings();
+        const settingsMap = new Map(settings.map(s => [s.key, s.value]));
+        
+        const dbConfig = {
+            host: settingsMap.get('database.host') || process.env.DB_HOST || 'localhost',
+            port: parseInt(settingsMap.get('database.port') || process.env.DB_PORT || '5432'),
+            user: settingsMap.get('database.user') || process.env.DB_USER || 'postgres',
+            password: settingsMap.get('database.password') || process.env.DB_PASSWORD || '',
+            database: settingsMap.get('database.name') || process.env.DB_NAME || 'nebuladb',
+            connectionTimeoutMillis: 5000,
+        };
+        
+        const testPool = new Pool(dbConfig);
+        
+        // Tester la connexion
+        const client = await testPool.connect();
+        await client.query('SELECT 1');
+        client.release();
+        await testPool.end();
+        
+        logger.info('Database connection test successful');
+        res.json({ 
+            success: true, 
+            message: 'Connexion à la base de données réussie',
+            config: {
+                host: dbConfig.host,
+                port: dbConfig.port,
+                database: dbConfig.database
+            }
+        });
+    } catch (error) {
+        logger.error('Database connection test failed', { error: error.message });
+        res.json({ 
+            success: false, 
+            error: error.message,
+            details: error.code || 'UNKNOWN_ERROR'
+        });
+    }
+});
+
 // Récupérer toute la configuration
 const getAllConfig = asyncHandler(async (req, res) => {
     logger.debug('Getting all configuration');
@@ -331,6 +377,7 @@ const exportEnv = asyncHandler(async (req, res) => {
 
 module.exports = {
     getAllConfig,
+    testDatabaseConnection,
     updateConfig,
     updateBulkConfig,
     resetToDefaults,

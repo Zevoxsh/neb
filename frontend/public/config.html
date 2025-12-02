@@ -95,6 +95,45 @@
                 opacity: 1;
             }
         }
+
+        .db-alert {
+            background: rgba(255, 51, 51, 0.1);
+            border: 1px solid var(--danger);
+            border-radius: var(--radius-md);
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .db-alert.show {
+            display: flex;
+        }
+
+        .db-alert-icon {
+            font-size: 24px;
+        }
+
+        .db-alert-content {
+            flex: 1;
+        }
+
+        .db-alert-title {
+            color: var(--danger);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .db-alert-message {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .db-alert-actions {
+            display: flex;
+            gap: 8px;
+        }
     </style>
 </head>
 <body data-page="config">
@@ -114,6 +153,16 @@
             </header>
             
             <section class="page-content">
+                <div id="dbAlert" class="db-alert">
+                    <div class="db-alert-icon">⚠️</div>
+                    <div class="db-alert-content">
+                        <div class="db-alert-title">Connexion à la base de données échouée</div>
+                        <div class="db-alert-message" id="dbAlertMessage">Impossible de se connecter à la base de données PostgreSQL</div>
+                    </div>
+                    <div class="db-alert-actions">
+                        <button onclick="testDatabaseConnection()" class="btn ghost" id="testDbBtn">🔌 Tester la connexion</button>
+                    </div>
+                </div>
                 <div class="config-tabs" id="categoryTabs"></div>
                 <div id="categoryContent"></div>
             </section>
@@ -133,8 +182,84 @@
 
         // Wait for api.js to load
         window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(loadConfig, 100);
+            setTimeout(() => {
+                loadConfig();
+                checkDatabaseConnection();
+            }, 100);
         });
+
+        async function checkDatabaseConnection() {
+            try {
+                if (typeof api === 'undefined') {
+                    setTimeout(checkDatabaseConnection, 200);
+                    return;
+                }
+
+                const response = await fetch('/api/config/test-db', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                const result = await response.json();
+                
+                if (!result.success) {
+                    showDatabaseAlert(result.error || 'Connexion à la base de données échouée');
+                } else {
+                    hideDatabaseAlert();
+                }
+            } catch (error) {
+                console.error('Failed to check database:', error);
+                showDatabaseAlert('Impossible de vérifier la connexion à la base de données');
+            }
+        }
+
+        function showDatabaseAlert(message) {
+            const alert = document.getElementById('dbAlert');
+            const messageEl = document.getElementById('dbAlertMessage');
+            messageEl.textContent = message;
+            alert.classList.add('show');
+        }
+
+        function hideDatabaseAlert() {
+            const alert = document.getElementById('dbAlert');
+            alert.classList.remove('show');
+        }
+
+        async function testDatabaseConnection() {
+            const btn = document.getElementById('testDbBtn');
+            const originalText = btn.textContent;
+            btn.textContent = '⏳ Test en cours...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/config/test-db', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    hideDatabaseAlert();
+                    showNotification('✓ Connexion à la base de données réussie', 'success');
+                } else {
+                    showDatabaseAlert(result.error || 'Connexion échouée');
+                    showNotification('Connexion échouée: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Test failed:', error);
+                showNotification('Erreur lors du test de connexion', 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
 
         async function loadConfig() {
             try {
