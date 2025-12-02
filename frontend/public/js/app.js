@@ -51,10 +51,17 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     console.log('[DEBUG] ====== DOMContentLoaded FIRED ======');
+    console.log('[DEBUG] document.body=', document.body);
     const body = document.body || {};
+    console.log('[DEBUG] body=', body);
+    console.log('[DEBUG] body.dataset=', body.dataset);
     const page = body.dataset ? body.dataset.page : '';
     const path = window.location.pathname;
     console.log('[DEBUG] page=', page, 'path=', path);
+    
+    if (!page) {
+      console.error('[DEBUG] ERROR: page is empty! body.dataset.page not found!');
+    }
 
     setupInlineBackendCreator();
     attachProxyBackendChange();
