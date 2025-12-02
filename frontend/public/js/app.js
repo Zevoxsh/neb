@@ -2440,7 +2440,7 @@
         if (row) {
           const placeholder = row.querySelector('.flag-placeholder');
           if (placeholder) {
-            if (countryCode && countryCode !== 'LOCAL') {
+            if (countryCode && countryCode !== 'LOCAL' && countryCode !== 'UNKNOWN') {
               placeholder.outerHTML = `<img src="https://flagsapi.com/${countryCode}/flat/32.png" style="width: 24px; height: 18px; border-radius: 2px;" alt="${countryCode}" title="${countryCode}">`;
             } else if (countryCode === 'LOCAL') {
               placeholder.outerHTML = '<span style="font-size: 18px;">🏠</span>';
@@ -2722,7 +2722,7 @@
           if (container) {
             const placeholder = container.querySelector('.flag-placeholder');
             if (placeholder) {
-              if (countryCode && countryCode !== 'LOCAL') {
+              if (countryCode && countryCode !== 'LOCAL' && countryCode !== 'UNKNOWN') {
                 placeholder.outerHTML = `<img src="https://flagsapi.com/${countryCode}/flat/24.png" alt="${countryCode}" style="width: 24px; height: 18px; vertical-align: middle; margin-right: 6px;">`;
               } else if (countryCode === 'LOCAL') {
                 placeholder.outerHTML = `<span style="margin-right: 6px;">🏠</span>`;
