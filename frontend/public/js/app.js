@@ -2561,6 +2561,7 @@
   // IP MANAGEMENT PAGE
   // ========================================
   function initIpManagementPage() {
+    console.log('[IP Management] Initializing page...');
     loadTrustedIps();
     loadBlockedIps();
 
@@ -2569,9 +2570,19 @@
     const confirmAddTrusted = document.getElementById('confirmAddTrusted');
     const confirmAddBlocked = document.getElementById('confirmAddBlocked');
 
+    console.log('[IP Management] Buttons found:', {
+      addTrustedBtn: !!addTrustedBtn,
+      addBlockedBtn: !!addBlockedBtn,
+      confirmAddTrusted: !!confirmAddTrusted,
+      confirmAddBlocked: !!confirmAddBlocked
+    });
+
     if (addTrustedBtn) {
       addTrustedBtn.addEventListener('click', () => {
-        document.getElementById('addTrustedModal').style.display = 'flex';
+        console.log('[IP Management] Add Trusted button clicked');
+        const modal = document.getElementById('addTrustedModal');
+        console.log('[IP Management] Modal element:', modal);
+        modal.style.display = 'flex';
         document.getElementById('trustedIpInput').value = '';
         document.getElementById('trustedLabelInput').value = '';
       });
@@ -2579,7 +2590,10 @@
 
     if (addBlockedBtn) {
       addBlockedBtn.addEventListener('click', () => {
-        document.getElementById('addBlockedModal').style.display = 'flex';
+        console.log('[IP Management] Add Blocked button clicked');
+        const modal = document.getElementById('addBlockedModal');
+        console.log('[IP Management] Modal element:', modal);
+        modal.style.display = 'flex';
         document.getElementById('blockedIpInput').value = '';
         document.getElementById('blockedReasonInput').value = '';
       });
@@ -2587,8 +2601,11 @@
 
     if (confirmAddTrusted) {
       confirmAddTrusted.addEventListener('click', async () => {
+        console.log('[IP Management] Confirm Add Trusted clicked');
         const ip = document.getElementById('trustedIpInput').value.trim();
         const label = document.getElementById('trustedLabelInput').value.trim();
+
+        console.log('[IP Management] Adding IP:', { ip, label });
 
         if (!ip) {
           alert('Please enter an IP address');
@@ -2596,7 +2613,9 @@
         }
 
         try {
+          console.log('[IP Management] Sending POST request to /api/security/trusted-ips');
           const res = await window.api.requestJson('/api/security/trusted-ips', 'POST', { ip, label });
+          console.log('[IP Management] Response:', res);
           if (res && res.status === 200) {
             document.getElementById('addTrustedModal').style.display = 'none';
             loadTrustedIps();
@@ -2613,8 +2632,11 @@
 
     if (confirmAddBlocked) {
       confirmAddBlocked.addEventListener('click', async () => {
+        console.log('[IP Management] Confirm Add Blocked clicked');
         const ip = document.getElementById('blockedIpInput').value.trim();
         const reason = document.getElementById('blockedReasonInput').value.trim();
+
+        console.log('[IP Management] Blocking IP:', { ip, reason });
 
         if (!ip) {
           alert('Please enter an IP address');
@@ -2622,7 +2644,9 @@
         }
 
         try {
+          console.log('[IP Management] Sending POST request to /api/security/blocked-ips');
           const res = await window.api.requestJson('/api/security/blocked-ips', 'POST', { ip, reason });
+          console.log('[IP Management] Response:', res);
           if (res && res.status === 200) {
             document.getElementById('addBlockedModal').style.display = 'none';
             loadBlockedIps();
