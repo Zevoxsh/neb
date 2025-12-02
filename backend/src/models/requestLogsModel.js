@@ -10,6 +10,7 @@ async function getRequestLogs({ limit = 1000, offset = 0, days = 30 } = {}) {
       MAX(timestamp) as last_seen
     FROM request_logs
     WHERE timestamp >= NOW() - INTERVAL '1 day' * $3
+      AND dismissed_at IS NULL
     GROUP BY client_ip, hostname
     ORDER BY request_count DESC, last_seen DESC
     LIMIT $1 OFFSET $2
@@ -27,6 +28,7 @@ async function getRecentRequestLogs({ limit = 500, minutes = 5 } = {}) {
       timestamp
     FROM request_logs
     WHERE timestamp >= NOW() - INTERVAL '1 minute' * $2
+      AND dismissed_at IS NULL
     ORDER BY timestamp DESC
     LIMIT $1
   `;
@@ -42,6 +44,7 @@ async function getTotalRequestCount(days = 30) {
       SELECT DISTINCT client_ip, hostname
       FROM request_logs
       WHERE timestamp >= NOW() - INTERVAL '1 day' * $1
+        AND dismissed_at IS NULL
     ) AS distinct_combinations
   `;
   
