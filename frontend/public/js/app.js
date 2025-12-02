@@ -88,15 +88,19 @@
     }
 
     // Skip initialization for detail pages, wait for partials-loaded event
+    console.log('[DEBUG] Testing path regex, path=', path);
     if (/^\/proxies\/\d+$/i.test(path)) {
+      console.log('[DEBUG] RETURN: matched /proxies/ID');
       return;
     }
     
     if (/^\/domain/i.test(path)) {
+      console.log('[DEBUG] RETURN: matched /domain');
       return;
     }
     
     if (/^\/backend/i.test(path)) {
+      console.log('[DEBUG] RETURN: matched /backend');
       return;
     }
 
