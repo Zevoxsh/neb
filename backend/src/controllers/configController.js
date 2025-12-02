@@ -25,14 +25,14 @@ const CONFIG_SCHEMA = {
     
     // Sécurité & JWT
     security: {
-        jwtSecret: { type: 'password', default: '', env: 'JWT_SECRET', category: 'Security', required: true },
-        cookieSecure: { type: 'boolean', default: true, env: 'COOKIE_SECURE', category: 'Security' },
-        botSecret: { type: 'password', default: '', env: 'BOT_SECRET', category: 'Security' }
+        jwtSecret: { type: 'password', default: '', env: 'JWT_SECRET', category: 'Security', required: true, requiresRestart: true },
+        cookieSecure: { type: 'boolean', default: true, env: 'COOKIE_SECURE', category: 'Security', requiresRestart: true },
+        botSecret: { type: 'password', default: '', env: 'BOT_SECRET', category: 'Security', requiresRestart: true }
     },
     
     // ACME / Let's Encrypt
     acme: {
-        email: { type: 'string', default: '', env: 'ACME_EMAIL', category: 'SSL', required: true },
+        email: { type: 'string', default: '', env: 'ACME_EMAIL', category: 'SSL', required: true, requiresRestart: true },
         localTlds: { type: 'array', default: ['local', 'localhost', 'lan'], category: 'SSL' }
     },
     
@@ -255,6 +255,18 @@ const getAllConfig = asyncHandler(async (req, res) => {
         password: process.env.DB_PASSWORD || '',
         name: process.env.DB_NAME || 'nebuladb'
     };
+    
+    // Pour la sécurité, toujours utiliser les valeurs du .env actuel
+    config.security = {
+        jwtSecret: process.env.JWT_SECRET || '',
+        cookieSecure: process.env.COOKIE_SECURE === 'true',
+        botSecret: process.env.BOT_SECRET || ''
+    };
+    
+    // Pour ACME, toujours utiliser les valeurs du .env actuel
+    if (process.env.ACME_EMAIL) {
+        config.acme.email = process.env.ACME_EMAIL;
+    }
     
     // Ajouter les valeurs actuelles du runtime
     config.botProtection.enabled = botProtection.enabled;
@@ -480,6 +492,37 @@ const exportEnv = asyncHandler(async (req, res) => {
     res.send(envContent);
 });
 
+// Obtenir les valeurs runtime actuelles (debug)
+const getRuntimeValues = asyncHandler(async (req, res) => {
+    const runtime = {
+        botProtection: {
+            enabled: botProtection.enabled,
+            threshold: botProtection.threshold,
+            perIpLimit: botProtection.perIpLimit,
+            perIpLimitProtected: botProtection.perIpLimitProtected,
+            verifiedIpLimit: botProtection.verifiedIpLimit,
+            burstLimit: botProtection.burstLimit,
+            maxConnectionsPerIP: botProtection.maxConnectionsPerIP,
+            maxAttempts: botProtection.maxAttempts,
+            verificationDuration: botProtection.verificationDuration / (60 * 60 * 1000), // Convert back to hours
+            challengeFirstVisit: botProtection.challengeFirstVisit
+        },
+        backends: {
+            healthProbeIntervalMs: proxyManager.healthProbeIntervalMs,
+            failureThreshold: proxyManager.failureThreshold
+        },
+        metrics: {
+            flushIntervalSec: proxyManager.flushIntervalSec
+        },
+        acme: {
+            localTlds: acmeManager.getLocalTlds ? acmeManager.getLocalTlds() : []
+        },
+        securityConfig: proxyManager.securityConfig
+    };
+    
+    res.json({ runtime });
+});
+
 module.exports = {
     getAllConfig,
     testDatabaseConnection,
@@ -488,5 +531,6 @@ module.exports = {
     updateBulkConfig,
     resetToDefaults,
     exportEnv,
+    getRuntimeValues,
     CONFIG_SCHEMA
 };

@@ -24,4 +24,7 @@ router.post('/api/config/reset', authenticateToken, configController.resetToDefa
 // Exporter en .env
 router.get('/api/config/export', authenticateToken, configController.exportEnv);
 
+// Debug: Obtenir les valeurs runtime actuelles
+router.get('/api/config/runtime', authenticateToken, configController.getRuntimeValues);
+
 module.exports = router;
