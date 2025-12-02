@@ -23,12 +23,12 @@ async function getCountryCode(req, res) {
       return res.json({ countryCode: cached.countryCode, cached: true });
     }
 
-    // Fetch from ipapi.co with timeout
+    // Use ip-api.com (free, 45 req/min, no key needed)
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
     try {
-      const response = await fetch(`https://ipapi.co/${ip}/country_code/`, {
+      const response = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode`, {
         signal: controller.signal,
         headers: {
           'User-Agent': 'Nebula-Proxy/1.0'
@@ -39,14 +39,14 @@ async function getCountryCode(req, res) {
 
       if (!response.ok) {
         if (response.status === 429) {
-          // Rate limited - return cached value or unknown
           console.warn(`[GeoIP] Rate limited for IP ${ip}`);
           return res.json({ countryCode: 'UNKNOWN', cached: false, rateLimited: true });
         }
         throw new Error(`API returned ${response.status}`);
       }
 
-      const countryCode = (await response.text()).trim();
+      const data = await response.json();
+      const countryCode = data.countryCode || 'UNKNOWN';
       
       // Cache the result
       geoCache.set(ip, {
