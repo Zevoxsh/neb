@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   await inject('/public/partials/header.html', '#sidebar-placeholder');
+  await inject('/public/partials/header.html', '#header-placeholder');
   await inject('/public/partials/footer.html', '#footer-placeholder');
 
   highlightActiveNav();
