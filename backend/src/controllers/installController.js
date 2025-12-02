@@ -100,10 +100,10 @@ class InstallController {
             console.log('👤 Création de l\'utilisateur admin...');
             const hashedPassword = await bcrypt.hash(admin.password, 10);
             await appClient.query(
-                `INSERT INTO users (username, password, role) 
+                `INSERT INTO users (username, password_hash, role) 
                  VALUES ($1, $2, 'admin') 
                  ON CONFLICT (username) DO UPDATE 
-                 SET password = $2, role = 'admin'`,
+                 SET password_hash = $2, role = 'admin'`,
                 [admin.username, hashedPassword]
             );
 
