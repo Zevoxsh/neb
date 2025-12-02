@@ -36,7 +36,7 @@
                     if (window.showToast) window.showToast('Erreur export', 'error');
                 } finally {
                     btnExport.disabled = false;
-                    btnExport.textContent = '📥 Télécharger backup';
+                    btnExport.textContent = 'Télécharger backup';
                 }
             });
         }
