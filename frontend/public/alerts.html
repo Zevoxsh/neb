@@ -8,7 +8,7 @@
   <script src="/public/js/api.js" defer></script>
   <script src="/public/js/include-partials.js" defer></script>
   <script src="/public/js/ui.js" defer></script>
-  <script src="/public/js/app.js" defer></script>
+  <script src="/public/js/app.js?v=14" defer></script>
 </head>
 <body data-page="alerts">
   <div class="app-shell">
@@ -33,17 +33,17 @@
               </svg>
             </button>
             <span id="autoRefreshIndicator" style="color: rgba(255,255,255,0.5); font-size: 13px;">
-              Actualisation automatique: 10s
+              Auto-refresh: 10s
             </span>
           </div>
           <div style="display: flex; gap: 12px;">
             <button class="filter-badge filter-all active" data-severity="all">
               <span class="badge-dot" style="background: #666;"></span>
-              Toutes
+              All
             </button>
             <button class="filter-badge" data-severity="critical">
               <span class="badge-dot" style="background: #dc2626;"></span>
-              Critiques
+              Critical
             </button>
             <button class="filter-badge" data-severity="high">
               <span class="badge-dot" style="background: #f97316;"></span>
@@ -51,11 +51,11 @@
             </button>
             <button class="filter-badge" data-severity="medium">
               <span class="badge-dot" style="background: #eab308;"></span>
-              Moyennes
+              Medium
             </button>
             <button class="filter-badge" data-severity="low">
               <span class="badge-dot" style="background: #22c55e;"></span>
-              Faibles
+              Low
             </button>
           </div>
         </div>
@@ -72,14 +72,14 @@
             <div class="alerts-list" id="alertsList">
               <div class="alert-item-loading">
                 <div class="spinner"></div>
-                <p>Loading des Alerts...</p>
+                <p>Loading alerts...</p>
               </div>
             </div>
             
             <div id="pagination" class="table-pagination">
               <button id="prevBtn" class="btn btn-secondary" disabled>← Previous</button>
               <span id="pageInfo" class="pagination-info"></span>
-              <button id="nextBtn" class="btn btn-secondary">Suivant →</button>
+              <button id="nextBtn" class="btn btn-secondary">Next →</button>
             </div>
           </div>
         </div>

@@ -2422,7 +2422,7 @@
       }
 
       if (!data.alerts || data.alerts.length === 0) {
-        alertsList.innerHTML = '<div class="alert-item-empty"><p>?? Aucune alerte de s�curit�</p></div>';
+        alertsList.innerHTML = '<div class="alert-item-empty"><p>🛡️ No security alerts</p></div>';
         if (pageInfo) pageInfo.textContent = '';
         if (prevBtn) prevBtn.disabled = true;
         if (nextBtn) nextBtn.disabled = true;
@@ -2435,10 +2435,29 @@
         filteredAlerts = data.alerts.filter(alert => alert.severity === alertsState.severity);
       }
 
+      // Fetch country codes for all IPs in parallel
+      const ipAddresses = filteredAlerts
+        .map(alert => alert.ip_address)
+        .filter(ip => ip);
+      
+      await Promise.all(ipAddresses.map(ip => getCountryFromIP(ip)));
+
       alertsList.innerHTML = filteredAlerts.map(alert => {
         const createdAt = new Date(alert.created_at);
         const severityIcon = getSeverityIcon(alert.severity);
         const typeLabel = getAlertTypeLabel(alert.alert_type);
+        const countryCode = alert.ip_address ? ipCountryCache.get(alert.ip_address) : null;
+        
+        let flagHtml = '';
+        if (alert.ip_address) {
+          if (countryCode && countryCode !== 'LOCAL') {
+            flagHtml = `<img src="https://flagsapi.com/${countryCode}/flat/24.png" alt="${countryCode}" style="width: 24px; height: 18px; vertical-align: middle; margin-right: 6px;">`;
+          } else if (countryCode === 'LOCAL') {
+            flagHtml = `<span style="margin-right: 6px;">🏠</span>`;
+          } else {
+            flagHtml = `<span style="margin-right: 6px;">??</span>`;
+          }
+        }
         
         return `
           <div class="alert-item ${alert.severity}">
@@ -2451,9 +2470,9 @@
                   <div class="alert-meta-item">
                     <span class="severity-badge severity-${alert.severity}">${alert.severity}</span>
                   </div>
-                  ${alert.ip_address ? `<div class="alert-meta-item">?? ${escapeHtml(alert.ip_address)}</div>` : ''}
-                  ${alert.hostname ? `<div class="alert-meta-item">?? ${escapeHtml(alert.hostname)}</div>` : ''}
-                  <div class="alert-meta-item">?? ${formatDate(createdAt)}</div>
+                  ${alert.ip_address ? `<div class="alert-meta-item">${flagHtml}${escapeHtml(alert.ip_address)}</div>` : ''}
+                  ${alert.hostname ? `<div class="alert-meta-item">🌐 ${escapeHtml(alert.hostname)}</div>` : ''}
+                  <div class="alert-meta-item">🕒 ${formatDate(createdAt)}</div>
                 </div>
               </div>
             </div>
@@ -2466,7 +2485,7 @@
       const totalPages = Math.ceil(alertsState.total / alertsState.limit);
       
       if (pageInfo) {
-        pageInfo.textContent = `Page ${currentPage} sur ${totalPages}`;
+        pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
       }
       
       if (prevBtn) {
@@ -2479,7 +2498,7 @@
 
     } catch (err) {
       console.error('Error loading alerts:', err);
-      alertsList.innerHTML = '<div class="alert-item-empty"><p style="color: #ff4444;">? Error de Loading</p></div>';
+      alertsList.innerHTML = '<div class="alert-item-empty"><p style="color: #ff4444;">❌ Loading Error</p></div>';
     }
   }
 
@@ -2495,13 +2514,13 @@
 
   function getAlertTypeLabel(type) {
     const labels = {
-      IP_BANNED: '?? IP Bannie',
-      RATE_LIMIT: '? Limite de taux d�pass�e',
-      BRUTE_FORCE: '?? Tentative de force brute',
-      DDOS: '?? Attaque DDoS d�tect�e',
-      SUSPICIOUS_ACTIVITY: '??? Activit� suspecte',
-      CHALLENGE_FAILED: '? �chec de d�fi',
-      MALICIOUS_REQUEST: '?? Requ�te malveillante'
+      IP_BANNED: '🚫 IP Banned',
+      RATE_LIMIT: '⚡ Rate Limit Exceeded',
+      BRUTE_FORCE: '🔨 Brute Force Attempt',
+      DDOS: '💥 DDoS Attack Detected',
+      SUSPICIOUS_ACTIVITY: '👁️ Suspicious Activity',
+      CHALLENGE_FAILED: '❌ Challenge Failed',
+      MALICIOUS_REQUEST: '⚠️ Malicious Request'
     };
     return labels[type] || type;
   }
