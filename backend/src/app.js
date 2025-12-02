@@ -7,6 +7,7 @@ const fs = require('fs');
 const authRoutes = require('./routes/authRoutes');
 const proxyRoutes = require('./routes/proxyRoutes');
 const backendRoutes = require('./routes/backendRoutes');
+const backendPoolRoutes = require('./routes/backendPoolRoutes');
 const domainRoutes = require('./routes/domainRoutes');
 const metricsRoutes = require('./routes/metricsRoutes');
 const certRoutes = require('./routes/certRoutes');
@@ -16,7 +17,9 @@ const backupRoutes = require('./routes/backupRoutes');
 const botChallengeRoutes = require('./routes/botChallengeRoutes');
 const requestLogsRoutes = require('./routes/requestLogsRoutes');
 const alertRoutes = require('./routes/alertRoutes');
+const cacheRoutes = require('./routes/cacheRoutes');
 const { botChallengeMiddleware } = require('./middleware/botChallenge');
+const { cacheMiddleware } = require('./middleware/cacheMiddleware');
 const debugRoutes = require('./routes/debugRoutes');
 
 function createApp() {
@@ -89,6 +92,10 @@ function createApp() {
   // Bot protection middleware (must be before routes)
   app.use(botChallengeMiddleware);
 
+  // HTTP Cache middleware (optional - can be selective per route)
+  // Uncomment to enable global caching:
+  // app.use(cacheMiddleware({ defaultTTL: 300, enabled: process.env.HTTP_CACHE_ENABLED !== 'false' }));
+
   // Static files middleware - CRITICAL for serving app.js and styles.css
   app.use('/public', express.static(path.join(__dirname, '..', '..', 'frontend', 'public')));
 
@@ -103,6 +110,7 @@ function createApp() {
   app.use(authRoutes);
   app.use(proxyRoutes);
   app.use(backendRoutes);
+  app.use('/api/backend-pools', backendPoolRoutes);
   app.use(domainRoutes);
   app.use(metricsRoutes);
   app.use(certRoutes);
@@ -112,6 +120,7 @@ function createApp() {
   app.use(botChallengeRoutes);
   app.use(requestLogsRoutes);
   app.use(alertRoutes);
+  app.use(cacheRoutes);
   app.use(debugRoutes);
 
   // Simple profile route

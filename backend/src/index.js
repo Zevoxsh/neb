@@ -26,6 +26,7 @@ const settingsModel = require('./models/settingsModel');
 const blockedIpModel = require('./models/blockedIpModel');
 const trustedIpModel = require('./models/trustedIpModel');
 const { normalizeSecurityConfig, DEFAULT_SECURITY_CONFIG } = require('./utils/securityConfig');
+const { connectRedis } = require('./config/redis');
 
 
 const app = createApp();
@@ -181,6 +182,59 @@ async function initDbAndStart() {
       console.warn('Failed to clean domain hostnames:', e.message);
     }
 
+    // Migration: Add load balancing support
+    try {
+      console.log('Running load balancing migration...');
+
+      // Add columns to backends table
+      await pool.query(`ALTER TABLE backends ADD COLUMN IF NOT EXISTS weight INT DEFAULT 1`);
+      await pool.query(`ALTER TABLE backends ADD COLUMN IF NOT EXISTS health_status VARCHAR(20) DEFAULT 'unknown'`);
+      await pool.query(`ALTER TABLE backends ADD COLUMN IF NOT EXISTS last_health_check TIMESTAMP WITH TIME ZONE`);
+      await pool.query(`ALTER TABLE backends ADD COLUMN IF NOT EXISTS consecutive_failures INT DEFAULT 0`);
+      await pool.query(`ALTER TABLE backends ADD COLUMN IF NOT EXISTS active_connections INT DEFAULT 0`);
+      await pool.query(`ALTER TABLE backends ADD COLUMN IF NOT EXISTS total_requests BIGINT DEFAULT 0`);
+      await pool.query(`ALTER TABLE backends ADD COLUMN IF NOT EXISTS avg_response_time_ms INT DEFAULT 0`);
+
+      // Create backend_pools table
+      await pool.query(`CREATE TABLE IF NOT EXISTS backend_pools(
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(191) NOT NULL UNIQUE,
+        lb_algorithm VARCHAR(50) NOT NULL DEFAULT 'round-robin',
+        health_check_enabled BOOLEAN DEFAULT TRUE,
+        health_check_interval_ms INT DEFAULT 30000,
+        health_check_path VARCHAR(255) DEFAULT '/',
+        health_check_timeout_ms INT DEFAULT 2000,
+        max_failures INT DEFAULT 3,
+        failure_timeout_ms INT DEFAULT 60000,
+        sticky_sessions BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+      )`);
+
+      // Create junction table
+      await pool.query(`CREATE TABLE IF NOT EXISTS backend_pool_members(
+        id SERIAL PRIMARY KEY,
+        pool_id INT NOT NULL REFERENCES backend_pools(id) ON DELETE CASCADE,
+        backend_id INT NOT NULL REFERENCES backends(id) ON DELETE CASCADE,
+        enabled BOOLEAN DEFAULT TRUE,
+        priority INT DEFAULT 100,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+        UNIQUE(pool_id, backend_id)
+      )`);
+
+      // Add pool_id to domain_mappings
+      await pool.query(`ALTER TABLE domain_mappings ADD COLUMN IF NOT EXISTS backend_pool_id INT REFERENCES backend_pools(id) ON DELETE SET NULL`);
+
+      // Create indexes
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_backend_pool_members_pool ON backend_pool_members(pool_id)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_backend_pool_members_backend ON backend_pool_members(backend_id)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_domain_mappings_pool ON domain_mappings(backend_pool_id)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_backends_health_status ON backends(health_status)`);
+
+      console.log('Load balancing migration completed');
+    } catch (e) {
+      console.error('Failed to run load balancing migration:', e.message);
+    }
+
     const adminUser = process.env.DEFAULT_ADMIN_USER || 'admin';
     const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
     const res = await pool.query('SELECT id FROM users WHERE username = $1', [adminUser]);
@@ -297,6 +351,23 @@ async function initDbAndStart() {
         }
       }
     } catch (e) { console.error('Failed to load settings', e); }
+
+    // Connect to Redis (optional - graceful fallback to memory cache)
+    try {
+      await connectRedis();
+    } catch (e) {
+      console.error('Failed to connect to Redis:', e.message);
+      console.log('Continuing without Redis (using in-memory fallback)');
+    }
+
+    // Start health checks for all backend pools
+    try {
+      const healthChecker = require('./services/healthChecker');
+      await healthChecker.startAllHealthChecks();
+      console.log('Health checker initialized');
+    } catch (e) {
+      console.error('Failed to start health checker', e);
+    }
 
     app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
   } catch (err) {
