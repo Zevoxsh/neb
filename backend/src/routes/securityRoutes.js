@@ -14,4 +14,6 @@ router.delete('/api/security/trusted-ips/:id', authenticateToken, securityContro
 router.get('/api/security/config', authenticateToken, securityController.getSecurityConfig);
 router.put('/api/security/config', authenticateToken, securityController.updateSecurityConfig);
 
+router.post('/api/security/alerts/dismiss', authenticateToken, securityController.dismissAlerts);
+
 module.exports = router;

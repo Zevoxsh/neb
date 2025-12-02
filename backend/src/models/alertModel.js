@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 
-async function getRecentAlerts({ limit = 50, offset = 0 } = {}) {
+async function getRecentAlerts({ limit = 50, offset = 0, includeDismissed = false } = {}) {
   const query = `
     SELECT 
       id,
@@ -10,18 +10,23 @@ async function getRecentAlerts({ limit = 50, offset = 0 } = {}) {
       hostname,
       message,
       details,
-      created_at
+      created_at,
+      dismissed_at
     FROM security_alerts
+    WHERE ($3 = true OR dismissed_at IS NULL)
     ORDER BY created_at DESC
     LIMIT $1 OFFSET $2
   `;
   
-  const result = await pool.query(query, [limit, offset]);
+  const result = await pool.query(query, [limit, offset, includeDismissed]);
   return result.rows;
 }
 
-async function getTotalAlerts() {
-  const result = await pool.query('SELECT COUNT(*) as total FROM security_alerts');
+async function getTotalAlerts(includeDismissed = false) {
+  const query = includeDismissed 
+    ? 'SELECT COUNT(*) as total FROM security_alerts'
+    : 'SELECT COUNT(*) as total FROM security_alerts WHERE dismissed_at IS NULL';
+  const result = await pool.query(query);
   return result.rows[0]?.total || 0;
 }
 
@@ -54,9 +59,21 @@ async function deleteOldAlerts(daysToKeep = 30) {
   return result.rowCount;
 }
 
+async function dismissAllAlerts() {
+  const query = `
+    UPDATE security_alerts 
+    SET dismissed_at = NOW()
+    WHERE dismissed_at IS NULL
+  `;
+  
+  const result = await pool.query(query);
+  return result.rowCount;
+}
+
 module.exports = {
   getRecentAlerts,
   getTotalAlerts,
   createAlert,
-  deleteOldAlerts
+  deleteOldAlerts,
+  dismissAllAlerts
 };

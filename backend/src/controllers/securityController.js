@@ -147,6 +147,14 @@ async function reloadTrustedIps() {
   }
 }
 
+const dismissAlerts = asyncHandler(async (req, res) => {
+  logger.debug('Dismissing all alerts');
+  const alertModel = require('../models/alertModel');
+  const count = await alertModel.dismissAllAlerts();
+  logger.info('Alerts dismissed', { count });
+  res.json({ dismissed: count });
+});
+
 module.exports = {
   listBlocked,
   createBlocked,
@@ -157,5 +165,7 @@ module.exports = {
   getSecurityConfig,
   updateSecurityConfig,
   reloadBlockedIps,
-  reloadTrustedIps
+  reloadTrustedIps,
+  dismissAlerts
 };
+

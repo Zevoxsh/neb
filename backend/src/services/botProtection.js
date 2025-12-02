@@ -118,23 +118,23 @@ class BotProtection {
             // Auto-ban if extreme burst (more than 3x the limit)
             if (requestsInLast10Sec > this.burstLimit * 3) {
                 console.log(`[BotProtection] 🚫 IP ${ip} auto-banned: burst ${requestsInLast10Sec} req/10s (limit: ${this.burstLimit})`);
-                this.banIP(ip, 600000); // Ban for 10 minutes
+                this.banIP(ip, 600000); // Ban for 10 minutes (will also create alert if not trusted)
+            } else {
+                // Create alert for burst attack (only if not trusted)
+                const alertService = require('./alertService');
+                alertService.createSecurityAlert({
+                    type: 'RATE_LIMIT',
+                    severity: 'high',
+                    ipAddress: ip,
+                    hostname: domain,
+                    message: `IP ${ip} exceeded burst limit: ${requestsInLast10Sec} requests in 10 seconds`,
+                    details: { 
+                        requestsInLast10Sec,
+                        burstLimit: this.burstLimit,
+                        attackType: 'burst'
+                    }
+                });
             }
-            
-            // Create alert for burst attack
-            const alertService = require('./alertService');
-            alertService.createSecurityAlert({
-                type: 'RATE_LIMIT',
-                severity: 'high',
-                ipAddress: ip,
-                hostname: domain,
-                message: `IP ${ip} exceeded burst limit: ${requestsInLast10Sec} requests in 10 seconds`,
-                details: { 
-                    requestsInLast10Sec,
-                    burstLimit: this.burstLimit,
-                    attackType: 'burst'
-                }
-            });
             
             return true;
         }
@@ -165,28 +165,28 @@ class BotProtection {
                 severity = 'critical'; // More than double the limit
                 // Auto-ban for extreme abuse (more than 2x limit)
                 console.log(`[BotProtection] 🚫 IP ${ip} auto-banned: ${requestsInLastMinute} req/min (limit: ${limit})`);
-                this.banIP(ip, 600000); // Ban for 10 minutes
+                this.banIP(ip, 600000); // Ban for 10 minutes (will also create alert if not trusted)
             } else if (exceededPercent > 50) {
                 severity = 'high';
+            } else {
+                // Only create rate limit alert if not auto-banned (to avoid duplicate)
+                const alertService = require('./alertService');
+                alertService.createSecurityAlert({
+                    type: 'RATE_LIMIT',
+                    severity: severity,
+                    ipAddress: ip,
+                    hostname: domain,
+                    message: `IP ${ip} exceeded rate limit: ${requestsInLastMinute} requests/min (limit: ${limit})`,
+                    details: { 
+                        requestsPerMinute: requestsInLastMinute,
+                        limit,
+                        limitType,
+                        isVerified,
+                        exceededBy,
+                        exceededPercent: Math.round(exceededPercent)
+                    }
+                });
             }
-            
-            // Create alert for rate limit violation
-            const alertService = require('./alertService');
-            alertService.createSecurityAlert({
-                type: 'RATE_LIMIT',
-                severity: severity,
-                ipAddress: ip,
-                hostname: domain,
-                message: `IP ${ip} exceeded rate limit: ${requestsInLastMinute} requests/min (limit: ${limit})`,
-                details: { 
-                    requestsPerMinute: requestsInLastMinute,
-                    limit,
-                    limitType,
-                    isVerified,
-                    exceededBy,
-                    exceededPercent: Math.round(exceededPercent)
-                }
-            });
             
             return true;
         }
@@ -204,7 +204,7 @@ class BotProtection {
         const proxyManager = require('./proxyManager');
         if (proxyManager.isTrustedIp(ip)) {
             console.log(`[BotProtection] ⚠️  Attempt to ban trusted IP ${ip} - BLOCKED`);
-            return; // Don't ban trusted IPs
+            return; // Don't ban trusted IPs - also don't create alert
         }
 
         const expiration = Date.now() + durationMs;

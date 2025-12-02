@@ -2299,6 +2299,7 @@
   function initRequestsPage() {
     const periodFilter = document.getElementById('periodFilter');
     const refreshBtn = document.getElementById('refreshBtn');
+    const clearRequestsBtn = document.getElementById('clearRequestsBtn');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
 
@@ -2314,6 +2315,25 @@
       refreshBtn.addEventListener('click', () => {
         requestLogsState.offset = 0;
         loadRequestLogs();
+      });
+    }
+
+    if (clearRequestsBtn) {
+      clearRequestsBtn.addEventListener('click', async () => {
+        if (!confirm('Clear all request logs from view? (Data will be kept in database)')) return;
+        
+        try {
+          const res = await window.api.requestJson('/api/request-logs/dismiss', { method: 'POST' });
+          if (res && res.status === 200) {
+            showToast(`✅ Cleared ${res.body.dismissed} request logs`, 'success');
+            loadRequestLogs();
+          } else {
+            throw new Error('Failed to clear request logs');
+          }
+        } catch (err) {
+          console.error('Error clearing request logs:', err);
+          showToast('❌ Error: ' + err.message, 'error');
+        }
       });
     }
 
@@ -2556,6 +2576,7 @@
 
   function initAlertsPage() {
     const refreshBtn = document.getElementById('refreshBtn');
+    const clearAlertsBtn = document.getElementById('clearAlertsBtn');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
     const filterBadges = document.querySelectorAll('.filter-badge');
@@ -2564,6 +2585,25 @@
       refreshBtn.addEventListener('click', () => {
         alertsState.offset = 0;
         loadAlerts();
+      });
+    }
+
+    if (clearAlertsBtn) {
+      clearAlertsBtn.addEventListener('click', async () => {
+        if (!confirm('Clear all security alerts from view? (Data will be kept in database)')) return;
+        
+        try {
+          const res = await window.api.requestJson('/api/security/alerts/dismiss', { method: 'POST' });
+          if (res && res.status === 200) {
+            showToast(`✅ Cleared ${res.body.dismissed} alerts`, 'success');
+            loadAlerts();
+          } else {
+            throw new Error('Failed to clear alerts');
+          }
+        } catch (err) {
+          console.error('Error clearing alerts:', err);
+          showToast('❌ Error: ' + err.message, 'error');
+        }
       });
     }
 

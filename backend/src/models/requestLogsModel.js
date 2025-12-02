@@ -49,9 +49,21 @@ async function getTotalRequestCount(days = 30) {
   return result.rows[0]?.total || 0;
 }
 
+async function dismissAllRequestLogs() {
+  const query = `
+    UPDATE request_logs 
+    SET dismissed_at = NOW()
+    WHERE dismissed_at IS NULL
+  `;
+  
+  const result = await pool.query(query);
+  return result.rowCount;
+}
+
 module.exports = {
   getRequestLogs,
   getRecentRequestLogs,
-  getTotalRequestCount
+  getTotalRequestCount,
+  dismissAllRequestLogs
 };
 

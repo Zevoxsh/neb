@@ -42,8 +42,20 @@ async function getRecentRequestLogs(req, res) {
   }
 }
 
+async function dismissRequestLogs(req, res) {
+  try {
+    const count = await requestLogsModel.dismissAllRequestLogs();
+    console.log('Request logs dismissed:', count);
+    res.json({ dismissed: count });
+  } catch (error) {
+    console.error('Error dismissing request logs:', error);
+    res.status(500).json({ error: 'Failed to dismiss request logs' });
+  }
+}
+
 module.exports = {
   getRequestLogs,
-  getRecentRequestLogs
+  getRecentRequestLogs,
+  dismissRequestLogs
 };
 
