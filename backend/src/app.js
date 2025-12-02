@@ -24,6 +24,7 @@ const cacheRoutes = require('./routes/cacheRoutes');
 const websocketRoutes = require('./routes/websocketRoutes');
 const twoFactorRoutes = require('./routes/twoFactorRoutes');
 const ddosRoutes = require('./routes/ddosRoutes');
+const geoipRoutes = require('./routes/geoipRoutes');
 const { botChallengeMiddleware } = require('./middleware/botChallenge');
 const { cacheMiddleware } = require('./middleware/cacheMiddleware');
 const { ddosProtectionMiddleware } = require('./middleware/ddosMiddleware');
@@ -123,6 +124,7 @@ function createApp() {
   app.use(backendRoutes);
   app.use('/api/backend-pools', backendPoolRoutes);
   app.use(domainRoutes);
+  app.use(geoipRoutes);
   app.use(metricsRoutes);
   app.use(certRoutes);
   app.use(settingsRoutes);

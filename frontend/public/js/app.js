@@ -2494,7 +2494,7 @@
 
   // Rate limiting for API calls
   let apiCallQueue = Promise.resolve();
-  const API_DELAY = 150; // 150ms between calls = max ~6 req/sec
+  const API_DELAY = 100; // 100ms between calls
   
   async function getCountryFromIP(ip) {
     if (!ip) return null;
@@ -2504,39 +2504,21 @@
       return ipCountryCache.get(ip);
     }
     
-    // Private/Local IPs
-    if (ip.startsWith('192.168.') || ip.startsWith('10.') || 
-        ip.startsWith('172.16.') || ip.startsWith('172.17.') || 
-        ip.startsWith('172.18.') || ip.startsWith('172.19.') ||
-        ip.startsWith('172.20.') || ip.startsWith('172.21.') || 
-        ip.startsWith('172.22.') || ip.startsWith('172.23.') ||
-        ip.startsWith('172.24.') || ip.startsWith('172.25.') || 
-        ip.startsWith('172.26.') || ip.startsWith('172.27.') ||
-        ip.startsWith('172.28.') || ip.startsWith('172.29.') || 
-        ip.startsWith('172.30.') || ip.startsWith('172.31.') ||
-        ip === '127.0.0.1' || ip === 'localhost' || ip === '::1') {
-      ipCountryCache.set(ip, 'LOCAL');
-      return 'LOCAL';
-    }
-    
-    // Queue API calls with delay to avoid rate limiting
+    // Queue API calls with delay to avoid overwhelming backend
     return new Promise((resolve) => {
       apiCallQueue = apiCallQueue.then(async () => {
         try {
-          // Use ipapi.co (free, HTTPS, no API key needed)
-          const response = await fetch(`https://ipapi.co/${ip}/country_code/`, {
-            method: 'GET',
-            cache: 'force-cache'
-          });
+          // Use our backend API instead of direct ipapi.co call
+          const response = await window.api.requestJson(`/api/geoip/${encodeURIComponent(ip)}`);
           
-          if (response.ok) {
-            const countryCode = await response.text();
-            const cleanCode = countryCode.trim();
-            if (cleanCode && cleanCode.length === 2) {
-              ipCountryCache.set(ip, cleanCode);
+          if (response && response.status === 200 && response.body && response.body.countryCode) {
+            const countryCode = response.body.countryCode;
+            
+            if (countryCode && (countryCode === 'LOCAL' || countryCode === 'UNKNOWN' || countryCode.length === 2)) {
+              ipCountryCache.set(ip, countryCode);
               // Wait before next API call
               await new Promise(r => setTimeout(r, API_DELAY));
-              return resolve(cleanCode);
+              return resolve(countryCode);
             }
           }
         } catch (error) {
