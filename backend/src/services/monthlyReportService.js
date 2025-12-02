@@ -102,33 +102,68 @@ class MonthlyReportService {
   async collectCurrentStats() {
     const stats = {};
 
-    // Domains
-    const domainsResult = await pool.query('SELECT COUNT(*) as count FROM domains');
-    stats.domains = parseInt(domainsResult.rows[0]?.count || 0);
+    try {
+      // Domains
+      const domainsResult = await pool.query('SELECT COUNT(*) as count FROM domains');
+      stats.domains = parseInt(domainsResult.rows[0]?.count || 0);
+    } catch (e) {
+      logger.warn('Table domains not found', { error: e.message });
+      stats.domains = 0;
+    }
 
-    // Proxies
-    const proxiesResult = await pool.query('SELECT COUNT(*) as count FROM proxies');
-    stats.proxies = parseInt(proxiesResult.rows[0]?.count || 0);
+    try {
+      // Proxies
+      const proxiesResult = await pool.query('SELECT COUNT(*) as count FROM proxies');
+      stats.proxies = parseInt(proxiesResult.rows[0]?.count || 0);
+    } catch (e) {
+      logger.warn('Table proxies not found', { error: e.message });
+      stats.proxies = 0;
+    }
 
-    // Backends
-    const backendsResult = await pool.query('SELECT COUNT(*) as count FROM backends');
-    stats.backends = parseInt(backendsResult.rows[0]?.count || 0);
+    try {
+      // Backends
+      const backendsResult = await pool.query('SELECT COUNT(*) as count FROM backends');
+      stats.backends = parseInt(backendsResult.rows[0]?.count || 0);
+    } catch (e) {
+      logger.warn('Table backends not found', { error: e.message });
+      stats.backends = 0;
+    }
 
-    // Certificates
-    const certsResult = await pool.query('SELECT COUNT(*) as count FROM certificates WHERE status = $1', ['valid']);
-    stats.certificates = parseInt(certsResult.rows[0]?.count || 0);
+    try {
+      // Certificates - check if table exists first
+      const certsResult = await pool.query('SELECT COUNT(*) as count FROM certificates');
+      stats.certificates = parseInt(certsResult.rows[0]?.count || 0);
+    } catch (e) {
+      logger.warn('Table certificates not found', { error: e.message });
+      stats.certificates = 0;
+    }
 
-    // Users
-    const usersResult = await pool.query('SELECT COUNT(*) as count FROM users');
-    stats.users = parseInt(usersResult.rows[0]?.count || 0);
+    try {
+      // Users
+      const usersResult = await pool.query('SELECT COUNT(*) as count FROM users');
+      stats.users = parseInt(usersResult.rows[0]?.count || 0);
+    } catch (e) {
+      logger.warn('Table users not found', { error: e.message });
+      stats.users = 0;
+    }
 
-    // Blocked IPs
-    const blockedResult = await pool.query('SELECT COUNT(*) as count FROM blocked_ips');
-    stats.blockedIps = parseInt(blockedResult.rows[0]?.count || 0);
+    try {
+      // Blocked IPs
+      const blockedResult = await pool.query('SELECT COUNT(*) as count FROM blocked_ips');
+      stats.blockedIps = parseInt(blockedResult.rows[0]?.count || 0);
+    } catch (e) {
+      logger.warn('Table blocked_ips not found', { error: e.message });
+      stats.blockedIps = 0;
+    }
 
-    // Trusted IPs
-    const trustedResult = await pool.query('SELECT COUNT(*) as count FROM trusted_ips');
-    stats.trustedIps = parseInt(trustedResult.rows[0]?.count || 0);
+    try {
+      // Trusted IPs
+      const trustedResult = await pool.query('SELECT COUNT(*) as count FROM trusted_ips');
+      stats.trustedIps = parseInt(trustedResult.rows[0]?.count || 0);
+    } catch (e) {
+      logger.warn('Table trusted_ips not found', { error: e.message });
+      stats.trustedIps = 0;
+    }
 
     return stats;
   }
@@ -168,77 +203,110 @@ class MonthlyReportService {
 
     const stats = {};
 
-    // Total requests for the month
-    const requestsResult = await pool.query(
-      'SELECT COUNT(*) as count FROM request_logs WHERE timestamp >= $1 AND timestamp <= $2',
-      [startDate, endDate]
-    );
-    stats.totalRequests = parseInt(requestsResult.rows[0]?.count || 0);
+    try {
+      // Total requests for the month
+      const requestsResult = await pool.query(
+        'SELECT COUNT(*) as count FROM request_logs WHERE timestamp >= $1 AND timestamp <= $2',
+        [startDate, endDate]
+      );
+      stats.totalRequests = parseInt(requestsResult.rows[0]?.count || 0);
 
-    // Unique IPs
-    const uniqueIpsResult = await pool.query(
-      'SELECT COUNT(DISTINCT client_ip) as count FROM request_logs WHERE timestamp >= $1 AND timestamp <= $2',
-      [startDate, endDate]
-    );
-    stats.uniqueIps = parseInt(uniqueIpsResult.rows[0]?.count || 0);
+      // Unique IPs
+      const uniqueIpsResult = await pool.query(
+        'SELECT COUNT(DISTINCT client_ip) as count FROM request_logs WHERE timestamp >= $1 AND timestamp <= $2',
+        [startDate, endDate]
+      );
+      stats.uniqueIps = parseInt(uniqueIpsResult.rows[0]?.count || 0);
 
-    // Unique domains
-    const uniqueDomainsResult = await pool.query(
-      'SELECT COUNT(DISTINCT hostname) as count FROM request_logs WHERE timestamp >= $1 AND timestamp <= $2',
-      [startDate, endDate]
-    );
-    stats.uniqueDomains = parseInt(uniqueDomainsResult.rows[0]?.count || 0);
+      // Unique domains
+      const uniqueDomainsResult = await pool.query(
+        'SELECT COUNT(DISTINCT hostname) as count FROM request_logs WHERE timestamp >= $1 AND timestamp <= $2',
+        [startDate, endDate]
+      );
+      stats.uniqueDomains = parseInt(uniqueDomainsResult.rows[0]?.count || 0);
+    } catch (e) {
+      logger.warn('Error collecting request stats', { error: e.message });
+      stats.totalRequests = 0;
+      stats.uniqueIps = 0;
+      stats.uniqueDomains = 0;
+    }
 
-    // Total alerts
-    const alertsResult = await pool.query(
-      'SELECT COUNT(*) as count FROM security_alerts WHERE timestamp >= $1 AND timestamp <= $2',
-      [startDate, endDate]
-    );
-    stats.totalAlerts = parseInt(alertsResult.rows[0]?.count || 0);
+    try {
+      // Total alerts
+      const alertsResult = await pool.query(
+        'SELECT COUNT(*) as count FROM security_alerts WHERE created_at >= $1 AND created_at <= $2',
+        [startDate, endDate]
+      );
+      stats.totalAlerts = parseInt(alertsResult.rows[0]?.count || 0);
+    } catch (e) {
+      logger.warn('Error collecting alert stats', { error: e.message });
+      stats.totalAlerts = 0;
+    }
 
-    // Certificates issued/renewed
-    const certsIssuedResult = await pool.query(
-      'SELECT COUNT(*) as count FROM certificates WHERE created_at >= $1 AND created_at <= $2',
-      [startDate, endDate]
-    );
-    stats.certificatesIssued = parseInt(certsIssuedResult.rows[0]?.count || 0);
+    try {
+      // Certificates issued/renewed
+      const certsIssuedResult = await pool.query(
+        'SELECT COUNT(*) as count FROM certificates WHERE created_at >= $1 AND created_at <= $2',
+        [startDate, endDate]
+      );
+      stats.certificatesIssued = parseInt(certsIssuedResult.rows[0]?.count || 0);
 
-    const certsRenewedResult = await pool.query(
-      'SELECT COUNT(*) as count FROM certificates WHERE updated_at >= $1 AND updated_at <= $2 AND created_at < $1',
-      [startDate, endDate]
-    );
-    stats.certificatesRenewed = parseInt(certsRenewedResult.rows[0]?.count || 0);
+      const certsRenewedResult = await pool.query(
+        'SELECT COUNT(*) as count FROM certificates WHERE updated_at >= $1 AND updated_at <= $2 AND created_at < $1',
+        [startDate, endDate]
+      );
+      stats.certificatesRenewed = parseInt(certsRenewedResult.rows[0]?.count || 0);
+    } catch (e) {
+      logger.warn('Error collecting certificate stats', { error: e.message });
+      stats.certificatesIssued = 0;
+      stats.certificatesRenewed = 0;
+    }
 
-    // Active users (logged in during the month)
-    const activeUsersResult = await pool.query(
-      'SELECT COUNT(*) as count FROM users WHERE last_login >= $1 AND last_login <= $2',
-      [startDate, endDate]
-    );
-    stats.activeUsers = parseInt(activeUsersResult.rows[0]?.count || 0);
+    try {
+      // Active users (logged in during the month)
+      const activeUsersResult = await pool.query(
+        'SELECT COUNT(*) as count FROM users WHERE last_login >= $1 AND last_login <= $2',
+        [startDate, endDate]
+      );
+      stats.activeUsers = parseInt(activeUsersResult.rows[0]?.count || 0);
+    } catch (e) {
+      logger.warn('Error collecting user stats', { error: e.message });
+      stats.activeUsers = 0;
+    }
 
-    // Top 10 domains by requests
-    const topDomainsResult = await pool.query(
-      `SELECT hostname, COUNT(*) as count 
-       FROM request_logs 
-       WHERE timestamp >= $1 AND timestamp <= $2 
-       GROUP BY hostname 
-       ORDER BY count DESC 
-       LIMIT 10`,
-      [startDate, endDate]
-    );
-    stats.topDomains = topDomainsResult.rows;
+    try {
+      // Top 10 domains by requests
+      const topDomainsResult = await pool.query(
+        `SELECT hostname, COUNT(*) as count 
+         FROM request_logs 
+         WHERE timestamp >= $1 AND timestamp <= $2 
+         GROUP BY hostname 
+         ORDER BY count DESC 
+         LIMIT 10`,
+        [startDate, endDate]
+      );
+      stats.topDomains = topDomainsResult.rows;
+    } catch (e) {
+      logger.warn('Error collecting top domains', { error: e.message });
+      stats.topDomains = [];
+    }
 
-    // Top 10 IPs by requests
-    const topIPsResult = await pool.query(
-      `SELECT client_ip, COUNT(*) as count 
-       FROM request_logs 
-       WHERE timestamp >= $1 AND timestamp <= $2 
-       GROUP BY client_ip 
-       ORDER BY count DESC 
-       LIMIT 10`,
-      [startDate, endDate]
-    );
-    stats.topIPs = topIPsResult.rows;
+    try {
+      // Top 10 IPs by requests
+      const topIPsResult = await pool.query(
+        `SELECT client_ip, COUNT(*) as count 
+         FROM request_logs 
+         WHERE timestamp >= $1 AND timestamp <= $2 
+         GROUP BY client_ip 
+         ORDER BY count DESC 
+         LIMIT 10`,
+        [startDate, endDate]
+      );
+      stats.topIPs = topIPsResult.rows;
+    } catch (e) {
+      logger.warn('Error collecting top IPs', { error: e.message });
+      stats.topIPs = [];
+    }
 
     return stats;
   }
