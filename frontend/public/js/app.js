@@ -2765,7 +2765,7 @@
 
     try {
       const res = await window.api.requestJson(`/api/security/trusted-ips/${id}`, { method: 'DELETE' });
-      if (res && res.status === 200) {
+      if (res && (res.status === 200 || res.status === 204)) {
         loadTrustedIps();
         showToast('✅ IP removed from whitelist', 'success');
       } else {
@@ -2782,7 +2782,7 @@
 
     try {
       const res = await window.api.requestJson(`/api/security/blocked-ips/${id}`, { method: 'DELETE' });
-      if (res && res.status === 200) {
+      if (res && (res.status === 200 || res.status === 204)) {
         loadBlockedIps();
         showToast('✅ IP unblocked', 'success');
       } else {
