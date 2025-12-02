@@ -1051,7 +1051,7 @@
       return;
     }
     payload.target_host = backend.targetHost || backend.target_host;
-    payload.target_Port = backend.targetPort || backend.target_Port;
+    payload.target_port = backend.targetPort || backend.target_port;
     try {
       const res = await window.api.requestJson('/api/proxies', { method: 'POST', body: payload });
       if (res && (res.status === 200 || res.status === 201)) {
@@ -1163,7 +1163,7 @@
       idField.value = backend.id;
       nameField.value = backend.name || '';
       hostField.value = backend.targetHost || backend.target_host || '';
-      PortField.value = backend.targetPort || backend.target_Port || '';
+      PortField.value = backend.targetPort || backend.target_port || '';
       protocolField.value = backend.targetProtocol || backend.target_protocol || 'http';
     } catch (e) {
       console.error('[Backend Detail] Failed to load:', e);
@@ -1364,14 +1364,14 @@
         proxies.forEach((p) => {
           const opt = document.createElement('option');
           opt.value = p.id;
-          opt.textContent = `${p.name} (${p.listen_host}:${p.listen_Port})`;
+          opt.textContent = `${p.name} (${p.listen_host}:${p.listen_port})`;
           proxySelect.appendChild(opt);
         });
         
         backends.forEach((b) => {
           const opt = document.createElement('option');
           opt.value = b.id;
-          opt.textContent = `${b.name} (${b.target_host}:${b.target_Port})`;
+          opt.textContent = `${b.name} (${b.target_host}:${b.target_port})`;
           backendSelect.appendChild(opt);
         });
       }
@@ -1522,7 +1522,7 @@
       backends.forEach((b) => {
         const opt = document.createElement('option');
         opt.value = b.id;
-        opt.textContent = `${b.name} (${b.targetHost || b.target_host}:${b.targetPort || b.target_Port})`;
+        opt.textContent = `${b.name} (${b.targetHost || b.target_host}:${b.targetPort || b.target_port})`;
         backendSelect.appendChild(opt);
       });
     } catch (e) {
@@ -1585,7 +1585,7 @@
       if (!proxy) return;
       document.getElementById('editProxyName').value = proxy.name || '';
       document.getElementById('editProxyListenHost').value = proxy.listen_host || '';
-      document.getElementById('editProxyListenPort').value = proxy.listen_Port || '';
+      document.getElementById('editProxyListenPort').value = proxy.listen_port || '';
       document.getElementById('editProxyProtocol').value = proxy.protocol || 'tcp';
       const enabledCheckbox = document.getElementById('editEnabled');
       if (enabledCheckbox) {
@@ -1817,7 +1817,7 @@
       list.forEach((b) => {
         const opt = document.createElement('option');
         opt.value = b.id;
-        opt.textContent = `${b.name} (${b.targetHost || b.target_host}:${b.targetPort || b.target_Port})`;
+        opt.textContent = `${b.name} (${b.targetHost || b.target_host}:${b.targetPort || b.target_port})`;
         select.appendChild(opt);
       });
       attachProxyBackendChange();
@@ -1849,7 +1849,7 @@
     hostInput.classList.add('input-locked');
     PortInput.classList.add('input-locked');
     hostInput.value = backend ? backend.targetHost || backend.target_host || '' : '';
-    PortInput.value = backend ? backend.targetPort || backend.target_Port || '' : '';
+    PortInput.value = backend ? backend.targetPort || backend.target_port || '' : '';
   }
 
   function resetProxyFormState() {
