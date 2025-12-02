@@ -6,72 +6,100 @@
   <title>Monthly Reports - Nebula</title>
   <link rel="stylesheet" href="/public/styles.css">
   <link rel="icon" type="image/png" href="/public/image.png">
+  <script src="/public/js/api.js" defer></script>
+  <script src="/public/js/include-partials.js" defer></script>
+  <script src="/public/js/ui.js" defer></script>
+  <script src="/public/js/app.js" defer></script>
+  <script src="/public/js/theme.js" defer></script>
 </head>
-<body>
+<body data-page="reports">
   <div class="app-shell">
-    <div id="header-placeholder"></div>
+    <div id="sidebar-placeholder"></div>
+    <div class="app-main">
+      <header class="topbar">
+        <div class="page-heading">
+          <div>
+            <div class="page-breadcrumb">ANALYTICS</div>
+            <h1>Monthly Reports</h1>
+            <p class="subtitle">Automated monthly statistics and insights</p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button id="generateReportBtn" class="btn">Generate Report</button>
+          <button id="refreshBtn" class="btn-icon" title="Refresh">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>
+            </svg>
+          </button>
+        </div>
+      </header>
 
-    <main class="app-main">
-      <div class="container">
-        <div class="header-row">
-          <h1>📊 Monthly Reports</h1>
-          <div class="button-group">
-            <button id="generateReportBtn" class="btn">Generate Report</button>
-            <button id="refreshBtn" class="btn">🔄 Refresh</button>
+      <main class="page-content">
+        <!-- Latest Report Summary -->
+        <div id="latestReportCard" class="card" style="display: none; margin-bottom: 24px;">
+          <div class="card-header">
+            <div>
+              <div class="card-eyebrow">SUMMARY</div>
+              <h2 class="card-title">Latest Report</h2>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="latestReportContent" class="stats-grid"></div>
           </div>
         </div>
 
-    <!-- Latest Report Summary -->
-    <div id="latestReportCard" class="card" style="display: none;">
-      <h2>Latest Report Summary</h2>
-      <div id="latestReportContent" class="stats-grid"></div>
-    </div>
+        <!-- Reports List -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-eyebrow">HISTORY</div>
+              <h2 class="card-title">Monthly Reports</h2>
+            </div>
+            <div id="totalCount" class="card-meta"></div>
+          </div>
+          <div class="card-body">
+            <div class="info-text" style="margin-bottom: 16px;">
+              Reports are automatically generated on the 1st of each month at 00:05.
+              Old dismissed logs (>90 days) are cleared during report generation.
+            </div>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>REPORT MONTH</th>
+                    <th>GENERATED</th>
+                    <th>DOMAINS</th>
+                    <th>PROXIES</th>
+                    <th>BACKENDS</th>
+                    <th>REQUESTS</th>
+                    <th>ALERTS</th>
+                    <th>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody id="reportsTableBody">
+                  <tr>
+                    <td colspan="8" class="table-empty">
+                      <div class="spinner"></div>
+                      <p>Loading reports...</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
-    <!-- Reports List -->
-    <div class="card">
-      <div class="card-header">
-        <h2>Historical Reports</h2>
-        <div class="info-text">
-          Reports are automatically generated on the 1st of each month at 00:05.
-          Old dismissed logs (>90 days) are cleared during report generation.
+            <div id="pagination" class="table-pagination">
+              <button id="prevBtn" class="btn btn-secondary" disabled>← Previous</button>
+              <span id="pageInfo" class="pagination-info"></span>
+              <button id="nextBtn" class="btn btn-secondary">Next →</button>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div id="reportsTableContainer">
-        <table>
-          <thead>
-            <tr>
-              <th>Report Month</th>
-              <th>Generated</th>
-              <th>Domains</th>
-              <th>Proxies</th>
-              <th>Backends</th>
-              <th>Requests</th>
-              <th>Alerts</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="reportsTableBody">
-            <tr>
-              <td colspan="8" class="loading">Loading reports...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination -->
-      <div class="pagination">
-        <button id="prevBtn" class="btn" disabled>← Previous</button>
-        <span id="pageInfo">Page 1</span>
-        <button id="nextBtn" class="btn">Next →</button>
-      </div>
-    </div>
-
-    <!-- Report Details Modal -->
-    <div id="reportModal" class="modal" style="display: none;">
-      <div class="modal-content" style="max-width: 900px;">
-        <span class="close" id="closeModal">&times;</span>
-        <h2 id="modalTitle">Report Details</h2>
+        <!-- Report Details Modal -->
+        <div id="reportModal" class="modal" style="display: none;">
+          <div class="modal-content" style="max-width: 900px;">
+            <span class="close" id="closeModal">&times;</span>
+            <h2 id="modalTitle">Report Details</h2>
       
       <div id="reportDetails">
         <!-- Domain Stats -->
@@ -202,15 +230,8 @@
       </div>
     </div>
   </div>
-  </main>
-
-  <div id="footer-placeholder"></div>
+      </main>
+    </div>
   </div>
-
-  <script src="/public/js/include-partials.js"></script>
-  <script src="/public/js/api.js"></script>
-  <script src="/public/js/ui.js"></script>
-  <script src="/public/js/app.js"></script>
-  <script src="/public/js/theme.js"></script>
 </body>
 </html>
