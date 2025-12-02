@@ -542,7 +542,9 @@
         // Debug: Check first log timestamp
         if (logsRes.body.logs.length > 0) {
           const firstLog = logsRes.body.logs[0];
-          console.log('[Live Activity] First log timestamp:', firstLog.timestamp, '-> parsed:', new Date(firstLog.timestamp).getTime(), 'now:', now, 'diff (seconds):', Math.round((now - new Date(firstLog.timestamp).getTime()) / 1000));
+          console.log('[Live Activity] First log:', firstLog);
+          const ts = firstLog.last_seen || firstLog.timestamp;
+          console.log('[Live Activity] Using timestamp:', ts, '-> parsed:', new Date(ts).getTime(), 'now:', now, 'diff (seconds):', Math.round((now - new Date(ts).getTime()) / 1000));
         }
         
         // Group by IP address
@@ -550,8 +552,10 @@
         let recentCount = 0;
         
         logsRes.body.logs.forEach(log => {
-          // Parse timestamp properly
-          const timestamp = log.timestamp ? new Date(log.timestamp).getTime() : 0;
+          // Use last_seen from grouped data, fallback to timestamp
+          const timestamp = log.last_seen ? new Date(log.last_seen).getTime() 
+                          : log.timestamp ? new Date(log.timestamp).getTime() 
+                          : 0;
           
           // Skip if invalid timestamp or older than 5 minutes
           if (!timestamp || isNaN(timestamp) || timestamp < last5min) {
@@ -563,13 +567,13 @@
           if (!ipStats[ip]) {
             ipStats[ip] = {
               ip: ip,
-              requests: 0,
+              requests: log.request_count || 1, // Use aggregated count
               traffic: 0,
               lastSeen: timestamp
             };
+          } else {
+            ipStats[ip].requests += (log.request_count || 1);
           }
-          ipStats[ip].requests++;
-          ipStats[ip].traffic += (log.bytes_sent || 0) + (log.bytes_received || 0);
           if (timestamp > ipStats[ip].lastSeen) {
             ipStats[ip].lastSeen = timestamp;
           }
@@ -606,8 +610,10 @@
         // Group by domain
         const domainStats = {};
         logsRes.body.logs.forEach(log => {
-          // Parse timestamp properly
-          const timestamp = log.timestamp ? new Date(log.timestamp).getTime() : 0;
+          // Use last_seen from grouped data, fallback to timestamp
+          const timestamp = log.last_seen ? new Date(log.last_seen).getTime() 
+                          : log.timestamp ? new Date(log.timestamp).getTime() 
+                          : 0;
           
           // Skip if invalid timestamp or older than 5 minutes
           if (!timestamp || isNaN(timestamp) || timestamp < last5min) {
@@ -618,13 +624,13 @@
           if (!domainStats[domain]) {
             domainStats[domain] = {
               domain: domain,
-              requests: 0,
+              requests: log.request_count || 1,
               traffic: 0,
               lastRequest: timestamp
             };
+          } else {
+            domainStats[domain].requests += (log.request_count || 1);
           }
-          domainStats[domain].requests++;
-          domainStats[domain].traffic += (log.bytes_sent || 0) + (log.bytes_received || 0);
           if (timestamp > domainStats[domain].lastRequest) {
             domainStats[domain].lastRequest = timestamp;
           }
