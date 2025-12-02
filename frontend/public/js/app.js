@@ -585,19 +585,19 @@
     tbody.innerHTML = '';
     try {
       const rows = await fetchAndCache('/api/proxies', 'proxies');
-      toggleEmpty(empty, rows.length > 0, 'Aucun proxy configure.');
+      toggleEmpty(empty, rows.length > 0, 'No proxy configured.');
       if (!rows.length) return;
       rows.forEach((p) => {
         const statusClass = p.enabled ? 'success' : 'muted';
-        const statusLabel = p.enabled ? 'Actif' : 'Inactif';
+        const statusLabel = p.enabled ? 'Active' : 'Inactive';
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>
             <strong>${escapeHtml(p.name || '')}</strong>
             <div class="muted mono">${escapeHtml((p.protocol || 'tcp').toUpperCase())}</div>
           </td>
-          <td class="mono">${escapeHtml(p.listen_host)}:${p.listen_Port}</td>
-          <td class="mono">${escapeHtml(p.target_host)}:${p.target_Port}</td>
+          <td class="mono">${escapeHtml(p.listen_host)}:${p.listen_port}</td>
+          <td class="mono">${escapeHtml(p.target_host)}:${p.target_port}</td>
           <td><span class="status-badge ${statusClass}"><span class="status-dot"></span>${statusLabel}</span></td>
           <td class="actions">
             <button class="btn ghost small edit-proxy" data-id="${p.id}">Manage</button>
@@ -607,8 +607,8 @@
         tbody.appendChild(tr);
       });
     } catch (e) {
-      toggleEmpty(empty, false, 'Impossible de charger les proxies.');
-      showToast('Loading des proxies impossible', 'error');
+      toggleEmpty(empty, false, 'Failed to load proxies.');
+      showToast('Failed to load proxies', 'error');
     }
   }
 
