@@ -531,13 +531,19 @@
 
   async function loadLiveActivityStats() {
     try {
-      // Load live request logs (last 60 seconds)
+      // Load live request logs (last 5 minutes)
       const logsRes = await window.api.requestJson('/api/request-logs?limit=500&offset=0');
       if (logsRes && logsRes.status === 200 && logsRes.body && logsRes.body.logs) {
         const now = Date.now();
-        const last60s = now - 60000;
+        const last5min = now - 300000; // 5 minutes instead of 60 seconds
         
         console.log('[Live Activity] Processing', logsRes.body.logs.length, 'logs');
+        
+        // Debug: Check first log timestamp
+        if (logsRes.body.logs.length > 0) {
+          const firstLog = logsRes.body.logs[0];
+          console.log('[Live Activity] First log timestamp:', firstLog.timestamp, '-> parsed:', new Date(firstLog.timestamp).getTime(), 'now:', now, 'diff (seconds):', Math.round((now - new Date(firstLog.timestamp).getTime()) / 1000));
+        }
         
         // Group by IP address
         const ipStats = {};
@@ -547,8 +553,8 @@
           // Parse timestamp properly
           const timestamp = log.timestamp ? new Date(log.timestamp).getTime() : 0;
           
-          // Skip if invalid timestamp or older than 60s
-          if (!timestamp || isNaN(timestamp) || timestamp < last60s) {
+          // Skip if invalid timestamp or older than 5 minutes
+          if (!timestamp || isNaN(timestamp) || timestamp < last5min) {
             return;
           }
           
@@ -603,8 +609,8 @@
           // Parse timestamp properly
           const timestamp = log.timestamp ? new Date(log.timestamp).getTime() : 0;
           
-          // Skip if invalid timestamp or older than 60s
-          if (!timestamp || isNaN(timestamp) || timestamp < last60s) {
+          // Skip if invalid timestamp or older than 5 minutes
+          if (!timestamp || isNaN(timestamp) || timestamp < last5min) {
             return;
           }
           
