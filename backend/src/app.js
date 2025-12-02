@@ -205,7 +205,7 @@ function createApp() {
   app.get('/install', blockInstallIfCompleted, (req, res) => res.sendFile(installPath));
   app.get('/install.html', blockInstallIfCompleted, (req, res) => res.redirect(301, '/install'));
     }
-  });
+ 
 
   // SPA Fallback: serve the correct top-level page for known client routes so
   // direct links / refresh on deep routes work (e.g. /proxies/3 -> proxies.html)
@@ -243,6 +243,6 @@ function createApp() {
   });
 
   return app;
-}
+
 
 module.exports = createApp;
