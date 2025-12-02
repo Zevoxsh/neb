@@ -32,14 +32,17 @@ if (!isInstallationMode) {
 }
 
 // Helper for cookie options
-function cookieOptions() {
+function cookieOptions(req) {
   const isProduction = process.env.NODE_ENV === 'production';
+  const isHttps = req && (req.secure || req.headers['x-forwarded-proto'] === 'https');
+  const cookieSecure = process.env.COOKIE_SECURE === 'true';
 
   return {
     httpOnly: true,
     maxAge: 60 * 60 * 1000, // 1 hour
-    secure: (process.env.COOKIE_SECURE === 'true') || isProduction,
-    sameSite: isProduction ? 'strict' : 'lax'  // Strict in production for better security
+    // Only set secure if both: COOKIE_SECURE is true AND request is HTTPS
+    secure: cookieSecure && (isHttps || isProduction),
+    sameSite: isProduction ? 'strict' : 'lax'
   };
 }
 
@@ -105,7 +108,7 @@ const webLogin = asyncHandler(async (req, res) => {
 
   logger.info('Web login successful', { username, userId: user.id });
 
-  res.cookie('token', token, cookieOptions());
+  res.cookie('token', token, cookieOptions(req));
   res.redirect('/');
 });
 
@@ -162,7 +165,7 @@ const apiLogin = asyncHandler(async (req, res) => {
 
   logger.info('API login successful', { username, userId: user.id });
 
-  res.cookie('token', token, cookieOptions());
+  res.cookie('token', token, cookieOptions(req));
   res.json({ ok: true });
 });
 
