@@ -22,9 +22,9 @@
     
     if (/^\/proxies\/\d+$/i.test(path)) {
       targetInit = initProxyDetail;
-    } else if (/^\/domain\.html/i.test(path)) {
+    } else if (/^\/domain/i.test(path)) {
       targetInit = initDomainDetail;
-    } else if (/^\/backend\.html/i.test(path)) {
+    } else if (/^\/backend/i.test(path)) {
       targetInit = initBackendDetail;
     }
     
