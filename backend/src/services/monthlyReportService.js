@@ -103,11 +103,11 @@ class MonthlyReportService {
     const stats = {};
 
     try {
-      // Domains
-      const domainsResult = await pool.query('SELECT COUNT(*) as count FROM domains');
+      // Domains (from domain_mappings)
+      const domainsResult = await pool.query('SELECT COUNT(*) as count FROM domain_mappings');
       stats.domains = parseInt(domainsResult.rows[0]?.count || 0);
     } catch (e) {
-      logger.warn('Table domains not found', { error: e.message });
+      logger.warn('Table domain_mappings not found', { error: e.message });
       stats.domains = 0;
     }
 
@@ -263,10 +263,9 @@ class MonthlyReportService {
     }
 
     try {
-      // Active users (logged in during the month)
+      // Active users (total users for now, last_login column doesn't exist)
       const activeUsersResult = await pool.query(
-        'SELECT COUNT(*) as count FROM users WHERE last_login >= $1 AND last_login <= $2',
-        [startDate, endDate]
+        'SELECT COUNT(*) as count FROM users'
       );
       stats.activeUsers = parseInt(activeUsersResult.rows[0]?.count || 0);
     } catch (e) {
