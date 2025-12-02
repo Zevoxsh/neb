@@ -19,6 +19,27 @@ async function getRequestLogs({ limit = 1000, offset = 0, days = 30 } = {}) {
   return result.rows;
 }
 
+async function getRecentRequestLogs({ limit = 500, minutes = 5 } = {}) {
+  const query = `
+    SELECT 
+      client_ip,
+      hostname,
+      method,
+      path,
+      status_code,
+      bytes_sent,
+      bytes_received,
+      timestamp
+    FROM request_logs
+    WHERE timestamp >= NOW() - INTERVAL '1 minute' * $2
+    ORDER BY timestamp DESC
+    LIMIT $1
+  `;
+  
+  const result = await pool.query(query, [limit, minutes]);
+  return result.rows;
+}
+
 async function getTotalRequestCount(days = 30) {
   const query = `
     SELECT COUNT(*) as total
@@ -35,5 +56,7 @@ async function getTotalRequestCount(days = 30) {
 
 module.exports = {
   getRequestLogs,
+  getRecentRequestLogs,
   getTotalRequestCount
 };
+

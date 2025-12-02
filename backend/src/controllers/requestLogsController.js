@@ -23,6 +23,27 @@ async function getRequestLogs(req, res) {
   }
 }
 
+async function getRecentRequestLogs(req, res) {
+  try {
+    const limit = parseInt(req.query.limit) || 500;
+    const minutes = parseInt(req.query.minutes) || 5;
+
+    const logs = await requestLogsModel.getRecentRequestLogs({ limit, minutes });
+
+    res.json({
+      logs,
+      total: logs.length,
+      limit,
+      minutes
+    });
+  } catch (error) {
+    console.error('Error fetching recent request logs:', error);
+    res.status(500).json({ error: 'Failed to fetch recent request logs' });
+  }
+}
+
 module.exports = {
-  getRequestLogs
+  getRequestLogs,
+  getRecentRequestLogs
 };
+

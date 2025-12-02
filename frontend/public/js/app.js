@@ -531,55 +531,38 @@
 
   async function loadLiveActivityStats() {
     try {
-      // Load live request logs (last 5 minutes)
-      const logsRes = await window.api.requestJson('/api/request-logs?limit=500&offset=0');
+      // Load live request logs (last 5 minutes - individual requests, not grouped)
+      const logsRes = await window.api.requestJson('/api/request-logs/recent?limit=1000&minutes=5');
       if (logsRes && logsRes.status === 200 && logsRes.body && logsRes.body.logs) {
         const now = Date.now();
-        const last5min = now - 300000; // 5 minutes instead of 60 seconds
         
-        console.log('[Live Activity] Processing', logsRes.body.logs.length, 'logs');
-        
-        // Debug: Check first log timestamp
-        if (logsRes.body.logs.length > 0) {
-          const firstLog = logsRes.body.logs[0];
-          console.log('[Live Activity] First log:', firstLog);
-          const ts = firstLog.last_seen || firstLog.timestamp;
-          console.log('[Live Activity] Using timestamp:', ts, '-> parsed:', new Date(ts).getTime(), 'now:', now, 'diff (seconds):', Math.round((now - new Date(ts).getTime()) / 1000));
-        }
+        console.log('[Live Activity] Processing', logsRes.body.logs.length, 'recent logs');
         
         // Group by IP address
         const ipStats = {};
-        let recentCount = 0;
         
         logsRes.body.logs.forEach(log => {
-          // Use last_seen from grouped data, fallback to timestamp
-          const timestamp = log.last_seen ? new Date(log.last_seen).getTime() 
-                          : log.timestamp ? new Date(log.timestamp).getTime() 
-                          : 0;
+          const timestamp = log.timestamp ? new Date(log.timestamp).getTime() : 0;
           
-          // Skip if invalid timestamp or older than 5 minutes
-          if (!timestamp || isNaN(timestamp) || timestamp < last5min) {
-            return;
-          }
+          if (!timestamp || isNaN(timestamp)) return;
           
-          recentCount++;
           const ip = log.client_ip || 'unknown';
           if (!ipStats[ip]) {
             ipStats[ip] = {
               ip: ip,
-              requests: log.request_count || 1, // Use aggregated count
+              requests: 0,
               traffic: 0,
               lastSeen: timestamp
             };
-          } else {
-            ipStats[ip].requests += (log.request_count || 1);
           }
+          ipStats[ip].requests++;
+          ipStats[ip].traffic += (log.bytes_sent || 0) + (log.bytes_received || 0);
           if (timestamp > ipStats[ip].lastSeen) {
             ipStats[ip].lastSeen = timestamp;
           }
         });
 
-        console.log('[Live Activity] Found', recentCount, 'recent requests,', Object.keys(ipStats).length, 'unique IPs');
+        console.log('[Live Activity] Found', Object.keys(ipStats).length, 'unique IPs');
 
         // Sort by requests
         const sortedIps = Object.values(ipStats).sort((a, b) => b.requests - a.requests).slice(0, 10);
@@ -610,27 +593,21 @@
         // Group by domain
         const domainStats = {};
         logsRes.body.logs.forEach(log => {
-          // Use last_seen from grouped data, fallback to timestamp
-          const timestamp = log.last_seen ? new Date(log.last_seen).getTime() 
-                          : log.timestamp ? new Date(log.timestamp).getTime() 
-                          : 0;
+          const timestamp = log.timestamp ? new Date(log.timestamp).getTime() : 0;
           
-          // Skip if invalid timestamp or older than 5 minutes
-          if (!timestamp || isNaN(timestamp) || timestamp < last5min) {
-            return;
-          }
+          if (!timestamp || isNaN(timestamp)) return;
           
           const domain = log.hostname || log.host || 'unknown';
           if (!domainStats[domain]) {
             domainStats[domain] = {
               domain: domain,
-              requests: log.request_count || 1,
+              requests: 0,
               traffic: 0,
               lastRequest: timestamp
             };
-          } else {
-            domainStats[domain].requests += (log.request_count || 1);
           }
+          domainStats[domain].requests++;
+          domainStats[domain].traffic += (log.bytes_sent || 0) + (log.bytes_received || 0);
           if (timestamp > domainStats[domain].lastRequest) {
             domainStats[domain].lastRequest = timestamp;
           }
