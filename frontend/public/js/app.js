@@ -50,9 +50,11 @@
   });
 
   document.addEventListener('DOMContentLoaded', () => {
+    console.log('[DEBUG] ====== DOMContentLoaded FIRED ======');
     const body = document.body || {};
     const page = body.dataset ? body.dataset.page : '';
     const path = window.location.pathname;
+    console.log('[DEBUG] page=', page, 'path=', path);
 
     setupInlineBackendCreator();
     attachProxyBackendChange();
@@ -73,30 +75,39 @@
 
     switch (page) {
       case 'dashboard':
+        console.log('[DEBUG] Calling initDashboard');
         initDashboard();
         break;
       case 'proxies':
+        console.log('[DEBUG] Calling initProxiesPage');
         initProxiesPage();
         break;
       case 'backends':
+        console.log('[DEBUG] Calling initBackendsPage');
         initBackendsPage();
         break;
       case 'domains':
+        console.log('[DEBUG] Calling initDomainsPage');
         initDomainsPage();
         break;
       case 'certificates':
+        console.log('[DEBUG] Calling initCertsPage');
         initCertsPage();
         break;
       case 'settings':
+        console.log('[DEBUG] Calling initSettingsPage');
         initSettingsPage();
         break;
       case 'security':
+        console.log('[DEBUG] Calling initSecurityPage');
         window.initSecurityPage();
         break;
       case 'requests':
+        console.log('[DEBUG] Calling initRequestsPage');
         initRequestsPage();
         break;
       case 'alerts':
+        console.log('[DEBUG] Calling initAlertsPage');
         initAlertsPage();
         break;
       default:
@@ -453,7 +464,9 @@
 
 
   async function initBackendsPage() {
+    console.log('[DEBUG] ====== initBackendsPage CALLED ======');
     await loadBackends();
+    console.log('[DEBUG] loadBackends done');
     const form = document.getElementById('createBackendForm');
     if (form) form.addEventListener('submit', createBackendFromForm);
 
@@ -495,8 +508,11 @@
   }
 
   async function initDomainsPage() {
+    console.log('[DEBUG] ====== initDomainsPage CALLED ======');
     await populateDomainSelects();
+    console.log('[DEBUG] populateDomainSelects done');
     await loadDomains();
+    console.log('[DEBUG] loadDomains done');
     const createForm = document.getElementById('createDomainForm');
     if (createForm) createForm.addEventListener('submit', createDomainFromForm);
 
