@@ -41,10 +41,6 @@ async function listBackends() {
     console.error('[backendModel] listBackends failed:', error.message);
     return [];
   }
-      return res.rows;
-    }
-    throw error;
-  }
 }
 
 async function getBackend(id) {
