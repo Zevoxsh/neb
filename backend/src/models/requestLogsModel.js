@@ -24,9 +24,6 @@ async function getRecentRequestLogs({ limit = 500, minutes = 5 } = {}) {
     SELECT 
       client_ip,
       hostname,
-      status_code,
-      bytes_sent,
-      bytes_received,
       timestamp
     FROM request_logs
     WHERE timestamp >= NOW() - INTERVAL '1 minute' * $2
