@@ -115,7 +115,6 @@ class InstallController {
             // 6. Enregistrer la configuration dans la table settings
             console.log('⚙️ Enregistrement de la configuration...');
             
-            const dbName = database.name.trim(); // Utiliser le nom nettoyé
             const settings = [
                 // Database
                 { key: 'database.host', value: database.host },
@@ -144,7 +143,6 @@ class InstallController {
             await appPool.end();
 
             // 7. Créer un fichier .env local avec les informations de connexion
-            const dbName = database.name.trim();
             const envContent = `# Configuration générée automatiquement lors de l'installation
 # Base de données PostgreSQL
 DB_HOST=${database.host}
