@@ -21,7 +21,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Check if installation is needed BEFORE loading other modules
-async function checkInstallation() {
+function checkInstallation() {
   const envPath = path.join(__dirname, '../../.env');
   
   try {
@@ -35,13 +35,17 @@ async function checkInstallation() {
   }
 }
 
+// Set temporary JWT_SECRET if not installed
+const isInstalled = checkInstallation();
+if (!isInstalled) {
+  console.log('🔧 Mode installation détecté...');
+  process.env.JWT_SECRET = 'temporary_installation_secret_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
 // Start installation server (minimal setup without auth)
 async function startInstallationServer() {
   console.log('🔧 Installation requise - démarrage du serveur d\'installation...');
   console.log('');
-  
-  // Set a temporary JWT_SECRET for installation mode
-  process.env.JWT_SECRET = 'temporary_installation_secret_' + Math.random().toString(36);
   
   const createApp = require('./app');
   const app = createApp();
@@ -72,9 +76,7 @@ async function startInstallationServer() {
 const PORT = process.env.PORT || 3000;
 
 async function initDbAndStart() {
-  // Check if installation is needed FIRST
-  const isInstalled = checkInstallation();
-  
+  // Check if installation is needed FIRST (already done at module load)
   if (!isInstalled) {
     await startInstallationServer();
     return;
