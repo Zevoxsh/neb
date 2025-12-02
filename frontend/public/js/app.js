@@ -531,19 +531,19 @@
 
   async function loadLiveActivityStats() {
     try {
-      // Load live IP stats (last 60 seconds)
-      const ipRes = await window.api.requestJson('/api/metrics/requests?limit=1000&offset=0');
-      if (ipRes && ipRes.status === 200 && ipRes.body) {
+      // Load live request logs (last 60 seconds)
+      const logsRes = await window.api.requestJson('/api/metrics/logs?limit=500&offset=0');
+      if (logsRes && logsRes.status === 200 && logsRes.body && logsRes.body.logs) {
         const now = Date.now();
         const last60s = now - 60000;
         
         // Group by IP address
         const ipStats = {};
-        ipRes.body.requests.forEach(req => {
-          const timestamp = new Date(req.timestamp).getTime();
+        logsRes.body.logs.forEach(log => {
+          const timestamp = new Date(log.timestamp).getTime();
           if (timestamp < last60s) return;
           
-          const ip = req.client_ip || 'unknown';
+          const ip = log.client_ip || 'unknown';
           if (!ipStats[ip]) {
             ipStats[ip] = {
               ip: ip,
@@ -553,7 +553,7 @@
             };
           }
           ipStats[ip].requests++;
-          ipStats[ip].traffic += (req.bytes_sent || 0);
+          ipStats[ip].traffic += (log.bytes_sent || 0) + (log.bytes_received || 0);
           if (timestamp > ipStats[ip].lastSeen) {
             ipStats[ip].lastSeen = timestamp;
           }
@@ -574,9 +574,9 @@
             ipTable.querySelector('tbody').innerHTML = sortedIps.map(stat => `
               <tr>
                 <td><code>${escapeHtml(stat.ip)}</code></td>
-                <td>${stat.requests}</td>
+                <td><strong>${stat.requests}</strong></td>
                 <td>${formatBytes(stat.traffic)}</td>
-                <td>${Math.round((now - stat.lastSeen) / 1000)}s ago</td>
+                <td><span style="color: var(--text-muted); font-size: 12px;">${Math.round((now - stat.lastSeen) / 1000)}s ago</span></td>
               </tr>
             `).join('');
           }
@@ -584,11 +584,11 @@
 
         // Group by domain
         const domainStats = {};
-        ipRes.body.requests.forEach(req => {
-          const timestamp = new Date(req.timestamp).getTime();
+        logsRes.body.logs.forEach(log => {
+          const timestamp = new Date(log.timestamp).getTime();
           if (timestamp < last60s) return;
           
-          const domain = req.hostname || 'unknown';
+          const domain = log.hostname || log.host || 'unknown';
           if (!domainStats[domain]) {
             domainStats[domain] = {
               domain: domain,
@@ -598,7 +598,7 @@
             };
           }
           domainStats[domain].requests++;
-          domainStats[domain].traffic += (req.bytes_sent || 0);
+          domainStats[domain].traffic += (log.bytes_sent || 0) + (log.bytes_received || 0);
           if (timestamp > domainStats[domain].lastRequest) {
             domainStats[domain].lastRequest = timestamp;
           }
@@ -619,9 +619,9 @@
             domainTable.querySelector('tbody').innerHTML = sortedDomains.map(stat => `
               <tr>
                 <td><strong>${escapeHtml(stat.domain)}</strong></td>
-                <td>${stat.requests}</td>
+                <td><strong>${stat.requests}</strong></td>
                 <td>${formatBytes(stat.traffic)}</td>
-                <td>${Math.round((now - stat.lastRequest) / 1000)}s ago</td>
+                <td><span style="color: var(--text-muted); font-size: 12px;">${Math.round((now - stat.lastRequest) / 1000)}s ago</span></td>
               </tr>
             `).join('');
           }
