@@ -2619,10 +2619,11 @@
           console.log('[IP Management] Response status:', res?.status);
           console.log('[IP Management] Response body:', res?.body);
           
-          if (res && res.status === 200) {
+          if (res && (res.status === 200 || res.status === 201)) {
             document.getElementById('addTrustedModal').style.display = 'none';
-            loadTrustedIps();
             showToast('✅ IP added to whitelist', 'success');
+            // Reload after a short delay to ensure DB has committed
+            setTimeout(() => loadTrustedIps(), 300);
           } else {
             const errorMsg = res?.body?.error || res?.body?.message || 'Failed to add IP';
             console.error('[IP Management] Error response:', errorMsg);
@@ -2655,10 +2656,11 @@
           console.log('[IP Management] Response status:', res?.status);
           console.log('[IP Management] Response body:', res?.body);
           
-          if (res && res.status === 200) {
+          if (res && (res.status === 200 || res.status === 201)) {
             document.getElementById('addBlockedModal').style.display = 'none';
-            loadBlockedIps();
             showToast('🚫 IP blocked successfully', 'success');
+            // Reload after a short delay to ensure DB has committed
+            setTimeout(() => loadBlockedIps(), 300);
           } else {
             const errorMsg = res?.body?.error || res?.body?.message || 'Failed to block IP';
             console.error('[IP Management] Error response:', errorMsg);
@@ -2716,13 +2718,18 @@
     const table = document.getElementById('blockedIpsTable');
     if (!table) return;
 
+    console.log('[IP Management] Loading blocked IPs...');
     table.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;"><div class="spinner"></div><p style="margin-top: 12px; color: rgba(255,255,255,0.5);">Loading...</p></td></tr>';
 
     try {
+      console.log('[IP Management] Fetching /api/security/blocked-ips');
       const res = await window.api.requestJson('/api/security/blocked-ips');
+      console.log('[IP Management] Blocked IPs response:', res);
+      
       if (!res || res.status !== 200) throw new Error('Failed to fetch');
 
       const ips = res.body || [];
+      console.log('[IP Management] Blocked IPs count:', ips.length);
 
       if (ips.length === 0) {
         table.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">No blocked IPs</td></tr>';
@@ -2746,8 +2753,9 @@
           </tr>
         `;
       }).join('');
+      console.log('[IP Management] Blocked IPs table rendered');
     } catch (err) {
-      console.error('Error loading blocked IPs:', err);
+      console.error('[IP Management] Error loading blocked IPs:', err);
       table.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #ff4444;">❌ Error loading data</td></tr>';
     }
   }
