@@ -71,5 +71,48 @@ window.api = (function () {
     return err.name === 'TypeError' && /network|fetch/i.test(message);
   }
 
-  return { requestJson, ensureAuthenticated, redirectToLogin, isNetworkError, isLoginPage };
+  // Helper methods for common HTTP verbs
+  async function get(url, options = {}) {
+    const res = await requestJson(url, { ...options, method: 'GET' });
+    if (res.status >= 200 && res.status < 300) {
+      return res.body;
+    }
+    throw new Error(res.body?.error || `HTTP ${res.status}`);
+  }
+
+  async function post(url, data, options = {}) {
+    const res = await requestJson(url, { ...options, method: 'POST', body: data });
+    if (res.status >= 200 && res.status < 300) {
+      return res.body;
+    }
+    throw new Error(res.body?.error || `HTTP ${res.status}`);
+  }
+
+  async function put(url, data, options = {}) {
+    const res = await requestJson(url, { ...options, method: 'PUT', body: data });
+    if (res.status >= 200 && res.status < 300) {
+      return res.body;
+    }
+    throw new Error(res.body?.error || `HTTP ${res.status}`);
+  }
+
+  async function del(url, options = {}) {
+    const res = await requestJson(url, { ...options, method: 'DELETE' });
+    if (res.status >= 200 && res.status < 300) {
+      return res.body;
+    }
+    throw new Error(res.body?.error || `HTTP ${res.status}`);
+  }
+
+  return { 
+    requestJson, 
+    ensureAuthenticated, 
+    redirectToLogin, 
+    isNetworkError, 
+    isLoginPage,
+    get,
+    post,
+    put,
+    delete: del
+  };
 })();
