@@ -146,6 +146,10 @@
         console.log('[DEBUG] Calling initIpManagementPage');
         initIpManagementPage();
         break;
+      case 'reports':
+        console.log('[DEBUG] Calling initReportsPage');
+        initReportsPage();
+        break;
       default:
         break;
     }
@@ -3128,6 +3132,359 @@
       });
     }
   });
+
+  // ================== MONTHLY REPORTS PAGE ==================
+  function initReportsPage() {
+    const generateReportBtn = document.getElementById('generateReportBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    if (generateReportBtn) {
+      generateReportBtn.addEventListener('click', generateMonthlyReport);
+    }
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        reportsState.offset = 0;
+        loadReports();
+      });
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        if (reportsState.offset > 0) {
+          reportsState.offset = Math.max(0, reportsState.offset - reportsState.limit);
+          loadReports();
+        }
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        reportsState.offset += reportsState.limit;
+        loadReports();
+      });
+    }
+
+    // Close modal
+    const closeModal = document.getElementById('closeModal');
+    if (closeModal) {
+      closeModal.addEventListener('click', () => {
+        document.getElementById('reportModal').style.display = 'none';
+      });
+    }
+
+    // Load initial data
+    loadLatestReport();
+    loadReports();
+  }
+
+  const reportsState = {
+    limit: 12,
+    offset: 0,
+    total: 0
+  };
+
+  async function loadLatestReport() {
+    try {
+      const res = await window.api.requestJson('/api/reports/latest');
+      if (res && res.status === 200) {
+        displayLatestReport(res.body);
+      }
+    } catch (err) {
+      console.error('Error loading latest report:', err);
+    }
+  }
+
+  function displayLatestReport(report) {
+    const card = document.getElementById('latestReportCard');
+    const content = document.getElementById('latestReportContent');
+    
+    if (!report) {
+      card.style.display = 'none';
+      return;
+    }
+
+    card.style.display = 'block';
+
+    const monthStr = new Date(report.report_month).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long' 
+    });
+
+    content.innerHTML = `
+      <div class="stat-item">
+        <span class="stat-label">Report Month</span>
+        <span class="stat-value">${monthStr}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Total Domains</span>
+        <span class="stat-value">${report.domains_total || 0}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Total Proxies</span>
+        <span class="stat-value">${report.proxies_total || 0}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Total Backends</span>
+        <span class="stat-value">${report.backends_total || 0}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Total Requests</span>
+        <span class="stat-value">${formatNumber(report.total_requests || 0)}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Total Alerts</span>
+        <span class="stat-value">${formatNumber(report.total_alerts || 0)}</span>
+      </div>
+    `;
+  }
+
+  async function loadReports() {
+    const tbody = document.getElementById('reportsTableBody');
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading...</td></tr>';
+
+    try {
+      const res = await window.api.requestJson(
+        `/api/reports?limit=${reportsState.limit}&offset=${reportsState.offset}`
+      );
+
+      if (res && res.status === 200) {
+        const { reports, total } = res.body;
+        reportsState.total = total;
+        displayReports(reports);
+        updatePagination();
+      } else {
+        throw new Error('Failed to load reports');
+      }
+    } catch (err) {
+      console.error('Error loading reports:', err);
+      tbody.innerHTML = `<tr><td colspan="8" class="error">Error: ${err.message}</td></tr>`;
+    }
+  }
+
+  function displayReports(reports) {
+    const tbody = document.getElementById('reportsTableBody');
+
+    if (!reports || reports.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty">No reports found. Reports are generated on the 1st of each month.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = reports.map(r => {
+      const monthStr = new Date(r.report_month).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long' 
+      });
+      const generatedStr = new Date(r.generated_at).toLocaleString();
+
+      const domainChange = (r.domains_added || 0) - (r.domains_deleted || 0);
+      const proxyChange = (r.proxies_added || 0) - (r.proxies_deleted || 0);
+      const backendChange = (r.backends_added || 0) - (r.backends_deleted || 0);
+
+      return `
+        <tr>
+          <td><strong>${monthStr}</strong></td>
+          <td>${generatedStr}</td>
+          <td>
+            ${r.domains_total || 0}
+            ${domainChange !== 0 ? `<span class="${domainChange > 0 ? 'green' : 'red'}">(${domainChange > 0 ? '+' : ''}${domainChange})</span>` : ''}
+          </td>
+          <td>
+            ${r.proxies_total || 0}
+            ${proxyChange !== 0 ? `<span class="${proxyChange > 0 ? 'green' : 'red'}">(${proxyChange > 0 ? '+' : ''}${proxyChange})</span>` : ''}
+          </td>
+          <td>
+            ${r.backends_total || 0}
+            ${backendChange !== 0 ? `<span class="${backendChange > 0 ? 'green' : 'red'}">(${backendChange > 0 ? '+' : ''}${backendChange})</span>` : ''}
+          </td>
+          <td>${formatNumber(r.total_requests || 0)}</td>
+          <td>${formatNumber(r.total_alerts || 0)}</td>
+          <td>
+            <button class="btn" onclick="viewReportDetails('${r.report_month}')">View Details</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function updatePagination() {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const pageInfo = document.getElementById('pageInfo');
+
+    const currentPage = Math.floor(reportsState.offset / reportsState.limit) + 1;
+    const totalPages = Math.ceil(reportsState.total / reportsState.limit);
+
+    pageInfo.textContent = `Page ${currentPage} of ${totalPages} (${reportsState.total} total)`;
+
+    prevBtn.disabled = reportsState.offset === 0;
+    nextBtn.disabled = reportsState.offset + reportsState.limit >= reportsState.total;
+  }
+
+  window.viewReportDetails = async function(reportMonth) {
+    try {
+      const res = await window.api.requestJson(`/api/reports/${reportMonth}`);
+      
+      if (res && res.status === 200) {
+        displayReportModal(res.body);
+      } else {
+        throw new Error('Failed to load report details');
+      }
+    } catch (err) {
+      console.error('Error loading report details:', err);
+      showToast('❌ Error: ' + err.message, 'error');
+    }
+  };
+
+  function displayReportModal(report) {
+    const modal = document.getElementById('reportModal');
+    const modalTitle = document.getElementById('modalTitle');
+
+    const monthStr = new Date(report.report_month).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long' 
+    });
+
+    modalTitle.textContent = `Report for ${monthStr}`;
+
+    // Update all stats
+    document.getElementById('stat-domains-total').textContent = report.domains_total || 0;
+    document.getElementById('stat-domains-added').textContent = `+${report.domains_added || 0}`;
+    document.getElementById('stat-domains-deleted').textContent = `-${report.domains_deleted || 0}`;
+
+    document.getElementById('stat-proxies-total').textContent = report.proxies_total || 0;
+    document.getElementById('stat-proxies-added').textContent = `+${report.proxies_added || 0}`;
+    document.getElementById('stat-proxies-deleted').textContent = `-${report.proxies_deleted || 0}`;
+
+    document.getElementById('stat-backends-total').textContent = report.backends_total || 0;
+    document.getElementById('stat-backends-added').textContent = `+${report.backends_added || 0}`;
+    document.getElementById('stat-backends-deleted').textContent = `-${report.backends_deleted || 0}`;
+
+    document.getElementById('stat-requests-total').textContent = formatNumber(report.total_requests || 0);
+    document.getElementById('stat-requests-ips').textContent = formatNumber(report.unique_ips || 0);
+    document.getElementById('stat-requests-domains').textContent = formatNumber(report.unique_domains || 0);
+
+    document.getElementById('stat-security-alerts').textContent = formatNumber(report.total_alerts || 0);
+    document.getElementById('stat-security-blocked').textContent = report.blocked_ips || 0;
+    document.getElementById('stat-security-trusted').textContent = report.trusted_ips || 0;
+
+    document.getElementById('stat-certs-active').textContent = report.active_certificates || 0;
+    document.getElementById('stat-certs-issued').textContent = `+${report.certificates_issued || 0}`;
+    document.getElementById('stat-certs-renewed').textContent = report.certificates_renewed || 0;
+
+    // Top Domains
+    const additionalData = typeof report.additional_data === 'string' 
+      ? JSON.parse(report.additional_data) 
+      : report.additional_data || {};
+
+    displayTopDomains(additionalData.topDomains || []);
+    displayTopIPs(additionalData.topIPs || []);
+
+    modal.style.display = 'block';
+  }
+
+  function displayTopDomains(topDomains) {
+    const container = document.getElementById('topDomainsTable');
+    
+    if (!topDomains || topDomains.length === 0) {
+      container.innerHTML = '<p class="empty">No data</p>';
+      return;
+    }
+
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Domain</th>
+            <th>Requests</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${topDomains.map((d, i) => `
+            <tr>
+              <td>${i + 1}</td>
+              <td><code>${d.hostname || 'N/A'}</code></td>
+              <td>${formatNumber(d.count || 0)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function displayTopIPs(topIPs) {
+    const container = document.getElementById('topIPsTable');
+    
+    if (!topIPs || topIPs.length === 0) {
+      container.innerHTML = '<p class="empty">No data</p>';
+      return;
+    }
+
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>IP Address</th>
+            <th>Requests</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${topIPs.map((ip, i) => `
+            <tr>
+              <td>${i + 1}</td>
+              <td><code>${ip.client_ip || 'N/A'}</code></td>
+              <td>${formatNumber(ip.count || 0)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  async function generateMonthlyReport() {
+    const btn = document.getElementById('generateReportBtn');
+    
+    if (!confirm('Generate monthly report for the previous month?\n\nThis will:\n- Calculate all statistics\n- Clear old dismissed logs (>90 days)\n- Create snapshot for comparison')) {
+      return;
+    }
+
+    try {
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      const res = await window.api.requestJson('/api/reports/generate', {
+        method: 'POST',
+        body: {}
+      });
+
+      if (res && res.status === 200) {
+        showToast('✅ Monthly report generated successfully', 'success');
+        loadLatestReport();
+        loadReports();
+      } else {
+        throw new Error(res.body?.error || 'Failed to generate report');
+      }
+    } catch (err) {
+      console.error('Error generating report:', err);
+      showToast('❌ Error: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Generate Report';
+    }
+  }
+
+  function formatNumber(num) {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + 'M';
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toString();
+  }
 
 })();
 

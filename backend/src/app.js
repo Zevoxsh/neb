@@ -25,6 +25,7 @@ const websocketRoutes = require('./routes/websocketRoutes');
 const twoFactorRoutes = require('./routes/twoFactorRoutes');
 const ddosRoutes = require('./routes/ddosRoutes');
 const geoipRoutes = require('./routes/geoipRoutes');
+const monthlyReportRoutes = require('./routes/monthlyReportRoutes');
 const { botChallengeMiddleware } = require('./middleware/botChallenge');
 const { cacheMiddleware } = require('./middleware/cacheMiddleware');
 const { ddosProtectionMiddleware } = require('./middleware/ddosMiddleware');
@@ -139,6 +140,7 @@ function createApp() {
   app.use(websocketRoutes);
   app.use(twoFactorRoutes);
   app.use(ddosRoutes);
+  app.use('/api/reports', monthlyReportRoutes);
   app.use(debugRoutes);
 
   // Simple profile route
@@ -165,7 +167,8 @@ function createApp() {
     '/backend': 'backend.html',
     '/requests': 'requests.html',
     '/alerts': 'alerts.html',
-    '/ip-management': 'ip-management.html'
+    '/ip-management': 'ip-management.html',
+    '/reports': 'reports.html'
   };
 
   // Middleware to block access to /install if already installed

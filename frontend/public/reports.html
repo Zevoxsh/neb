@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monthly Reports - Nebula</title>
+  <link rel="stylesheet" href="/public/styles.css">
+  <link rel="icon" type="image/png" href="/public/image.png">
+</head>
+<body>
+  <div id="header-placeholder"></div>
+
+  <div class="container">
+    <div class="header-row">
+      <h1>📊 Monthly Reports</h1>
+      <div class="button-group">
+        <button id="generateReportBtn" class="btn">Generate Report</button>
+        <button id="refreshBtn" class="btn">🔄 Refresh</button>
+      </div>
+    </div>
+
+    <!-- Latest Report Summary -->
+    <div id="latestReportCard" class="card" style="display: none;">
+      <h2>Latest Report Summary</h2>
+      <div id="latestReportContent" class="stats-grid"></div>
+    </div>
+
+    <!-- Reports List -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Historical Reports</h2>
+        <div class="info-text">
+          Reports are automatically generated on the 1st of each month at 00:05.
+          Old dismissed logs (>90 days) are cleared during report generation.
+        </div>
+      </div>
+
+      <div id="reportsTableContainer">
+        <table>
+          <thead>
+            <tr>
+              <th>Report Month</th>
+              <th>Generated</th>
+              <th>Domains</th>
+              <th>Proxies</th>
+              <th>Backends</th>
+              <th>Requests</th>
+              <th>Alerts</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="reportsTableBody">
+            <tr>
+              <td colspan="8" class="loading">Loading reports...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        <button id="prevBtn" class="btn" disabled>← Previous</button>
+        <span id="pageInfo">Page 1</span>
+        <button id="nextBtn" class="btn">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Details Modal -->
+  <div id="reportModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 900px;">
+      <span class="close" id="closeModal">&times;</span>
+      <h2 id="modalTitle">Report Details</h2>
+      
+      <div id="reportDetails">
+        <!-- Domain Stats -->
+        <div class="stats-section">
+          <h3>🌐 Domains</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Total</span>
+              <span class="stat-value" id="stat-domains-total">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Added</span>
+              <span class="stat-value green" id="stat-domains-added">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Deleted</span>
+              <span class="stat-value red" id="stat-domains-deleted">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Proxy Stats -->
+        <div class="stats-section">
+          <h3>🔌 Proxies</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Total</span>
+              <span class="stat-value" id="stat-proxies-total">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Added</span>
+              <span class="stat-value green" id="stat-proxies-added">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Deleted</span>
+              <span class="stat-value red" id="stat-proxies-deleted">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Backend Stats -->
+        <div class="stats-section">
+          <h3>🖥️ Backends</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Total</span>
+              <span class="stat-value" id="stat-backends-total">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Added</span>
+              <span class="stat-value green" id="stat-backends-added">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Deleted</span>
+              <span class="stat-value red" id="stat-backends-deleted">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Request Stats -->
+        <div class="stats-section">
+          <h3>📊 Requests</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Total Requests</span>
+              <span class="stat-value" id="stat-requests-total">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Unique IPs</span>
+              <span class="stat-value" id="stat-requests-ips">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Unique Domains</span>
+              <span class="stat-value" id="stat-requests-domains">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Stats -->
+        <div class="stats-section">
+          <h3>🔒 Security</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Total Alerts</span>
+              <span class="stat-value" id="stat-security-alerts">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Blocked IPs</span>
+              <span class="stat-value red" id="stat-security-blocked">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Trusted IPs</span>
+              <span class="stat-value green" id="stat-security-trusted">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Certificate Stats -->
+        <div class="stats-section">
+          <h3>🔐 Certificates</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Active</span>
+              <span class="stat-value" id="stat-certs-active">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Issued</span>
+              <span class="stat-value green" id="stat-certs-issued">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Renewed</span>
+              <span class="stat-value" id="stat-certs-renewed">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Domains -->
+        <div class="stats-section">
+          <h3>🔝 Top 10 Domains by Traffic</h3>
+          <div id="topDomainsTable"></div>
+        </div>
+
+        <!-- Top IPs -->
+        <div class="stats-section">
+          <h3>🔝 Top 10 IPs by Requests</h3>
+          <div id="topIPsTable"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="footer-placeholder"></div>
+
+  <script src="/public/js/include-partials.js"></script>
+  <script src="/public/js/api.js"></script>
+  <script src="/public/js/ui.js"></script>
+  <script src="/public/js/app.js"></script>
+  <script src="/public/js/theme.js"></script>
+</body>
+</html>

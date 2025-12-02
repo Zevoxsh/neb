@@ -507,6 +507,15 @@ async function initDbAndStart() {
     } catch (e) {
       console.error('Failed to start health checker', e);
     }
+
+    // Initialize scheduled tasks (monthly reports, cleanup, etc.)
+    try {
+      const schedulerService = require('./services/schedulerService');
+      schedulerService.init();
+      console.log('Scheduler service initialized');
+    } catch (e) {
+      console.error('Failed to initialize scheduler service', e);
+    }
     
     } catch (err) {
       console.error('Failed to initialize with database:', err);
