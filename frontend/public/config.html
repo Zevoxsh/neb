@@ -513,24 +513,54 @@
         }
 
         async function restartApp() {
-            if (!confirm('Redémarrer l\'application maintenant ? Cela peut prendre quelques secondes.')) {
+            if (!confirm('Recharger la configuration maintenant ? Les nouvelles valeurs de la base de données seront appliquées.')) {
                 return;
             }
             
-            showNotification('Redémarrage en cours...', 'success');
+            const restartBtn = document.getElementById('restartBtn');
+            restartBtn.disabled = true;
+            restartBtn.textContent = 'Rechargement...';
+            
+            showNotification('Rechargement de la configuration...', 'success');
             
             try {
-                await fetch('/api/system/restart', {
+                const response = await fetch('/api/system/restart', {
                     method: 'POST',
                     credentials: 'include'
                 });
                 
-                // Attendre quelques secondes puis recharger
-                setTimeout(() => {
-                    window.location.reload();
-                }, 3000);
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.dbConnected) {
+                        showNotification('✓ Configuration rechargée - Base de données reconnectée !', 'success');
+                        
+                        // Masquer le bouton restart et l'alerte DB
+                        restartBtn.style.display = 'none';
+                        hideDatabaseAlert();
+                        
+                        // Recharger la page après un court délai
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showNotification('⚠️ Configuration rechargée mais la DB reste inaccessible: ' + (result.error || 'Erreur inconnue'), 'error');
+                        restartBtn.disabled = false;
+                        restartBtn.textContent = 'Redémarrer';
+                        
+                        // Vérifier à nouveau la connexion DB
+                        setTimeout(checkDatabaseConnection, 1000);
+                    }
+                } else {
+                    showNotification('Échec du rechargement: ' + (result.message || 'Erreur inconnue'), 'error');
+                    restartBtn.disabled = false;
+                    restartBtn.textContent = 'Redémarrer';
+                }
             } catch (error) {
-                showNotification('Veuillez redémarrer manuellement l\'application', 'error');
+                console.error('Restart error:', error);
+                showNotification('Erreur lors du rechargement de la configuration', 'error');
+                restartBtn.disabled = false;
+                restartBtn.textContent = 'Redémarrer';
             }
         }
 
