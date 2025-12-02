@@ -25,7 +25,7 @@ async function listDomains() {
         console.log(`${emoji} ${d.hostname.padEnd(28)} | ${protection}`);
     });
     
-    console.log('\n🛡️  protected    = Challenge systématique si trafic élevé');
+    console.log('\n🛡️  protected    = Systematic challenge if high traffic');
     console.log('✅ unprotected  = Pas de challenge bot (bypass complet)');
     console.log('⚙️  default     = Protection standard (rate limiting uniquement)');
 }
@@ -48,7 +48,7 @@ async function setProtection(domain, mode) {
                      mode === 'unprotected' ? '✅' : '⚙️';
         console.log(`${emoji} ${domain} mis en mode: ${mode}`);
     } else {
-        console.log(`⚠️ Domaine ${domain} non trouvé`);
+        console.log(`⚠️ Domain ${domain} not found`);
     }
 }
 

@@ -1,4 +1,4 @@
-// Minimal SPA app glue for Nebula (new frontend)
+﻿// Minimal SPA app glue for Nebula (new frontend)
 (function () {
   const cache = { proxies: [], backends: [] };
   const dashboardState = {
@@ -462,7 +462,7 @@
 
       const btn = ev.target.closest && ev.target.closest('.delete-backend');
       if (!btn || !btn.dataset.id) return;
-      if (!confirm('Supprimer ce backend ?')) return;
+      if (!confirm('Delete ce backend ?')) return;
       const res = await window.api.requestJson(`/api/backends/${btn.dataset.id}`, { method: 'DELETE' });
       if (res && (res.status === 200 || res.status === 204)) {
         showToast('Backend supprime');
@@ -490,7 +490,7 @@
         showToast('Creation impossible', 'error');
       }
     } catch (e) {
-      showToast('Erreur technique', 'error');
+      showToast('Error technique', 'error');
     }
   }
 
@@ -506,7 +506,7 @@
       // Handle delete button
       const deleteBtn = ev.target.closest && ev.target.closest('.delete-domain');
       if (!deleteBtn || !deleteBtn.dataset.id) return;
-      if (!confirm('Supprimer ce domaine ?')) return;
+      if (!confirm('Delete ce domaine ?')) return;
       const res = await window.api.requestJson(`/api/domains/${deleteBtn.dataset.id}`, { method: 'DELETE' });
       if (res && (res.status === 200 || res.status === 204)) {
         showToast('Domaine supprime');
@@ -596,19 +596,19 @@
             <strong>${escapeHtml(p.name || '')}</strong>
             <div class="muted mono">${escapeHtml((p.protocol || 'tcp').toUpperCase())}</div>
           </td>
-          <td class="mono">${escapeHtml(p.listen_host)}:${p.listen_port}</td>
-          <td class="mono">${escapeHtml(p.target_host)}:${p.target_port}</td>
+          <td class="mono">${escapeHtml(p.listen_host)}:${p.listen_Port}</td>
+          <td class="mono">${escapeHtml(p.target_host)}:${p.target_Port}</td>
           <td><span class="status-badge ${statusClass}"><span class="status-dot"></span>${statusLabel}</span></td>
           <td class="actions">
-            <button class="btn ghost small edit-proxy" data-id="${p.id}">Gerer</button>
-            <button class="btn ghost small edit-error-page" data-id="${p.id}" data-name="${escapeHtml(p.name || '')}">Erreur</button>
+            <button class="btn ghost small edit-proxy" data-id="${p.id}">Manage</button>
+            <button class="btn ghost small edit-error-page" data-id="${p.id}" data-name="${escapeHtml(p.name || '')}">Error</button>
           </td>
         `;
         tbody.appendChild(tr);
       });
     } catch (e) {
       toggleEmpty(empty, false, 'Impossible de charger les proxies.');
-      showToast('Chargement des proxies impossible', 'error');
+      showToast('Loading des proxies impossible', 'error');
     }
   }
 
@@ -705,14 +705,14 @@
     const form = document.getElementById('smtpForm');
     if (!form) return;
     const hostEl = document.getElementById('smtpHost') || form.elements && form.elements['host'];
-    const portEl = document.getElementById('smtpPort') || form.elements && form.elements['port'];
+    const PortEl = document.getElementById('smtpPort') || form.elements && form.elements['Port'];
     const secureEl = document.getElementById('smtpSecure') || form.elements && form.elements['secure'];
     const userEl = document.getElementById('smtpUser') || form.elements && form.elements['user'];
     const passEl = document.getElementById('smtpPass') || form.elements && form.elements['pass'];
     const fromEl = document.getElementById('smtpFrom') || form.elements && form.elements['from'];
     const toEl = document.getElementById('smtpTo') || form.elements && form.elements['to'];
     if (hostEl) hostEl.value = cfg.host || '';
-    if (portEl) portEl.value = cfg.port || '';
+    if (PortEl) PortEl.value = cfg.Port || '';
     if (secureEl) {
       try { secureEl.checked = !!cfg.secure; } catch (e) { /* ignore */ }
     }
@@ -726,7 +726,7 @@
     ev.preventDefault();
     const form = ev.target;
     const hostEl = document.getElementById('smtpHost') || form.elements && form.elements['host'];
-    const portEl = document.getElementById('smtpPort') || form.elements && form.elements['port'];
+    const PortEl = document.getElementById('smtpPort') || form.elements && form.elements['Port'];
     const secureEl = document.getElementById('smtpSecure') || form.elements && form.elements['secure'];
     const userEl = document.getElementById('smtpUser') || form.elements && form.elements['user'];
     const passEl = document.getElementById('smtpPass') || form.elements && form.elements['pass'];
@@ -735,7 +735,7 @@
     const payload = {
       smtp: {
         host: (hostEl && (hostEl.value || '') || '').trim(),
-        port: Number(portEl && portEl.value) || 0,
+        Port: Number(PortEl && PortEl.value) || 0,
         secure: !!(secureEl && secureEl.checked),
         user: (userEl && userEl.value) || '',
         pass: (passEl && passEl.value) || '',
@@ -863,10 +863,10 @@
         form.reset();
         await loadTrustedIps();
       } else {
-        showToast('Impossible d\'ajouter', 'error');
+        showToast('Impossible d\'Add', 'error');
       }
     } catch (e) {
-      showToast('Impossible d\'ajouter', 'error');
+      showToast('Impossible d\'Add', 'error');
     }
   }
 
@@ -885,7 +885,7 @@
       showToast('Suppression impossible', 'error');
     }
   }
-  // === BOT PROTECTION MANAGEMENT ===
+  // === Bot Protection MANAGEMENT ===
   window.loadBotStats = async function () {
     try {
       const res = await window.api.requestJson('/api/bot-protection/stats');
@@ -921,18 +921,18 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${escapeHtml(b.name || '')}</strong></td>
-          <td class="mono">${escapeHtml(b.targetHost || b.target_host || '')}:${b.targetPort || b.target_port}</td>
+          <td class="mono">${escapeHtml(b.targetHost || b.target_host || '')}:${b.targetPort || b.target_Port}</td>
           <td>${escapeHtml((b.targetProtocol || b.target_protocol || '').toUpperCase())}</td>
           <td>
-            <a class="btn ghost small" href="/backend?id=${b.id}">Gerer</a>
-            <button class="btn ghost small delete-backend" data-id="${b.id}">Supprimer</button>
+            <a class="btn ghost small" href="/backend?id=${b.id}">Manage</a>
+            <button class="btn ghost small delete-backend" data-id="${b.id}">Delete</button>
           </td>
         `;
         tbody.appendChild(tr);
       });
     } catch (e) {
       toggleEmpty(empty, false, 'Impossible de charger les backends.');
-      showToast('Chargement des backends impossible', 'error');
+      showToast('Loading des backends impossible', 'error');
     }
   }
 
@@ -954,10 +954,10 @@
         const proxy = proxyMap.get(String(d.proxy_id));
         const backend = backendMap.get(String(d.backend_id));
         const backendLabel = backend
-          ? `${escapeHtml(backend.name || '')} (${escapeHtml(backend.targetHost || backend.target_host || '')}:${backend.targetPort || backend.target_port})`
-          : `${escapeHtml(d.target_host || '')}:${d.target_port || ''}`;
+          ? `${escapeHtml(backend.name || '')} (${escapeHtml(backend.targetHost || backend.target_host || '')}:${backend.targetPort || backend.target_Port})`
+          : `${escapeHtml(d.target_host || '')}:${d.target_Port || ''}`;
         
-        // Bot protection status
+        // Bot Protection status
         const botProtection = d.bot_protection || 'unprotected';
         let protectionBadge = '';
         let protectionText = '';
@@ -976,15 +976,15 @@
           <td>${backendLabel}</td>
           <td><span class="status-badge ${protectionBadge}"><span class="status-dot"></span>${protectionText}</span></td>
           <td>
-            <a class="btn ghost small" href="/domain?id=${d.id}">Gerer</a>
-            <button class="btn ghost small delete-domain" data-id="${d.id}">Supprimer</button>
+            <a class="btn ghost small" href="/domain?id=${d.id}">Manage</a>
+            <button class="btn ghost small delete-domain" data-id="${d.id}">Delete</button>
           </td>
         `;
         tbody.appendChild(tr);
       });
     } catch (e) {
-      toggleEmpty(empty, false, 'Impossible de charger les domaines.');
-      showToast('Chargement des domaines impossible', 'error');
+      toggleEmpty(empty, false, 'Impossible de charger les Domains.');
+      showToast('Loading des Domains impossible', 'error');
     }
   }
 
@@ -1015,8 +1015,8 @@
         tbody.appendChild(tr);
       });
     } catch (e) {
-      toggleEmpty(empty, false, 'Impossible de charger les certificats.');
-      showToast('Chargement des certificats impossible', 'error');
+      toggleEmpty(empty, false, 'Impossible de charger les Certificates.');
+      showToast('Loading des Certificates impossible', 'error');
     }
   }
 
@@ -1032,7 +1032,7 @@
       else textarea.value = '';
     } catch (e) {
       textarea.value = '';
-      showToast('Chargement des parametres impossible', 'error');
+      showToast('Loading des parametres impossible', 'error');
     }
   }
 
@@ -1051,7 +1051,7 @@
       return;
     }
     payload.target_host = backend.targetHost || backend.target_host;
-    payload.target_port = backend.targetPort || backend.target_port;
+    payload.target_Port = backend.targetPort || backend.target_Port;
     try {
       const res = await window.api.requestJson('/api/proxies', { method: 'POST', body: payload });
       if (res && (res.status === 200 || res.status === 201)) {
@@ -1078,7 +1078,7 @@
       return;
     }
     
-    // Handle bot protection setting
+    // Handle Bot Protection setting
     const botProtection = payload.botProtection || 'unprotected';
     const hostname = payload.hostname;
     delete payload.botProtection;
@@ -1088,7 +1088,7 @@
       if (res && (res.status === 200 || res.status === 201)) {
         console.log(`[Domains] Created domain: ${hostname}, protection: ${botProtection}`);
         
-        // Apply bot protection setting
+        // Apply Bot Protection setting
         if (botProtection === 'protected') {
           try {
             const protRes = await window.api.requestJson('/api/bot-protection/protected-domains/add', {
@@ -1145,15 +1145,15 @@
       const idField = document.getElementById('editBackendId');
       const nameField = document.getElementById('editBackendName');
       const hostField = document.getElementById('editBackendHost');
-      const portField = document.getElementById('editBackendPort');
+      const PortField = document.getElementById('editBackendPort');
       const protocolField = document.getElementById('editBackendProtocol');
 
-      if (!idField || !nameField || !hostField || !portField || !protocolField) {
+      if (!idField || !nameField || !hostField || !PortField || !protocolField) {
         console.error('[Backend Detail] Required form fields not found', {
           idField: !!idField,
           nameField: !!nameField,
           hostField: !!hostField,
-          portField: !!portField,
+          PortField: !!PortField,
           protocolField: !!protocolField,
           bodyHTML: document.body ? 'exists' : 'missing'
         });
@@ -1163,11 +1163,11 @@
       idField.value = backend.id;
       nameField.value = backend.name || '';
       hostField.value = backend.targetHost || backend.target_host || '';
-      portField.value = backend.targetPort || backend.target_port || '';
+      PortField.value = backend.targetPort || backend.target_Port || '';
       protocolField.value = backend.targetProtocol || backend.target_protocol || 'http';
     } catch (e) {
       console.error('[Backend Detail] Failed to load:', e);
-      showToast('Erreur lors du chargement', 'error');
+      showToast('Error lors du Loading', 'error');
     }
   }
 
@@ -1198,7 +1198,7 @@
   async function deleteBackendDetail() {
     const backendId = document.getElementById('editBackendId').value;
     const backendName = document.getElementById('editBackendName').value;
-    if (!confirm(`Supprimer le backend "${backendName}" ?`)) return;
+    if (!confirm(`Delete le backend "${backendName}" ?`)) return;
     
     try {
       const res = await window.api.requestJson(`/api/backends/${backendId}`, { method: 'DELETE' });
@@ -1271,7 +1271,7 @@
     }
   }
 
-  async function importDomainCertificate() {
+  async function imPortDomainCertificate() {
     const hostnameField = document.getElementById('editDomainHostname');
     const fullchainField = document.getElementById('domainCertFullchain');
     const keyField = document.getElementById('domainCertKey');
@@ -1303,18 +1303,18 @@
       });
       
       if (res && res.status === 200) {
-        showToast('Certificat import� avec succ�s', 'success');
+        showToast('Certificat imPort� avec succ�s', 'success');
         await loadDomainCertificate();
       } else {
-        throw new Error('Import failed');
+        throw new Error('ImPort failed');
       }
     } catch (e) {
-      console.error('[Domain Cert] Import failed:', e);
-      showToast('�chec de l\'importation du certificat', 'error');
+      console.error('[Domain Cert] ImPort failed:', e);
+      showToast('�chec de l\'imPortation du certificat', 'error');
     }
   }
 
-  function showCertImportForm() {
+  function showCertImPortForm() {
     const certInfo = document.getElementById('domainCertInfo');
     const certEmpty = document.getElementById('domainCertEmpty');
     
@@ -1322,7 +1322,7 @@
       certInfo.hidden = false;
       certEmpty.hidden = true;
       
-      // Vider les champs pour l'import
+      // Vider les champs pour l'imPort
       const fullchainField = document.getElementById('domainCertFullchain');
       const keyField = document.getElementById('domainCertKey');
       if (fullchainField) fullchainField.value = '';
@@ -1364,14 +1364,14 @@
         proxies.forEach((p) => {
           const opt = document.createElement('option');
           opt.value = p.id;
-          opt.textContent = `${p.name} (${p.listen_host}:${p.listen_port})`;
+          opt.textContent = `${p.name} (${p.listen_host}:${p.listen_Port})`;
           proxySelect.appendChild(opt);
         });
         
         backends.forEach((b) => {
           const opt = document.createElement('option');
           opt.value = b.id;
-          opt.textContent = `${b.name} (${b.target_host}:${b.target_port})`;
+          opt.textContent = `${b.name} (${b.target_host}:${b.target_Port})`;
           backendSelect.appendChild(opt);
         });
       }
@@ -1406,7 +1406,7 @@
       protectionField.value = domain.bot_protection || 'unprotected';
     } catch (e) {
       console.error('[Domain Detail] Failed to load:', e);
-      showToast('Erreur lors du chargement', 'error');
+      showToast('Error lors du Loading', 'error');
     }
   }
 
@@ -1433,7 +1433,7 @@
       });
       
       if (res && (res.status === 200 || res.status === 201)) {
-        // Update bot protection lists
+        // Update Bot Protection lists
         try {
           await window.api.requestJson('/api/bot-protection/protected-domains/remove', {
             method: 'POST',
@@ -1474,12 +1474,12 @@
   async function deleteDomainDetail() {
     const domainId = document.getElementById('editDomainId').value;
     const hostname = document.getElementById('editDomainHostname').value;
-    if (!confirm(`Supprimer le domaine "${hostname}" ?`)) return;
+    if (!confirm(`Delete le domaine "${hostname}" ?`)) return;
     
     try {
       const res = await window.api.requestJson(`/api/domains/${domainId}`, { method: 'DELETE' });
       if (res && (res.status === 200 || res.status === 204)) {
-        // Clean up bot protection lists
+        // Clean up Bot Protection lists
         try {
           await window.api.requestJson('/api/bot-protection/protected-domains/remove', {
             method: 'POST',
@@ -1516,13 +1516,13 @@
       proxies.forEach((p) => {
         const opt = document.createElement('option');
         opt.value = p.id;
-        opt.textContent = `${p.name} (${p.listen_host}:${p.listen_port})`;
+        opt.textContent = `${p.name} (${p.listen_host}:${p.listen_Port})`;
         proxySelect.appendChild(opt);
       });
       backends.forEach((b) => {
         const opt = document.createElement('option');
         opt.value = b.id;
-        opt.textContent = `${b.name} (${b.targetHost || b.target_host}:${b.targetPort || b.target_port})`;
+        opt.textContent = `${b.name} (${b.targetHost || b.target_host}:${b.targetPort || b.target_Port})`;
         backendSelect.appendChild(opt);
       });
     } catch (e) {
@@ -1585,7 +1585,7 @@
       if (!proxy) return;
       document.getElementById('editProxyName').value = proxy.name || '';
       document.getElementById('editProxyListenHost').value = proxy.listen_host || '';
-      document.getElementById('editProxyListenPort').value = proxy.listen_port || '';
+      document.getElementById('editProxyListenPort').value = proxy.listen_Port || '';
       document.getElementById('editProxyProtocol').value = proxy.protocol || 'tcp';
       const enabledCheckbox = document.getElementById('editEnabled');
       if (enabledCheckbox) {
@@ -1606,7 +1606,7 @@
             showToast('Proxy enregistre');
             window.location.href = '/proxies';
           } else {
-            showToast('Impossible de sauvegarder', 'error');
+            showToast('Impossible de Save', 'error');
           }
         });
       }
@@ -1614,7 +1614,7 @@
       const delBtn = document.getElementById('btnDeleteProxy');
       if (delBtn) {
         delBtn.addEventListener('click', async () => {
-          if (!confirm('Supprimer ce proxy ?')) return;
+          if (!confirm('Delete ce proxy ?')) return;
           const resp = await window.api.requestJson(`/api/proxies/${id}`, { method: 'DELETE' });
           if (resp && (resp.status === 200 || resp.status === 204)) {
             showToast('Proxy supprime');
@@ -1625,7 +1625,7 @@
         });
       }
     } catch (e) {
-      showToast('Chargement du proxy impossible', 'error');
+      showToast('Loading du proxy impossible', 'error');
     }
   }
 
@@ -1643,14 +1643,14 @@
       deleteBtn.addEventListener('click', deleteDomainDetail);
     }
 
-    const importCertBtn = document.getElementById('btnImportDomainCert');
-    if (importCertBtn) {
-      importCertBtn.addEventListener('click', importDomainCertificate);
+    const imPortCertBtn = document.getElementById('btnImPortDomainCert');
+    if (imPortCertBtn) {
+      imPortCertBtn.addEventListener('click', imPortDomainCertificate);
     }
 
-    const showImportBtn = document.getElementById('btnShowCertImport');
-    if (showImportBtn) {
-      showImportBtn.addEventListener('click', showCertImportForm);
+    const showImPortBtn = document.getElementById('btnShowCertImPort');
+    if (showImPortBtn) {
+      showImPortBtn.addEventListener('click', showCertImPortForm);
     }
   }
 
@@ -1700,15 +1700,15 @@
     try {
       const res = await window.api.requestJson('/api/certificates/manual', { method: 'POST', body: payload });
       if (res && res.status === 200) {
-        showToast('Certificat importe');
+        showToast('Certificat imPorte');
         form.reset();
         togglePanel('manualCertPanel', false);
         await loadCerts();
       } else {
-        showToast('Import impossible', 'error');
+        showToast('ImPort impossible', 'error');
       }
     } catch (e) {
-      showToast('Import impossible', 'error');
+      showToast('ImPort impossible', 'error');
     }
   }
 
@@ -1817,7 +1817,7 @@
       list.forEach((b) => {
         const opt = document.createElement('option');
         opt.value = b.id;
-        opt.textContent = `${b.name} (${b.targetHost || b.target_host}:${b.targetPort || b.target_port})`;
+        opt.textContent = `${b.name} (${b.targetHost || b.target_host}:${b.targetPort || b.target_Port})`;
         select.appendChild(opt);
       });
       attachProxyBackendChange();
@@ -1842,14 +1842,14 @@
 
   function applyBackendDataToProxyFields(backend) {
     const hostInput = document.getElementById('targetHost');
-    const portInput = document.getElementById('targetPort');
-    if (!hostInput || !portInput) return;
+    const PortInput = document.getElementById('targetPort');
+    if (!hostInput || !PortInput) return;
     hostInput.readOnly = true;
-    portInput.readOnly = true;
+    PortInput.readOnly = true;
     hostInput.classList.add('input-locked');
-    portInput.classList.add('input-locked');
+    PortInput.classList.add('input-locked');
     hostInput.value = backend ? backend.targetHost || backend.target_host || '' : '';
-    portInput.value = backend ? backend.targetPort || backend.target_port || '' : '';
+    PortInput.value = backend ? backend.targetPort || backend.target_Port || '' : '';
   }
 
   function resetProxyFormState() {
@@ -1983,7 +1983,7 @@
   async function openErrorPageEditor(proxyId, proxyName) {
     currentErrorPageProxyId = proxyId;
     const title = document.getElementById('errorPageTitle');
-    if (title) title.textContent = proxyName ? `Page d'erreur � ${proxyName}` : 'Page d�erreur';
+    if (title) title.textContent = proxyName ? `Page d'Error � ${proxyName}` : 'Page d�Error';
     const textarea = document.getElementById('errorPageTextarea');
     if (textarea) {
       textarea.value = '';
@@ -2023,13 +2023,13 @@
         method: 'PUT',
         body: { html }
       });
-      showToast('Page d\'erreur mise a jour');
+      showToast('Page d\'Error mise a jour');
       togglePanel('errorPagePanel', false);
     } catch (e) {
-      showToast('Impossible de sauvegarder', 'error');
+      showToast('Impossible de Save', 'error');
     }
   }
-  // Bot protection save button
+  // Bot Protection save button
   document.addEventListener('click', async (e) => {
     if (e.target.id === 'saveBotConfig') {
       const enabled = document.getElementById('underAttackMode').checked;
@@ -2042,7 +2042,7 @@
         if (typeof loadBotStats === 'function') loadBotStats();
       } catch (err) {
         console.error('Bot config error:', err);
-        showToast('Erreur: ' + err.message, 'error');
+        showToast('Error: ' + err.message, 'error');
       }
     }
   });
@@ -2113,7 +2113,7 @@
 
     if (!table) return;
 
-    table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">Chargement...</td></tr>';
+    table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">Loading...</td></tr>';
 
     try {
       const res = await window.api.requestJson(
@@ -2189,7 +2189,7 @@
 
     } catch (err) {
       console.error('Error loading request logs:', err);
-      table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #ff4444;">Erreur de chargement</td></tr>';
+      table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #ff4444;">Error de Loading</td></tr>';
     }
   }
 
@@ -2341,7 +2341,7 @@
     if (!alertsList) return;
 
     if (!silent) {
-      alertsList.innerHTML = '<div class="alert-item-loading"><div class="spinner"></div><p>Chargement...</p></div>';
+      alertsList.innerHTML = '<div class="alert-item-loading"><div class="spinner"></div><p>Loading...</p></div>';
     }
 
     try {
@@ -2355,7 +2355,7 @@
       alertsState.total = data.total || 0;
 
       if (totalCount) {
-        totalCount.textContent = `Total: ${formatNumber(alertsState.total)} alertes`;
+        totalCount.textContent = `Total: ${formatNumber(alertsState.total)} Alerts`;
       }
 
       if (!data.alerts || data.alerts.length === 0) {
@@ -2416,7 +2416,7 @@
 
     } catch (err) {
       console.error('Error loading alerts:', err);
-      alertsList.innerHTML = '<div class="alert-item-empty"><p style="color: #ff4444;">? Erreur de chargement</p></div>';
+      alertsList.innerHTML = '<div class="alert-item-empty"><p style="color: #ff4444;">? Error de Loading</p></div>';
     }
   }
 

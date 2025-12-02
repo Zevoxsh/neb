@@ -1,4 +1,4 @@
-// Analytics Page Logic
+﻿// Analytics Page Logic
 
 (function () {
     let latencyChart = null;
@@ -59,7 +59,7 @@
         latencyChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['P50 (Médiane)', 'P95', 'P99'],
+                labels: ['P50 (Median)', 'P95', 'P99'],
                 datasets: [{
                     label: 'Latence (ms)',
                     data: [p50, p95, p99],
@@ -108,7 +108,7 @@
         statusChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['Succès (2xx)', 'Redirections (3xx)', 'Erreurs Client (4xx)', 'Erreurs Serveur (5xx)'],
+                labels: ['Success (2xx)', 'Redirects (3xx)', 'Client Errors (4xx)', 'Server Errors (5xx)'],
                 datasets: [{
                     data: [groups['2xx'], groups['3xx'], groups['4xx'], groups['5xx']],
                     backgroundColor: [

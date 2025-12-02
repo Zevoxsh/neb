@@ -12,9 +12,9 @@ const { createLogger } = require('../utils/logger');
 
 const logger = createLogger('ConfigController');
 
-// Définition de tous les paramètres configurables
+// Definition of all configurable parameters
 const CONFIG_SCHEMA = {
-    // Base de données (modifiable via .env)
+    // Database (modifiable via .env)
     database: {
         host: { type: 'string', default: 'localhost', env: 'DB_HOST', category: 'Database', requiresRestart: true },
         port: { type: 'number', default: 5432, env: 'DB_PORT', category: 'Database', requiresRestart: true },
@@ -23,7 +23,7 @@ const CONFIG_SCHEMA = {
         name: { type: 'string', default: 'nebuladb', env: 'DB_NAME', category: 'Database', requiresRestart: true }
     },
     
-    // Sécurité & JWT
+    // Security & JWT
     security: {
         jwtSecret: { type: 'password', default: '', env: 'JWT_SECRET', category: 'Security', required: true, requiresRestart: true },
         cookieSecure: { type: 'boolean', default: true, env: 'COOKIE_SECURE', category: 'Security', requiresRestart: true },
@@ -63,21 +63,21 @@ const CONFIG_SCHEMA = {
         cooldown: { type: 'number', default: 900000, category: 'Alerts', unit: 'ms', min: 60000, max: 3600000 }
     },
     
-    // Sécurité IP
+    // IP Security
     ipSecurity: {
         autoBlockIps: { type: 'boolean', default: true, category: 'IP Security' },
         ipBytesThreshold: { type: 'number', default: 52428800, category: 'IP Security', unit: 'bytes', min: 1048576, max: 1073741824 },
         ipRequestsThreshold: { type: 'number', default: 1000, category: 'IP Security', min: 100, max: 100000 }
     },
     
-    // Métriques
+    // Metrics
     metrics: {
         flushInterval: { type: 'number', default: 5, category: 'Metrics', unit: 'seconds', min: 1, max: 60 },
         maxBufferSize: { type: 'number', default: 100000, category: 'Metrics', min: 1000, max: 1000000 }
     }
 };
 
-// Tester la connexion à la base de données
+// Test database connection
 const testDatabaseConnection = asyncHandler(async (req, res) => {
     const { Pool } = require('pg');
     
@@ -104,7 +104,7 @@ const testDatabaseConnection = asyncHandler(async (req, res) => {
         logger.info('Database connection test successful');
         res.json({ 
             success: true, 
-            message: 'Connexion à la base de données réussie',
+            message: 'Database connection successful',
             config: {
                 host: dbConfig.host,
                 port: dbConfig.port,
@@ -209,12 +209,12 @@ const updateEnvFile = asyncHandler(async (req, res) => {
         
         res.json({ 
             success: true, 
-            message: 'Fichier .env mis à jour. Redémarrage requis pour appliquer les changements.',
+            message: '.env file updated. Restart required to apply changes.',
             requiresRestart: true
         });
     } catch (error) {
         logger.error('Failed to update .env file', { error: error.message });
-        throw new AppError('Erreur lors de la mise à jour du fichier .env: ' + error.message, 500);
+        throw new AppError('Error updating .env file: ' + error.message, 500);
     }
 });
 

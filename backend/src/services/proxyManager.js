@@ -188,11 +188,11 @@ class ProxyManager {
     const MAX_BUFFER_SIZE = 100000; // 100k entrées max
     
     if (this.metricsBuffer.length >= MAX_BUFFER_SIZE) {
-      // Flush immédiat en mode urgence
+      // Immediate flush in emergency mode
       console.warn('Metrics buffer full, forcing flush');
       setImmediate(() => this.flushMetrics());
       
-      // Rejeter les nouvelles métriques si le buffer est toujours plein
+      // Reject new metrics if buffer is still full
       if (this.metricsBuffer.length >= MAX_BUFFER_SIZE) {
         return; // Drop silently
       }
@@ -285,7 +285,7 @@ class ProxyManager {
         try { pm.addMetrics(id, 0, 0, 1, 0, 0, null); } catch (e) { }
         pm.trackIpTraffic(remoteIp, 0, 1);
         
-        // Limite de données par connexion (anti-slowloris)
+        // Data limit per connection (anti-slowloris)
         let bytesReceived = 0;
         const MAX_BYTES = 100 * 1024 * 1024; // 100 MB max
 
@@ -305,7 +305,7 @@ class ProxyManager {
           const len = c ? c.length : 0;
           bytesReceived += len;
           
-          // Détection d\'abus
+          // Abuse detection
           if (bytesReceived > MAX_BYTES) {
             console.warn(`Proxy ${id} - max bytes exceeded from ${remoteIp}`);
             try { clientSocket.destroy(); targetSocket.destroy(); } catch (e) { }
@@ -407,18 +407,18 @@ class ProxyManager {
             const rest = req.url.slice(prefix.length);
             const token = rest.split('/')[0];
             
-            // Validation stricte: alphanumérique, dash, underscore seulement
+            // Strict validation: alphanumeric, dash, underscore only
             if (!/^[a-zA-Z0-9_-]+$/.test(token) || token.length > 128 || token.length === 0) {
               res.writeHead(404);
               return res.end('Not found');
             }
             
-            // Résolution du chemin et vérification qu\'il reste dans le webroot
+            // Path resolution and verification it stays within webroot
             const webroot = '/var/www/letsencrypt';
             const candidate1 = path.join(webroot, '.well-known', 'acme-challenge', token);
             const candidate2 = path.join(webroot, token);
             
-            // Vérifier que les chemins résolus restent dans webroot
+            // Verify resolved paths stay within webroot
             const resolvedWebroot = path.resolve(webroot);
             const resolved1 = path.resolve(candidate1);
             const resolved2 = path.resolve(candidate2);
@@ -648,7 +648,7 @@ animation:spin 1s linear infinite;margin:30px auto}
                 if (!result.success) {
                   if (result.banned) {
                     res.writeHead(403, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'Trop de tentatives. Banni.', banned: true }));
+                    res.end(JSON.stringify({ error: 'Too many attempts. Banned.', banned: true }));
                     return;
                   }
                   res.writeHead(400, { 'Content-Type': 'application/json' });

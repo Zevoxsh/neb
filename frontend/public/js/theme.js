@@ -1,4 +1,4 @@
-// Dark Mode Toggle Script
+﻿// Dark Mode Toggle Script
 (function () {
     // Check for saved theme preference or default to 'dark'
     const currentTheme = localStorage.getItem('theme') || 'dark';

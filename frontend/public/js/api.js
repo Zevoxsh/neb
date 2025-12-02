@@ -1,4 +1,4 @@
-// Lightweight API helpers attached to window to ease incremental migration
+﻿// Lightweight API helpers attached to window to ease incremental migration
 window.api = (function () {
   const loginPaths = new Set(['/login', '/login']);
   let authChecked = false;

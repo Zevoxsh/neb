@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async () => {
+﻿document.addEventListener('DOMContentLoaded', async () => {
   async function inject(url, selector) {
     try {
       const res = await fetch(url, { cache: 'no-store' });

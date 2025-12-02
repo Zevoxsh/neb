@@ -76,7 +76,7 @@ router.post('/api/system/restart', authenticateToken, asyncHandler(async (req, r
             
             res.json({ 
                 success: true, 
-                message: 'Configuration rechargée avec succès. Base de données reconnectée.',
+                message: 'Configuration reloaded successfully. Database reconnected.',
                 dbConnected: true
             });
         } catch (error) {
@@ -93,7 +93,7 @@ router.post('/api/system/restart', authenticateToken, asyncHandler(async (req, r
     } else {
         res.status(500).json({ 
             success: false, 
-            message: 'Échec du rechargement de la configuration'
+            message: 'Configuration reload failed'
         });
     }
 }));

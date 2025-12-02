@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="fr">
 
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewPort" content="width=device-width,initial-scale=1">
   <title>Nebula Console - Certificates</title>
   <link rel="stylesheet" href="/public/styles.css">
     <script src="/public/js/theme.js"></script>
@@ -26,7 +26,7 @@
           <button class="btn primary" data-panel-target="certFormPanel" data-panel-focus="#certDomain">Demander un
             certificat</button>
           <button class="btn ghost" data-panel-target="manualCertPanel"
-            data-panel-focus="#manualCertDomain">Importer</button>
+            data-panel-focus="#manualCertDomain">ImPorter</button>
         </div>
       </header>
       <section class="page-content">
@@ -59,19 +59,19 @@
               <p class="eyebrow">ACME</p>
               <h2>Demander un certificat</h2>
             </div>
-            <button class="btn ghost small" type="button" data-panel-close="certFormPanel">Fermer</button>
+            <button class="btn ghost small" type="button" data-panel-close="certFormPanel">Close</button>
           </div>
           <form id="requestCertForm">
             <div class="form-grid">
               <div class="form-field">
                 <label for="certDomain">Domaine</label>
                 <input id="certDomain" name="domain" placeholder="app.example.com" required>
-                <p class="form-hint">Le certificat sera renouvelé automatiquement lors de la première requête si proche
+                <p class="form-hint">Certificate will be automatically renewed on first request if close
                   de l'expiration</p>
               </div>
             </div>
             <div class="form-actions">
-              <button class="btn ghost" type="button" data-panel-close="certFormPanel">Annuler</button>
+              <button class="btn ghost" type="button" data-panel-close="certFormPanel">Cancel</button>
               <button class="btn primary" type="submit">Lancer la demande</button>
             </div>
           </form>
@@ -81,10 +81,10 @@
         <div class="panel-card">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Import</p>
+              <p class="eyebrow">ImPort</p>
               <h2>Certificat manuel</h2>
             </div>
-            <button class="btn ghost small" type="button" data-panel-close="manualCertPanel">Fermer</button>
+            <button class="btn ghost small" type="button" data-panel-close="manualCertPanel">Close</button>
           </div>
           <form id="manualCertForm">
             <div class="form-field">
@@ -102,8 +102,8 @@
                 required></textarea>
             </div>
             <div class="form-actions">
-              <button class="btn ghost" type="button" data-panel-close="manualCertPanel">Annuler</button>
-              <button class="btn primary" type="submit">Importer</button>
+              <button class="btn ghost" type="button" data-panel-close="manualCertPanel">Cancel</button>
+              <button class="btn primary" type="submit">ImPorter</button>
             </div>
           </form>
         </div>

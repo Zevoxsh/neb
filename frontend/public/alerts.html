@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Alertes de Sécurité - Nebula Proxy</title>
+  <meta name="viewPort" content="width=device-width, initial-scale=1">
+  <title>Security Alerts - Nebula Proxy</title>
   <link rel="stylesheet" href="/public/styles.css">
   <script src="/public/js/api.js" defer></script>
   <script src="/public/js/include-partials.js" defer></script>
@@ -17,9 +17,9 @@
       <header class="topbar">
         <div class="page-heading">
           <div>
-            <div class="page-breadcrumb">SÉCURITÉ</div>
-            <h1>Alertes de Sécurité</h1>
-            <p class="subtitle">Surveillance des événements de sécurité et menaces détectées</p>
+            <div class="page-breadcrumb">SECURITY</div>
+            <h1>Security Alerts</h1>
+            <p class="subtitle">Monitoring security events and detected threats</p>
           </div>
         </div>
       </header>
@@ -27,7 +27,7 @@
       <main class="page-content">
         <div class="filters-section" style="margin-bottom: 24px; display: flex; gap: 16px; align-items: center; justify-content: space-between;">
           <div style="display: flex; gap: 16px; align-items: center;">
-            <button id="refreshBtn" class="btn-icon" title="Rafraîchir">
+            <button id="refreshBtn" class="btn-icon" title="Refresh">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>
               </svg>
@@ -47,7 +47,7 @@
             </button>
             <button class="filter-badge" data-severity="high">
               <span class="badge-dot" style="background: #f97316;"></span>
-              Élevées
+              High
             </button>
             <button class="filter-badge" data-severity="medium">
               <span class="badge-dot" style="background: #eab308;"></span>
@@ -64,7 +64,7 @@
           <div class="card-header">
             <div>
               <div class="card-eyebrow">JOURNAL</div>
-              <h2 class="card-title">Événements de sécurité</h2>
+              <h2 class="card-title">Security Events</h2>
             </div>
             <div id="totalCount" class="card-meta"></div>
           </div>
@@ -72,12 +72,12 @@
             <div class="alerts-list" id="alertsList">
               <div class="alert-item-loading">
                 <div class="spinner"></div>
-                <p>Chargement des alertes...</p>
+                <p>Loading des Alerts...</p>
               </div>
             </div>
             
             <div id="pagination" class="table-pagination">
-              <button id="prevBtn" class="btn btn-secondary" disabled>← Précédent</button>
+              <button id="prevBtn" class="btn btn-secondary" disabled>← Previous</button>
               <span id="pageInfo" class="pagination-info"></span>
               <button id="nextBtn" class="btn btn-secondary">Suivant →</button>
             </div>

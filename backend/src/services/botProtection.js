@@ -277,7 +277,7 @@ class BotProtection {
         
         const shouldBlock = isDomainProtected || isUnderAttack || isNewVisitor;
         
-        // Log uniquement les événements importants (pas les nouveaux visiteurs normaux)
+        // Log only important events (not normal new visitors)
         if (shouldBlock && !isNewVisitor) {
             const reqCount = this.getRequestsPerMinute(ip);
             const reason = isDomainProtected ? 'Protected domain' : 'Under attack mode';
@@ -291,14 +291,14 @@ class BotProtection {
         // Mark IP as verified (duration configurable, default 6 hours)
         const expiration = Date.now() + this.verificationDuration;
         this.verifiedIPs.set(ip, expiration);
-        // Log silencieux - l'IP est vérifiée pour 6h
+        // Silent log - IP verified for 6h
     }
 
     generateChallenge(ip) {
         const timestamp = Date.now();
         
         // Generate a random 6-character code
-        // Utilise uniquement des caractères sûrs (pas de < > & " ')
+        // Use only safe characters (no < > & \" ')
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         let code = '';
         for (let i = 0; i < 6; i++) {
@@ -465,7 +465,7 @@ class BotProtection {
         };
     }
     
-    // Gestion des connexions actives pour prévenir épuisement de ressources
+    // Active connection management to prevent resource exhaustion
     trackConnection(ip) {
         if (!this.activeConnections) this.activeConnections = new Map();
         if (!this.maxConnectionsPerIP) this.maxConnectionsPerIP = 100;

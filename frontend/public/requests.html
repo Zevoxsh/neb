@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Requêtes - Nebula Proxy</title>
+  <meta name="viewPort" content="width=device-width, initial-scale=1">
+  <title>Requests - Nebula Proxy</title>
   <link rel="stylesheet" href="/public/styles.css">
   <script src="/public/js/api.js" defer></script>
   <script src="/public/js/include-partials.js" defer></script>
@@ -18,8 +18,8 @@
         <div class="page-heading">
           <div>
             <div class="page-breadcrumb">TRACKING</div>
-            <h1>Journal des requêtes</h1>
-            <p class="subtitle">Vue d'ensemble des requêtes par IP et domaine</p>
+            <h1>Requests Log</h1>
+            <p class="subtitle">Overview of requests by IP and domain</p>
           </div>
         </div>
       </header>
@@ -27,14 +27,14 @@
       <main class="page-content">
         <div class="filters-section" style="margin-bottom: 24px; display: flex; gap: 16px; align-items: center;">
           <label style="display: flex; align-items: center; gap: 8px;">
-            <span style="color: rgba(255,255,255,0.7); font-size: 14px;">Période:</span>
+            <span style="color: rgba(255,255,255,0.7); font-size: 14px;">Period:</span>
             <select id="periodFilter" style="background: #0a0a0a; color: #fff; border: 1px solid #333; border-radius: 6px; padding: 8px 12px; font-size: 14px;">
               <option value="7">7 derniers jours</option>
               <option value="30" selected>30 derniers jours</option>
               <option value="90">90 derniers jours</option>
             </select>
           </label>
-          <button id="refreshBtn" class="btn-icon" title="Rafraîchir">
+          <button id="refreshBtn" class="btn-icon" title="Refresh">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>
             </svg>
@@ -45,7 +45,7 @@
           <div class="card-header">
             <div>
               <div class="card-eyebrow">INVENTAIRE</div>
-              <h2 class="card-title">Requêtes par IP</h2>
+              <h2 class="card-title">Requests by IP</h2>
             </div>
             <div id="totalCount" class="card-meta"></div>
           </div>
@@ -56,16 +56,16 @@
                   <tr>
                     <th>IP CLIENTE</th>
                     <th>DOMAINE</th>
-                    <th>NOMBRE DE REQUÊTES</th>
-                    <th>PREMIÈRE VISITE</th>
-                    <th>DERNIÈRE VISITE</th>
+                    <th>REQUEST COUNT</th>
+                    <th>FIRST VISIT</th>
+                    <th>LAST VISIT</th>
                   </tr>
                 </thead>
                 <tbody id="requestLogsTable">
                   <tr>
                     <td colspan="5" class="table-empty">
                       <div class="spinner"></div>
-                      <p>Chargement...</p>
+                      <p>Loading...</p>
                     </td>
                   </tr>
                 </tbody>
@@ -73,7 +73,7 @@
             </div>
             
             <div id="pagination" class="table-pagination">
-              <button id="prevBtn" class="btn btn-secondary" disabled>← Précédent</button>
+              <button id="prevBtn" class="btn btn-secondary" disabled>← Previous</button>
               <span id="pageInfo" class="pagination-info"></span>
               <button id="nextBtn" class="btn btn-secondary">Suivant →</button>
             </div>

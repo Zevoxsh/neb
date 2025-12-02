@@ -17,7 +17,7 @@ async function connectRedis() {
   const redisEnabled = process.env.REDIS_ENABLED !== 'false';
 
   if (!redisEnabled) {
-    console.log('[Redis] Désactivé via REDIS_ENABLED=false');
+    console.log('[Redis] Disabled via REDIS_ENABLED=false');
     return null;
   }
 
@@ -45,7 +45,7 @@ async function connectRedis() {
           console.warn('[Redis] ⚠️  Non disponible - l\'application continuera sans Redis');
         }
       } else {
-        console.error('[Redis] Erreur:', err.message);
+        console.error('[Redis] Error:', err.message);
       }
       isConnected = false;
     });
@@ -57,7 +57,7 @@ async function connectRedis() {
     });
 
     redisClient.on('ready', () => {
-      console.log('[Redis] ✅ Connecté');
+      console.log('[Redis] ✅ Connected');
       isConnected = true;
       retries = 0;
     });
@@ -72,7 +72,7 @@ async function connectRedis() {
     if (error.code === 'ECONNREFUSED') {
       console.warn('[Redis] ⚠️  Non disponible - l\'application continuera sans cache Redis');
     } else {
-      console.error('[Redis] Erreur de connexion:', error.message);
+      console.error('[Redis] Connection error:', error.message);
     }
     redisClient = null;
     isConnected = false;

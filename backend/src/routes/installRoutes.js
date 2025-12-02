@@ -17,7 +17,7 @@ function blockIfInstalled(req, res, next) {
     if (isInstalled) {
       return res.status(403).json({ 
         error: 'Installation already completed',
-        message: 'L\'installation est déjà terminée. Accès refusé.'
+        message: 'Installation already completed. Access denied.'
       });
     }
   } catch (error) {

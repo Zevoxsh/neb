@@ -1,8 +1,8 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="fr">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="viewPort" content="width=device-width,initial-scale=1">
     <title>Nebula Console - Domains</title>
     <link rel="stylesheet" href="/public/styles.css">
     <script src="/public/js/theme.js"></script>
@@ -21,7 +21,7 @@
             <p class="muted">Associate a hostname with a proxy and backend target.</p>
           </div>
           <div class="topbar-actions">
-            <button class="btn primary" data-panel-target="domainFormPanel" data-panel-focus="#domainHostname">Ajouter un domaine</button>
+            <button class="btn primary" data-panel-target="domainFormPanel" data-panel-focus="#domainHostname">Add un domaine</button>
           </div>
         </header>
         <section class="page-content">
@@ -54,9 +54,9 @@
             <div class="panel-head">
               <div>
                 <p class="eyebrow">Mapping</p>
-                <h2>Ajouter un domaine</h2>
+                <h2>Add un domaine</h2>
               </div>
-              <button class="btn ghost small" type="button" data-panel-close="domainFormPanel">Fermer</button>
+              <button class="btn ghost small" type="button" data-panel-close="domainFormPanel">Close</button>
             </div>
             <form id="createDomainForm">
               <div class="form-grid">
@@ -78,14 +78,14 @@
                 <div class="form-field">
                   <label for="domainBotProtection">Protection CAPTCHA</label>
                   <select id="domainBotProtection" name="botProtection">
-                    <option value="unprotected">Non protégé (accès libre)</option>
-                    <option value="protected">Protégé (CAPTCHA obligatoire)</option>
+                    <option value="unprotected">Unprotected (free access)</option>
+                    <option value="protected">Protected (CAPTCHA required)</option>
                   </select>
-                  <p class="form-hint">Contrôle si ce domaine nécessite une vérification humaine.</p>
+                  <p class="form-hint">Controls if this domain requires human verification.</p>
                 </div>
               </div>
               <div class="form-actions">
-                <button class="btn ghost" type="button" data-panel-close="domainFormPanel">Annuler</button>
+                <button class="btn ghost" type="button" data-panel-close="domainFormPanel">Cancel</button>
                 <button class="btn primary" type="submit">Creer le domaine</button>
               </div>
             </form>

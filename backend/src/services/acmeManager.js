@@ -113,7 +113,7 @@ function runCmd(cmd, opts = {}) {
 async function ensureCert(domain) {
   if (!domain || typeof domain !== 'string') return;
   
-  // Validation stricte du domaine pour prévenir command injection
+  // Strict domain validation to prevent command injection
   const cleanDomain = String(domain).trim().toLowerCase();
   
   if (!/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i.test(cleanDomain)) {
@@ -158,7 +158,7 @@ async function ensureCert(domain) {
     const os = require('os');
     const logFile = path.join(os.tmpdir(), `acme-${cleanDomain}.log`);
 
-    // Utiliser spawn au lieu de exec pour éviter shell injection
+    // Use spawn instead of exec to avoid shell injection
     await new Promise((resolve, reject) => {
       const args = [
         'certonly',
@@ -203,7 +203,7 @@ async function ensureCert(domain) {
         reject(err);
       });
       
-      // Timeout de sécurité (2 minutes max)
+      // Security timeout (2 minutes max)
       setTimeout(() => {
         proc.kill('SIGTERM');
         reject(new Error('certbot timeout after 2 minutes'));

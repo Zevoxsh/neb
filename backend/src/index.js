@@ -38,16 +38,16 @@ function checkInstallation() {
 // Set temporary JWT_SECRET if not installed
 const isInstalled = checkInstallation();
 if (!isInstalled) {
-  console.log('🔧 Mode installation détecté...');
+  console.log('🔧 Installation mode detected...');
   process.env.JWT_SECRET = 'temporary_installation_secret_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  process.env.INSTALLATION_MODE = 'true'; // Désactiver les services qui nécessitent la DB
-  process.env.BOT_PROTECTION_ENABLED = 'false'; // Désactiver la protection bot en mode installation
-  process.env.DDOS_PROTECTION_ENABLED = 'false'; // Désactiver la protection DDoS en mode installation
+  process.env.INSTALLATION_MODE = 'true'; // Disable services that require DB
+  process.env.BOT_PROTECTION_ENABLED = 'false'; // Disable bot protection in installation mode
+  process.env.DDOS_PROTECTION_ENABLED = 'false'; // Disable DDoS protection in installation mode
 }
 
 // Start installation server (minimal setup without auth)
 async function startInstallationServer() {
-  console.log('🔧 Installation requise - démarrage du serveur d\'installation...');
+  console.log('🔧 Installation required - starting installation server...');
   console.log('');
   
   const createApp = require('./app');
@@ -68,7 +68,7 @@ async function startInstallationServer() {
   const server = http.createServer(app);
   
   server.listen(PORT, () => {
-    console.log(`✅ Serveur d'installation démarré sur http://localhost:${PORT}`);
+    console.log(`✅ Installation server started on http://localhost:${PORT}`);
     console.log(`📝 Ouvrez http://localhost:${PORT}/install pour configurer votre installation`);
     console.log('');
   });

@@ -1,8 +1,8 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="fr">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="viewPort" content="width=device-width,initial-scale=1">
     <title>Nebula Console - Proxies</title>
     <link rel="stylesheet" href="/public/styles.css">
     <script src="/public/js/theme.js"></script>
@@ -21,7 +21,7 @@
             <p class="muted">Pilotez les frontends TCP/HTTP, routez le trafic et exposez vos services.</p>
           </div>
           <div class="topbar-actions">
-            <button class="btn primary" data-panel-target="proxyFormPanel" data-panel-focus="#proxyName">Ajouter un proxy</button>
+            <button class="btn primary" data-panel-target="proxyFormPanel" data-panel-focus="#proxyName">Add un proxy</button>
           </div>
         </header>
         <section class="page-content">
@@ -53,18 +53,18 @@
             <div class="panel-head">
               <div>
                 <p class="eyebrow">Provisioning</p>
-                <h2>Ajouter un proxy</h2>
+                <h2>Add un proxy</h2>
               </div>
-              <button class="btn ghost small" type="button" data-panel-close="proxyFormPanel">Fermer</button>
+              <button class="btn ghost small" type="button" data-panel-close="proxyFormPanel">Close</button>
             </div>
             <form id="createProxyForm">
               <div class="form-grid">
                 <div class="form-field"><label for="proxyName">Nom</label><input id="proxyName" name="name" placeholder="web-frontend" required></div>
                 <div class="form-field"><label for="proxyBackendSelect">Backend</label><select id="proxyBackendSelect" name="backendId" required></select><p class="form-hint">Selectionnez un backend. Les champs cibles seront bloques.</p></div>
                 <div class="form-field"><label for="listenHost">Hote d'ecoute</label><input id="listenHost" name="listen_host" value="0.0.0.0" required></div>
-                <div class="form-field"><label for="listenPort">Port d'ecoute</label><input id="listenPort" type="number" name="listen_port" value="80" required></div>
+                <div class="form-field"><label for="listenPort">Port d'ecoute</label><input id="listenPort" type="number" name="listen_Port" value="80" required></div>
                 <div class="form-field"><label for="targetHost">Cible (hote)</label><input id="targetHost" name="target_host" readonly class="input-locked"></div>
-                <div class="form-field"><label for="targetPort">Cible (port)</label><input id="targetPort" type="number" name="target_port" readonly class="input-locked"></div>
+                <div class="form-field"><label for="targetPort">Cible (Port)</label><input id="targetPort" type="number" name="target_Port" readonly class="input-locked"></div>
                 <div class="form-field"><label for="proxyProtocol">Protocole</label><select id="proxyProtocol" name="protocol"><option value="tcp">TCP</option><option value="http">HTTP</option><option value="https">HTTPS</option></select></div>
               </div>
               <div id="proxyBackendEmpty" class="inline-callout" hidden>
@@ -79,13 +79,13 @@
                   <div class="form-field"><label for="inlineBackendProtocol">Protocole</label><select id="inlineBackendProtocol"><option value="http">HTTP</option><option value="https">HTTPS</option><option value="tcp">TCP</option></select></div>
                 </div>
                 <div class="form-actions">
-                  <button class="btn ghost" type="button" id="btnCancelInlineBackend">Annuler</button>
+                  <button class="btn ghost" type="button" id="btnCancelInlineBackend">Cancel</button>
                   <button class="btn primary" type="button" id="btnSubmitInlineBackend">Valider le backend</button>
                 </div>
               </div>
               <div class="form-actions">
-                <button class="btn ghost" type="button" data-panel-close="proxyFormPanel">Fermer</button>
-                <button class="btn primary" type="submit">Enregistrer le proxy</button>
+                <button class="btn ghost" type="button" data-panel-close="proxyFormPanel">Close</button>
+                <button class="btn primary" type="submit">Save le proxy</button>
               </div>
             </form>
           </div>
@@ -95,14 +95,14 @@
             <div class="panel-head">
               <div>
                 <p class="eyebrow">Personnalisation</p>
-                <h2 id="errorPageTitle">Page d'erreur</h2>
+                <h2 id="errorPageTitle">Page d'Error</h2>
               </div>
-              <button class="btn ghost small" type="button" data-panel-close="errorPagePanel">Fermer</button>
+              <button class="btn ghost small" type="button" data-panel-close="errorPagePanel">Close</button>
             </div>
             <div class="form-field">
               <label for="errorPageTextarea">Contenu HTML</label>
               <textarea id="errorPageTextarea" rows="10" placeholder="<h1>Service indisponible</h1>"></textarea>
-              <p class="form-hint">Ce contenu s'affichera pour les erreurs 4xx/5xx generiques.</p>
+              <p class="form-hint">Ce contenu s'affichera pour les Errors 4xx/5xx generiques.</p>
             </div>
             <div class="inline-panel" style="max-height:250px;overflow:auto;margin-top:16px;">
               <div class="form-field">
@@ -112,7 +112,7 @@
             </div>
             <div class="form-actions">
               <button class="btn ghost" type="button" id="btnResetErrorPage">Reinitialiser</button>
-              <button class="btn primary" type="button" id="btnSaveErrorPage">Enregistrer</button>
+              <button class="btn primary" type="button" id="btnSaveErrorPage">Save</button>
             </div>
           </div>
         </div>

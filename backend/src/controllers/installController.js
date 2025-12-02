@@ -37,11 +37,11 @@ class InstallController {
                 success: true,
                 message: dbExists 
                     ? `Base de données "${name}" trouvée`
-                    : `Connexion réussie. La base "${name}" sera créée lors de l'installation`,
+                    : `Connection successful. Database "${name}" will be created during installation`,
                 databaseExists: dbExists
             });
         } catch (error) {
-            console.error('❌ Test de connexion échoué:', error);
+            console.error('❌ Connection test failed:', error);
             res.json({
                 success: false,
                 error: error.message
@@ -73,12 +73,12 @@ class InstallController {
             );
 
             if (dbCheckResult.rows.length === 0) {
-                console.log(`📦 Création de la base de données "${dbName}"...`);
+                console.log(`📦 Creating database "${dbName}"...`);
                 // Utiliser des identifiants quotés pour gérer les caractères spéciaux
                 await client.query(`CREATE DATABASE "${dbName}"`);
-                console.log(`✅ Base de données "${dbName}" créée avec succès`);
+                console.log(`✅ Database "${dbName}" created successfully`);
             } else {
-                console.log(`ℹ️  Base de données "${dbName}" existe déjà`);
+                console.log(`ℹ️  Database "${dbName}" already exists`);
             }
 
             client.release();
@@ -96,13 +96,13 @@ class InstallController {
             const appClient = await appPool.connect();
 
             // 4. Exécuter le script d'initialisation SQL
-            console.log('📄 Exécution du script init.sql...');
+            console.log('📄 Executing init.sql script...');
             const initSqlPath = path.join(__dirname, '../../db/init.sql');
             const initSql = await fs.readFile(initSqlPath, 'utf8');
             await appClient.query(initSql);
 
             // 5. Créer l'utilisateur admin
-            console.log('👤 Création de l\'utilisateur admin...');
+            console.log('👤 Creating admin user...');
             const hashedPassword = await bcrypt.hash(admin.password, 10);
             await appClient.query(
                 `INSERT INTO users (username, password_hash) 
@@ -113,7 +113,7 @@ class InstallController {
             );
 
             // 6. Enregistrer la configuration dans la table settings
-            console.log('⚙️ Enregistrement de la configuration...');
+            console.log('⚙️ Saving configuration...');
             
             const settings = [
                 // Database
@@ -163,15 +163,15 @@ PORT=3000
             const envPath = path.join(__dirname, '../../../.env');
             await fs.writeFile(envPath, envContent);
 
-            console.log('✅ Installation terminée avec succès !');
+            console.log('✅ Installation completed successfully!');
 
             res.json({
                 success: true,
-                message: 'Installation terminée avec succès'
+                message: 'Installation completed successfully'
             });
 
         } catch (error) {
-            console.error('❌ Erreur lors de l\'installation:', error);
+            console.error('❌ Error during installation:', error);
             res.status(500).json({
                 success: false,
                 error: error.message
@@ -225,7 +225,7 @@ PORT=3000
                         
                         return res.json({ 
                             installed: false,
-                            reason: 'Table settings non trouvée - installation requise'
+                            reason: 'Settings table not found - installation required'
                         });
                     }
 
@@ -244,7 +244,7 @@ PORT=3000
             }
 
         } catch (error) {
-            console.error('❌ Erreur lors de la vérification:', error);
+            console.error('❌ Error during verification:', error);
             res.json({ 
                 installed: false,
                 reason: error.message

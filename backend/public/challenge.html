@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vérification Humaine - Nebula</title>
+    <title>Human Verification - Nebula</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -116,7 +116,7 @@
         <div class="logo">
             <img src="/public/image.png" alt="Nebula" onerror="this.style.display='none'; this.parentElement.textContent='🛡️'">
         </div>
-        <h1>Vérification Humaine</h1>
+        <h1>Human Verification</h1>
         <p>Veuillez recopier le code ci-dessous pour continuer</p>
         
         <div class="captcha-box">
@@ -129,7 +129,7 @@
         <form onsubmit="return submitChallenge(event)">
             <label>Entrez le code :</label>
             <input type="text" id="captchaInput" maxlength="6" required autocomplete="off">
-            <button type="submit" id="submitBtn">Vérifier</button>
+            <button type="submit" id="submitBtn">Verify</button>
             <div class="error" id="errorMsg">Code incorrect</div>
         </form>
         
@@ -213,7 +213,7 @@
             }
 
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Vérification...';
+            submitBtn.textContent = 'Verifying...';
 
             try {
                 const response = await fetch('/verify-challenge', {
@@ -226,21 +226,21 @@
                 });
 
                 if (response.ok) {
-                    submitBtn.textContent = '✓ Accès autorisé';
+                    submitBtn.textContent = '✓ Access granted';
                     setTimeout(() => window.location.href = '/', 500);
                 } else {
-                    errorMsg.textContent = 'Erreur de vérification';
+                    errorMsg.textContent = 'Verification error';
                     errorMsg.classList.add('show');
                     submitBtn.disabled = false;
-                    submitBtn.textContent = 'Vérifier';
+                    submitBtn.textContent = 'Verify';
                     generateCaptcha();
                 }
             } catch (err) {
                 console.error('Challenge error:', err);
-                errorMsg.textContent = 'Erreur de connexion';
+                errorMsg.textContent = 'Connection error';
                 errorMsg.classList.add('show');
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Vérifier';
+                submitBtn.textContent = 'Verify';
             }
             return false;
         }

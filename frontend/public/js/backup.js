@@ -1,17 +1,17 @@
-// Backup & Restore handlers
+﻿// Backup & Restore handlers
 (function () {
     document.addEventListener('DOMContentLoaded', () => {
-        const btnExport = document.getElementById('btnExportConfig');
-        const btnImport = document.getElementById('btnImportConfig');
-        const fileInput = document.getElementById('importFile');
+        const btnExPort = document.getElementById('btnExPortConfig');
+        const btnImPort = document.getElementById('btnImPortConfig');
+        const fileInput = document.getElementById('imPortFile');
 
-        if (btnExport) {
-            btnExport.addEventListener('click', async () => {
+        if (btnExPort) {
+            btnExPort.addEventListener('click', async () => {
                 try {
-                    btnExport.disabled = true;
-                    btnExport.textContent = '⏳ Export en cours...';
+                    btnExPort.disabled = true;
+                    btnExPort.textContent = '⏳ ExPort en cours...';
 
-                    const response = await fetch('/api/backup/export', {
+                    const response = await fetch('/api/backup/exPort', {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' }
                     });
@@ -27,22 +27,22 @@
                         window.URL.revokeObjectURL(url);
                         document.body.removeChild(a);
 
-                        if (window.showToast) window.showToast('Configuration exportée !');
+                        if (window.showToast) window.showToast('Configuration exported!');
                     } else {
-                        throw new Error('Export failed');
+                        throw new Error('ExPort failed');
                     }
                 } catch (err) {
-                    console.error('Export error', err);
-                    if (window.showToast) window.showToast('Erreur export', 'error');
+                    console.error('ExPort error', err);
+                    if (window.showToast) window.showToast('Error exPort', 'error');
                 } finally {
-                    btnExport.disabled = false;
-                    btnExport.textContent = 'Télécharger backup';
+                    btnExPort.disabled = false;
+                    btnExPort.textContent = 'Download backup';
                 }
             });
         }
 
-        if (btnImport && fileInput) {
-            btnImport.addEventListener('click', () => {
+        if (btnImPort && fileInput) {
+            btnImPort.addEventListener('click', () => {
                 fileInput.click();
             });
 
@@ -50,19 +50,19 @@
                 const file = e.target.files[0];
                 if (!file) return;
 
-                if (!confirm('⚠️ ATTENTION: Cette action va AJOUTER les éléments du backup à votre configuration actuelle. Continuer ?')) {
+                if (!confirm('⚠️ Warning: This action will add backup items to your current configuration. Continue?')) {
                     fileInput.value = '';
                     return;
                 }
 
                 try {
-                    btnImport.disabled = true;
-                    btnImport.textContent = '⏳ Import en cours...';
+                    btnImPort.disabled = true;
+                    btnImPort.textContent = '⏳ ImPort en cours...';
 
                     const text = await file.text();
                     const backup = JSON.parse(text);
 
-                    const response = await fetch('/api/backup/import', {
+                    const response = await fetch('/api/backup/imPort', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(backup)
@@ -71,7 +71,7 @@
                     if (response.ok) {
                         const result = await response.json();
                         if (window.showToast) {
-                            const msg = `Import OK: ${result.stats.proxiesCreated} proxies, ${result.stats.backendsCreated} backends, ${result.stats.domainsCreated} domaines`;
+                            const msg = `ImPort OK: ${result.stats.proxiesCreated} proxies, ${result.stats.backendsCreated} backends, ${result.stats.domainsCreated} Domains`;
                             window.showToast(msg);
                         }
 
@@ -79,14 +79,14 @@
                         setTimeout(() => window.location.reload(), 2000);
                     } else {
                         const error = await response.json();
-                        throw new Error(error.message || 'Import failed');
+                        throw new Error(error.message || 'ImPort failed');
                     }
                 } catch (err) {
-                    console.error('Import error', err);
-                    if (window.showToast) window.showToast('Erreur import: ' + err.message, 'error');
+                    console.error('ImPort error', err);
+                    if (window.showToast) window.showToast('Error imPort: ' + err.message, 'error');
                 } finally {
-                    btnImport.disabled = false;
-                    btnImport.textContent = '📤 Importer backup';
+                    btnImPort.disabled = false;
+                    btnImPort.textContent = '📤 ImPorter backup';
                     fileInput.value = '';
                 }
             });

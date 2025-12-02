@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="fr">
 
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewPort" content="width=device-width,initial-scale=1">
   <title>Nebula Console - Proxy</title>
   <link rel="stylesheet" href="/public/styles.css">
   <script src="/public/js/theme.js"></script>
@@ -20,7 +20,7 @@
         <div class="page-heading">
           <p class="eyebrow">Proxies</p>
           <h1>Details du proxy</h1>
-          <p class="muted">Modifier les parametres d'ecoute et de cible, ou supprimer le proxy.</p>
+          <p class="muted">Edit les parametres d'ecoute et de cible, ou Delete le proxy.</p>
         </div>
         <div class="topbar-actions">
           <a class="btn ghost" href="/proxies.html">Retour</a>
@@ -40,7 +40,7 @@
               </div>
               <div class="form-field">
                 <label for="editProxyListenPort">Port d'ecoute</label>
-                <input id="editProxyListenPort" name="listen_port" type="number" required>
+                <input id="editProxyListenPort" name="listen_Port" type="number" required>
               </div>
               <div class="form-field">
                 <label for="editProxyProtocol">Protocole</label>
@@ -61,13 +61,13 @@
               <div class="form-field">
                 <label class="form-check">
                   <input type="checkbox" id="editEnabled" name="enabled" checked>
-                  Proxy activé
+                  Proxy enabled
                 </label>
               </div>
             </div>
             <div class="form-actions">
-              <button class="btn ghost" type="button" id="btnDeleteProxy">Supprimer</button>
-              <button class="btn primary" type="button" id="btnSaveProxy">Enregistrer</button>
+              <button class="btn ghost" type="button" id="btnDeleteProxy">Delete</button>
+              <button class="btn primary" type="button" id="btnSaveProxy">Save</button>
             </div>
           </form>
         </article>

@@ -1,4 +1,4 @@
-(function(){
+﻿(function(){
   // Metrics module: responsible for fetching, smoothing and rendering charts
   const metrics = {
     state: null,

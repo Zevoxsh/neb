@@ -3,7 +3,7 @@
  * Fonctions de validation et sanitization réutilisables
  */
 
-// Regex précompilées pour performances
+// Precompiled regex for performance
 const IPV4_REGEX = /^\d{1,3}(?:\.\d{1,3}){3}$/;
 const IPV6_REGEX = /^([0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}$/i;
 const DOMAIN_REGEX = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i;
@@ -26,7 +26,7 @@ function isValidDomain(domain) {
     // Format
     if (!DOMAIN_REGEX.test(clean)) return false;
     
-    // Chaque label ne doit pas dépasser 63 caractères
+    // Each label must not exceed 63 characters
     const labels = clean.split('.');
     for (const label of labels) {
         if (label.length > 63) return false;
@@ -234,9 +234,9 @@ class RateLimiter {
     }
 }
 
-// Nettoyage périodique des rate limiters
+// Periodic cleanup of rate limiters
 setInterval(() => {
-    // Cleanup sera appelé par les instances
+    // Cleanup will be called by instances
 }, 60000);
 
 module.exports = {
@@ -255,7 +255,7 @@ module.exports = {
     CircuitBreaker,
     RateLimiter,
     
-    // Regex exportées
+    // Exported regex
     IPV4_REGEX,
     IPV6_REGEX,
     DOMAIN_REGEX,

@@ -68,7 +68,7 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
             if (fs.existsSync(challengePath)) {
                 let html = fs.readFileSync(challengePath, 'utf8');
                 
-                // Protection XSS : échapper le code avant injection
+                // XSS protection: escape code before injection
                 const escapeHtml = (str) => {
                     return String(str).replace(/[&<>"']/g, char => ({
                         '&': '&amp;',

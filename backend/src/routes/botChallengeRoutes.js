@@ -66,7 +66,7 @@ router.post('/verify-challenge', asyncHandler(async (req, res) => {
     if (attempts.count >= 5) {
         logger.warn('Too many verification attempts', { ip, count: attempts.count });
         return res.status(429).json({ 
-            error: 'Trop de tentatives. Réessayez dans 1 minute.',
+            error: 'Too many attempts. Try again in 1 minute.',
             retryAfter: Math.ceil((attempts.resetAt - now) / 1000)
         });
     }
@@ -87,7 +87,7 @@ router.post('/verify-challenge', asyncHandler(async (req, res) => {
         if (result.banned) {
             logger.warn('IP banned for too many failed attempts', { ip });
             return res.status(403).json({ 
-                error: 'Trop de tentatives échouées. Vous avez été temporairement banni.',
+                error: 'Too many failed attempts. You have been temporarily banned.',
                 banned: true
             });
         }
@@ -204,7 +204,7 @@ router.post('/api/bot-protection/protected-domains/add', asyncHandler(async (req
         logger.error('Failed to generate SSL certificate', { domain, error: certError.message });
         return res.status(500).json({ 
             success: false, 
-            error: 'Échec de la génération du certificat SSL',
+            error: 'SSL certificate generation failed',
             details: certError.message 
         });
     }

@@ -28,11 +28,11 @@ function createPool() {
     // Optimisations de pool
     max: 20, // Max 20 connexions
     min: 2, // Min 2 connexions toujours actives
-    idleTimeoutMillis: 30000, // Ferme après 30s d'inactivité
+    idleTimeoutMillis: 30000, // Close after 30s of inactivity
     connectionTimeoutMillis: 5000, // Timeout de connexion 5s
     
     // Optimisations de performance
-    statement_timeout: 10000, // 10s max par requête
+    statement_timeout: 10000, // 10s max per query
     query_timeout: 10000,
     
     // Gestion des erreurs
@@ -40,7 +40,7 @@ function createPool() {
     keepAliveInitialDelayMillis: 10000
   });
 
-  // Gestion des événements
+  // Event management
   newPool.on('error', (err, client) => {
     console.error('Unexpected error on idle PostgreSQL client', err);
   });
@@ -54,10 +54,10 @@ function createPool() {
   return newPool;
 }
 
-// Créer le pool initial
+// Create initial pool
 pool = createPool();
 
-// Fonction pour recréer le pool avec les nouvelles variables d'environnement
+// Function to recreate pool with new environment variables
 async function recreatePool() {
   if (pool) {
     try {

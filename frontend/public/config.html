@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewPort" content="width=device-width, initial-scale=1.0">
     <title>Configuration - Nebula Proxy</title>
     <link rel="stylesheet" href="/public/styles.css">
     <style>
@@ -142,15 +142,15 @@
         <div class="app-main">
             <header class="topbar">
                 <div class="page-heading">
-                    <p class="eyebrow">Système</p>
+                    <p class="eyebrow">System</p>
                     <h1>Configuration</h1>
-                    <p class="muted">Gestion centralisée de tous les paramètres</p>
+                    <p class="muted">Centralized management of all settings</p>
                 </div>
                 <div class="topbar-actions">
-                    <button onclick="showRuntimeDebug()" class="btn ghost small" title="Voir les valeurs runtime actuelles">Debug</button>
-                    <button onclick="exportEnv()" class="btn ghost">Exporter .env</button>
-                    <button onclick="saveAll()" class="btn">Sauvegarder Tout</button>
-                    <button onclick="restartApp()" class="btn ghost" id="restartBtn" style="display: none;">Redémarrer</button>
+                    <button onclick="showRuntimeDebug()" class="btn ghost small" title="Voir les Current Runtime Values">Debug</button>
+                    <button onclick="exPortEnv()" class="btn ghost">Export .env</button>
+                    <button onclick="saveAll()" class="btn">Save All</button>
+                    <button onclick="restartApp()" class="btn ghost" id="restartBtn" style="display: none;">Restart</button>
                 </div>
             </header>
             
@@ -158,11 +158,11 @@
                 <div id="dbAlert" class="db-alert">
                     <div class="db-alert-icon">⚠️</div>
                     <div class="db-alert-content">
-                        <div class="db-alert-title">Connexion à la base de données échouée</div>
-                        <div class="db-alert-message" id="dbAlertMessage">Impossible de se connecter à la base de données PostgreSQL</div>
+                        <div class="db-alert-title">Database connection failed</div>
+                        <div class="db-alert-message" id="dbAlertMessage">Unable to connect to PostgreSQL database</div>
                     </div>
                     <div class="db-alert-actions">
-                        <button onclick="testDatabaseConnection()" class="btn ghost" id="testDbBtn">Tester la connexion</button>
+                        <button onclick="testDatabaseConnection()" class="btn ghost" id="testDbBtn">Test Connection</button>
                     </div>
                 </div>
                 <div class="config-tabs" id="categoryTabs"></div>
@@ -208,13 +208,13 @@
                 const result = await response.json();
                 
                 if (!result.success) {
-                    showDatabaseAlert(result.error || 'Connexion à la base de données échouée');
+                    showDatabaseAlert(result.error || 'Database connection failed');
                 } else {
                     hideDatabaseAlert();
                 }
             } catch (error) {
                 console.error('Failed to check database:', error);
-                showDatabaseAlert('Impossible de vérifier la connexion à la base de données');
+                showDatabaseAlert('Unable to verify database connection');
             }
         }
 
@@ -249,14 +249,14 @@
                 
                 if (result.success) {
                     hideDatabaseAlert();
-                    showNotification('✓ Connexion à la base de données réussie', 'success');
+                    showNotification('✓ Database connection successful', 'success');
                 } else {
-                    showDatabaseAlert(result.error || 'Connexion échouée');
-                    showNotification('Connexion échouée: ' + result.error, 'error');
+                    showDatabaseAlert(result.error || 'Connection failed');
+                    showNotification('Connection failed: ' + result.error, 'error');
                 }
             } catch (error) {
                 console.error('Test failed:', error);
-                showNotification('Erreur lors du test de connexion', 'error');
+                showNotification('Connection test error', 'error');
             } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;
@@ -277,7 +277,7 @@
                 renderConfig();
             } catch (error) {
                 console.error('Failed to load config:', error);
-                showNotification('Erreur de chargement de la configuration', 'error');
+                showNotification('Configuration loading error', 'error');
             }
         }
 
@@ -301,7 +301,7 @@
                             <h2>Configuration</h2>
                         </div>
                         <button class="btn ghost small" onclick="resetCategory('${cat}')">
-                            Réinitialiser
+                            Reset
                         </button>
                     </div>
                     <div class="config-grid">
@@ -315,12 +315,12 @@
         function renderCategoryFields(category) {
             const fields = configSchema[category];
             
-            // Message spécial pour la base de données
+            // Special message for database
             let headerMessage = '';
             if (category === 'database') {
                 headerMessage = `
                     <div class="alert alert-info" style="margin-bottom: 20px;">
-                        Ces paramètres modifient le fichier <code>.env</code>. Un redémarrage de l'application sera nécessaire après la sauvegarde.
+                        These settings modify the <code>.env</code> file. Application restart will be required after save.
                     </div>
                 `;
             }
@@ -360,7 +360,7 @@
                         <label>${getFieldLabel(key)}${required}</label>
                         <input type="text" id="${fieldId}" 
                                value="${Array.isArray(value) ? value.join(', ') : ''}"
-                               placeholder="Valeurs séparées par des virgules"
+                               placeholder="Comma-separated values"
                                onchange="markChanged('${category}', '${key}', this.value.split(',').map(v => v.trim()), ${schema.requiresRestart || false})">
                     `;
                 } else {
@@ -400,7 +400,7 @@
             const changeKey = `${category}.${key}`;
             unsavedChanges.add(changeKey);
             
-            // Marquer si nécessite redémarrage
+            // Mark if requires restart
             if (requiresRestart) {
                 if (!window.changesRequiringRestart) {
                     window.changesRequiringRestart = new Set();
@@ -417,7 +417,7 @@
         async function saveChanges(category, key, value, requiresRestart = false) {
             try {
                 if (requiresRestart) {
-                    // Sauvegarder dans le .env
+                    // Save dans le .env
                     const updates = {};
                     updates[key] = value;
                     
@@ -431,28 +431,28 @@
                     const result = await response.json();
                     
                     unsavedChanges.delete(`${category}.${key}`);
-                    showNotification('✓ Sauvegardé dans .env - Redémarrage requis', 'success');
+                    showNotification('✓ Saved in .env - Restart required', 'success');
                     
-                    // Afficher le bouton de redémarrage
+                    // Show restart button
                     const restartBtn = document.getElementById('restartBtn');
                     if (restartBtn) {
                         restartBtn.style.display = 'inline-block';
                     }
                 } else {
-                    // Sauvegarder en DB (comportement normal)
+                    // Save en DB (comPortement normal)
                     await api.put('/api/config', { category, key, value });
                     unsavedChanges.delete(`${category}.${key}`);
-                    showNotification('✓ Sauvegardé', 'success');
+                    showNotification('✓ Saved', 'success');
                 }
             } catch (error) {
                 console.error('Failed to save:', error);
-                showNotification('Erreur de sauvegarde', 'error');
+                showNotification('Error de sauvegarde', 'error');
             }
         }
 
         async function saveAll() {
             if (unsavedChanges.size === 0) {
-                showNotification('Aucun changement à sauvegarder', 'success');
+                showNotification('No changes to save', 'success');
                 return;
             }
 
@@ -460,7 +460,7 @@
             const envUpdatesByCategory = {};
             let hasEnvChanges = false;
             
-            // Séparer les changements DB vs .env
+            // Separate DB vs .env changes
             for (const changeKey of unsavedChanges) {
                 const [category, field] = changeKey.split('.');
                 const schema = configSchema[category]?.[field];
@@ -481,7 +481,7 @@
             }
 
             try {
-                // Sauvegarder les changements .env par catégorie
+                // Save .env changes by category
                 for (const [category, updates] of Object.entries(envUpdatesByCategory)) {
                     await fetch('/api/config/update-env', {
                         method: 'POST',
@@ -491,7 +491,7 @@
                     });
                 }
                 
-                // Sauvegarder les changements DB
+                // Save les changements DB
                 if (dbUpdates.length > 0) {
                     await api.post('/api/config/bulk', { updates: dbUpdates });
                 }
@@ -499,30 +499,30 @@
                 unsavedChanges.clear();
                 
                 if (hasEnvChanges) {
-                    showNotification(`✓ Fichier .env mis à jour - REDÉMARRAGE REQUIS`, 'success');
+                    showNotification(`✓ .env file updated - RESTART REQUIRED`, 'success');
                     const restartBtn = document.getElementById('restartBtn');
                     if (restartBtn) {
                         restartBtn.style.display = 'inline-block';
                     }
                 } else {
-                    showNotification(`✓ ${dbUpdates.length} paramètres sauvegardés`, 'success');
+                    showNotification(`✓ ${dbUpdates.length} settings saved`, 'success');
                 }
             } catch (error) {
                 console.error('Failed to save all:', error);
-                showNotification('Erreur de sauvegarde', 'error');
+                showNotification('Error de sauvegarde', 'error');
             }
         }
 
         async function restartApp() {
-            if (!confirm('Recharger la configuration maintenant ? Les nouvelles valeurs de la base de données seront appliquées.')) {
+            if (!confirm('Reload configuration now? New database values will be applied.')) {
                 return;
             }
             
             const restartBtn = document.getElementById('restartBtn');
             restartBtn.disabled = true;
-            restartBtn.textContent = 'Rechargement...';
+            restartBtn.textContent = 'ReLoading...';
             
-            showNotification('Rechargement de la configuration...', 'success');
+            showNotification('Reloading configuration...', 'success');
             
             try {
                 const response = await fetch('/api/system/restart', {
@@ -534,54 +534,54 @@
                 
                 if (result.success) {
                     if (result.dbConnected) {
-                        showNotification('✓ Configuration rechargée - Base de données reconnectée !', 'success');
+                        showNotification('✓ Configuration reloaded - Database reconnected!', 'success');
                         
                         // Masquer le bouton restart et l'alerte DB
                         restartBtn.style.display = 'none';
                         hideDatabaseAlert();
                         
-                        // Recharger la page après un court délai
+                        // Reload page after short delay
                         setTimeout(() => {
                             window.location.reload();
                         }, 1500);
                     } else {
-                        showNotification('⚠️ Configuration rechargée mais la DB reste inaccessible: ' + (result.error || 'Erreur inconnue'), 'error');
+                        showNotification('⚠️ Configuration reloaded but DB remains unreachable: ' + (result.error || 'Unknown error'), 'error');
                         restartBtn.disabled = false;
-                        restartBtn.textContent = 'Redémarrer';
+                        restartBtn.textContent = 'Restart';
                         
-                        // Vérifier à nouveau la connexion DB
+                        // Check DB connection again
                         setTimeout(checkDatabaseConnection, 1000);
                     }
                 } else {
-                    showNotification('Échec du rechargement: ' + (result.message || 'Erreur inconnue'), 'error');
+                    showNotification('Reload failed: ' + (result.message || 'Unknown error'), 'error');
                     restartBtn.disabled = false;
-                    restartBtn.textContent = 'Redémarrer';
+                    restartBtn.textContent = 'Restart';
                 }
             } catch (error) {
                 console.error('Restart error:', error);
-                showNotification('Erreur lors du rechargement de la configuration', 'error');
+                showNotification('Error reloading configuration', 'error');
                 restartBtn.disabled = false;
-                restartBtn.textContent = 'Redémarrer';
+                restartBtn.textContent = 'Restart';
             }
         }
 
         async function resetCategory(category) {
-            if (!confirm(`Réinitialiser tous les paramètres de ${getCategoryLabel(category)} ?`)) {
+            if (!confirm(`Reset all settings for ${getCategoryLabel(category)}?`)) {
                 return;
             }
 
             try {
                 await api.post('/api/config/reset', { category });
                 await loadConfig();
-                showNotification('✓ Réinitialisé', 'success');
+                showNotification('✓ Reset', 'success');
             } catch (error) {
                 console.error('Failed to reset:', error);
-                showNotification('Erreur', 'error');
+                showNotification('Error', 'error');
             }
         }
 
-        async function exportEnv() {
-            window.location.href = '/api/config/export';
+        async function exPortEnv() {
+            window.location.href = '/api/config/exPort';
         }
 
         function showNotification(message, type = 'success') {
@@ -611,60 +611,60 @@
 
         function getCategoryLabel(category) {
             const labels = {
-                database: 'Base de Données',
-                security: 'Sécurité & JWT',
+                database: 'Database',
+                security: 'Security & JWT',
                 acme: 'SSL / Let\'s Encrypt',
-                botProtection: 'Protection Bot / DDoS',
+                botProtection: 'Bot / DDoS Protection',
                 backends: 'Backends & Health Check',
-                alerts: 'Alertes',
-                ipSecurity: 'Sécurité IP',
-                metrics: 'Métriques'
+                alerts: 'Alerts',
+                ipSecurity: 'IP Security',
+                metrics: 'Metrics'
             };
             return labels[category] || category;
         }
 
         function getFieldLabel(key) {
             const labels = {
-                host: 'Hôte',
-                port: 'Port',
-                user: 'Utilisateur',
-                password: 'Mot de passe',
-                name: 'Nom de la base',
-                jwtSecret: 'Secret JWT',
-                cookieSecure: 'Cookie sécurisé (HTTPS)',
-                botSecret: 'Secret Bot Protection',
-                email: 'Email ACME',
-                localTlds: 'TLDs locaux',
-                enabled: 'Activé',
-                threshold: 'Seuil global (req/s)',
-                perIpLimit: 'Limite par IP (req/min)',
-                perIpLimitProtected: 'Limite domaines protégés (req/min)',
-                verifiedIpLimit: 'Limite IP vérifiées (req/min)',
-                burstLimit: 'Limite burst (req/10s)',
-                maxConnectionsPerIP: 'Connexions max par IP',
-                maxAttempts: 'Tentatives max challenge',
-                verificationDuration: 'Durée vérification',
-                challengeFirstVisit: 'Challenge 1ère visite',
-                healthCheckInterval: 'Intervalle health check',
-                failureThreshold: 'Seuil d\'échecs',
-                healthCheckTimeout: 'Timeout health check',
-                cooldown: 'Délai entre alertes',
-                autoBlockIps: 'Blocage auto IPs',
-                ipBytesThreshold: 'Seuil bytes par IP',
-                ipRequestsThreshold: 'Seuil requêtes par IP',
-                flushInterval: 'Intervalle flush métriques',
-                maxBufferSize: 'Taille max buffer'
+                host: 'Host',
+                Port: 'Port',
+                user: 'User',
+                password: 'Password',
+                name: 'Database Name',
+                jwtSecret: 'JWT Secret',
+                cookieSecure: 'Secure Cookie (HTTPS)',
+                botSecret: 'Bot Protection Secret',
+                email: 'ACME Email',
+                localTlds: 'Local TLDs',
+                enabled: 'Enabled',
+                threshold: 'Global Threshold (req/s)',
+                perIpLimit: 'Per IP Limit (req/min)',
+                perIpLimitProtected: 'Protected Domains Limit (req/min)',
+                verifiedIpLimit: 'Verified IP Limit (req/min)',
+                burstLimit: 'Burst Limit (req/10s)',
+                maxConnectionsPerIP: 'Max Connections per IP',
+                maxAttempts: 'Max Challenge Attempts',
+                verificationDuration: 'Verification Duration',
+                challengeFirstVisit: 'Challenge First Visit',
+                healthCheckInterval: 'Health Check Interval',
+                failureThreshold: 'Failure Threshold',
+                healthCheckTimeout: 'Health Check Timeout',
+                cooldown: 'Delay Between Alerts',
+                autoBlockIps: 'Auto Block IPs',
+                ipBytesThreshold: 'Bytes Threshold per IP',
+                ipRequestsThreshold: 'Requests Threshold per IP',
+                flushInterval: 'Metrics Flush Interval',
+                maxBufferSize: 'Max Buffer Size'
             };
             return labels[key] || key;
         }
 
         function getHelpText(key, schema) {
             const helps = {
-                jwtSecret: 'Au moins 32 caractères aléatoires',
-                perIpLimit: 'Limite pour IPs non vérifiées',
-                verifiedIpLimit: 'Limite plus élevée après challenge',
-                verificationDuration: 'Durée de validité après challenge réussi',
-                localTlds: 'Domaines locaux qui ne génèrent pas de certificat'
+                jwtSecret: 'At least 32 random characters',
+                perIpLimit: 'Limit for unverified IPs',
+                verifiedIpLimit: 'Higher limit after challenge',
+                verificationDuration: 'Validity duration after successful challenge',
+                localTlds: 'Local domains that do not generate certificates'
             };
             
             let text = helps[key] || '';
@@ -682,7 +682,7 @@
                 });
                 const data = await response.json();
                 
-                // Créer une fenêtre modale avec les valeurs
+                // Create a modal window with values
                 const modal = document.createElement('div');
                 modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
                 
@@ -690,11 +690,11 @@
                 content.style.cssText = 'background:#1a1a1a;color:#fff;padding:30px;border-radius:8px;max-width:900px;width:100%;max-height:80vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,0.5);';
                 content.innerHTML = `
                     <h2 style="margin-top:0;color:#fff;display:flex;align-items:center;gap:10px;">
-                        🔍 Valeurs Runtime Actuelles
+                        🔍 Current Runtime Values
                     </h2>
-                    <p style="color:#999;margin-bottom:20px;">Ces valeurs sont en cours d'utilisation par l'application</p>
+                    <p style="color:#999;margin-bottom:20px;">These values are currently used by the application</p>
                     <pre style="background:#0d0d0d;color:#0f0;padding:20px;border-radius:6px;overflow:auto;font-family:monospace;font-size:13px;line-height:1.6;border:1px solid #333;">${JSON.stringify(data.runtime, null, 2)}</pre>
-                    <button onclick="this.closest('div[style*=fixed]').remove()" class="btn" style="margin-top:20px;">Fermer</button>
+                    <button onclick="this.closest('div[style*=fixed]').remove()" class="btn" style="margin-top:20px;">Close</button>
                 `;
                 
                 modal.appendChild(content);
@@ -705,7 +705,7 @@
                 });
             } catch (error) {
                 console.error('Failed to get runtime values:', error);
-                showNotification('Erreur lors de la récupération des valeurs runtime', 'error');
+                showNotification('Error retrieving runtime values', 'error');
             }
         }
 

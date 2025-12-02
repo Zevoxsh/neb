@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="fr">
 
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewPort" content="width=device-width,initial-scale=1">
   <title>Nebula Console - Domain</title>
   <link rel="stylesheet" href="/public/styles.css">
   <script src="/public/js/theme.js"></script>
@@ -19,8 +19,8 @@
       <header class="topbar">
         <div class="page-heading">
           <p class="eyebrow">Domains</p>
-          <h1>Détails du domaine</h1>
-          <p class="muted">Modifier les paramètres de mapping et de protection du domaine.</p>
+          <h1>Domain Details</h1>
+          <p class="muted">Edit domain mapping and protection settings.</p>
         </div>
         <div class="topbar-actions">
           <a class="btn ghost" href="/domains.html">Retour</a>
@@ -32,7 +32,7 @@
             <input type="hidden" id="editDomainId" name="id">
             <div class="form-grid">
               <div class="form-field">
-                <label for="editDomainHostname">Nom d'hôte</label>
+                <label for="editDomainHostname">Hostname</label>
                 <input id="editDomainHostname" name="hostname" placeholder="app.example.com" required>
               </div>
               <div class="form-field">
@@ -42,28 +42,28 @@
               <div class="form-field">
                 <label for="editDomainBackendSelect">Backend</label>
                 <select id="editDomainBackendSelect" name="backendId" required>
-                  <option value="">Sélectionner</option>
+                  <option value="">Select</option>
                 </select>
               </div>
               <div class="form-field">
                 <label for="editDomainBotProtection">Protection CAPTCHA</label>
                 <select id="editDomainBotProtection" name="botProtection">
-                  <option value="unprotected">Non protégé (accès libre)</option>
-                  <option value="protected">Protégé (CAPTCHA obligatoire)</option>
+                  <option value="unprotected">Unprotected (free access)</option>
+                  <option value="protected">Protected (CAPTCHA required)</option>
                 </select>
-                <p class="form-hint">Contrôle si ce domaine nécessite une vérification humaine.</p>
+                <p class="form-hint">Controls if this domain requires human verification.</p>
               </div>
             </div>
             <div class="form-actions">
-              <button class="btn ghost" type="button" id="btnDeleteDomain">Supprimer</button>
-              <button class="btn primary" type="button" id="btnSaveDomain">Enregistrer</button>
+              <button class="btn ghost" type="button" id="btnDeleteDomain">Delete</button>
+              <button class="btn primary" type="button" id="btnSaveDomain">Save</button>
             </div>
           </form>
         </article>
 
         <article class="card">
           <header>
-            <p class="eyebrow">Sécurité</p>
+            <p class="eyebrow">Security</p>
             <h2>Certificat SSL/TLS</h2>
           </header>
           <section id="domainCertSection">
@@ -83,16 +83,16 @@
                 <textarea id="domainCertFullchain" class="mono" rows="8" placeholder="Collez le certificat complet ici..."></textarea>
               </div>
               <div class="form-field">
-                <label>Clé privée (privkey.pem)</label>
-                <textarea id="domainCertKey" class="mono" rows="8" placeholder="Collez la clé privée ici..."></textarea>
+                <label>Private Key (privkey.pem)</label>
+                <textarea id="domainCertKey" class="mono" rows="8" placeholder="Paste private key here..."></textarea>
               </div>
               <div class="form-actions">
-                <button class="btn primary" type="button" id="btnImportDomainCert">Importer le certificat</button>
+                <button class="btn primary" type="button" id="btnImPortDomainCert">ImPorter le certificat</button>
               </div>
             </div>
             <div id="domainCertEmpty" class="empty-state">
-              <p>Aucun certificat configuré pour ce domaine.</p>
-              <button class="btn primary" type="button" id="btnShowCertImport">Importer un certificat</button>
+              <p>No certificate configured for this domain.</p>
+              <button class="btn primary" type="button" id="btnShowCertImPort">ImPorter un certificat</button>
             </div>
           </section>
         </article>

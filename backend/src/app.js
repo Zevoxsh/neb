@@ -165,7 +165,7 @@ function createApp() {
     '/alerts': 'alerts.html'
   };
 
-  // Middleware pour bloquer l'accès à /install si déjà installé
+  // Middleware to block access to /install if already installed
   const blockInstallIfCompleted = (req, res, next) => {
     const fs = require('fs');
     const envPath = path.join(__dirname, '../../.env');
@@ -177,11 +177,11 @@ function createApp() {
                          envContent.includes('JWT_SECRET');
       
       if (isInstalled) {
-        // Installation déjà terminée, rediriger vers le dashboard
+        // Installation already completed, redirect to dashboard
         return res.redirect('/dashboard');
       }
     } catch (error) {
-      // .env n'existe pas, installation pas terminée
+      // .env doesn't exist, installation not completed
     }
     
     next();
@@ -200,7 +200,7 @@ function createApp() {
     }
   });
 
-  // Route spéciale pour /install avec protection
+  // Special route for /install with protection
   const installPath = path.join(__dirname, '..', '..', 'frontend', 'public', 'install.html');
   app.get('/install', blockInstallIfCompleted, (req, res) => res.sendFile(installPath));
   app.get('/install.html', blockInstallIfCompleted, (req, res) => res.redirect(301, '/install'));
