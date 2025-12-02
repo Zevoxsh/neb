@@ -41,6 +41,8 @@ if (!isInstalled) {
   console.log('🔧 Mode installation détecté...');
   process.env.JWT_SECRET = 'temporary_installation_secret_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   process.env.INSTALLATION_MODE = 'true'; // Désactiver les services qui nécessitent la DB
+  process.env.BOT_PROTECTION_ENABLED = 'false'; // Désactiver la protection bot en mode installation
+  process.env.DDOS_PROTECTION_ENABLED = 'false'; // Désactiver la protection DDoS en mode installation
 }
 
 // Start installation server (minimal setup without auth)

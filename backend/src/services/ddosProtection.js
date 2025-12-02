@@ -169,12 +169,12 @@ class DDoSProtectionService {
     const userAgent = headers['user-agent'] || '';
     if (this.isSuspiciousUserAgent(userAgent)) {
       logger.debug('Suspicious User-Agent detected', { ip, userAgent });
-      this.addSuspicionScore(ip, 5, 'suspicious_user_agent');
+      this.addSuspicionScore(ip, 1, 'suspicious_user_agent');
     }
 
     // Check for missing common headers (possible bot)
     if (!headers['accept'] || !headers['accept-language']) {
-      this.addSuspicionScore(ip, 3, 'missing_headers');
+      this.addSuspicionScore(ip, 1, 'missing_headers');
     }
 
     return { allowed: true };
@@ -208,9 +208,7 @@ class DDoSProtectionService {
 
     const suspiciousPatterns = [
       /bot|crawler|spider|scraper/i,
-      /curl|wget|python-requests|go-http-client/i,
-      /^.*$/,  // Empty or very generic
-      /^Mozilla\/5\.0$/  // Too generic
+      /curl|wget|python-requests|go-http-client/i
     ];
 
     // Known good bots (allow these)
@@ -244,7 +242,7 @@ class DDoSProtectionService {
     logger.debug('Added suspicion score', { ip, points, reason, totalScore: suspicious.score });
 
     // Progressive banning based on score
-    if (suspicious.score >= 100) {
+    if (suspicious.score >= 200) {
       const banIndex = Math.min(suspicious.banCount, this.banDurations.length - 1);
       const banDuration = this.banDurations[banIndex];
       suspicious.bannedUntil = Date.now() + banDuration;
