@@ -8,16 +8,18 @@
   <link rel="icon" type="image/png" href="/public/image.png">
 </head>
 <body>
-  <div id="header-placeholder"></div>
+  <div class="app-shell">
+    <div id="header-placeholder"></div>
 
-  <div class="container">
-    <div class="header-row">
-      <h1>📊 Monthly Reports</h1>
-      <div class="button-group">
-        <button id="generateReportBtn" class="btn">Generate Report</button>
-        <button id="refreshBtn" class="btn">🔄 Refresh</button>
-      </div>
-    </div>
+    <main class="app-main">
+      <div class="container">
+        <div class="header-row">
+          <h1>📊 Monthly Reports</h1>
+          <div class="button-group">
+            <button id="generateReportBtn" class="btn">Generate Report</button>
+            <button id="refreshBtn" class="btn">🔄 Refresh</button>
+          </div>
+        </div>
 
     <!-- Latest Report Summary -->
     <div id="latestReportCard" class="card" style="display: none;">
@@ -64,13 +66,12 @@
         <button id="nextBtn" class="btn">Next →</button>
       </div>
     </div>
-  </div>
 
-  <!-- Report Details Modal -->
-  <div id="reportModal" class="modal" style="display: none;">
-    <div class="modal-content" style="max-width: 900px;">
-      <span class="close" id="closeModal">&times;</span>
-      <h2 id="modalTitle">Report Details</h2>
+    <!-- Report Details Modal -->
+    <div id="reportModal" class="modal" style="display: none;">
+      <div class="modal-content" style="max-width: 900px;">
+        <span class="close" id="closeModal">&times;</span>
+        <h2 id="modalTitle">Report Details</h2>
       
       <div id="reportDetails">
         <!-- Domain Stats -->
@@ -201,8 +202,10 @@
       </div>
     </div>
   </div>
+  </main>
 
   <div id="footer-placeholder"></div>
+  </div>
 
   <script src="/public/js/include-partials.js"></script>
   <script src="/public/js/api.js"></script>
