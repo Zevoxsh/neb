@@ -18,31 +18,31 @@
           <div class="page-heading">
             <p class="eyebrow">Origines</p>
             <h1>Backends</h1>
-            <p class="muted">Declare les services internes a exposer via vos proxies.</p>
+            <p class="muted">Declare internal services to expose via your proxies.</p>
           </div>
           <div class="topbar-actions">
-            <button class="btn primary" data-panel-target="backendFormPanel" data-panel-focus="#backendName">Add un backend</button>
+            <button class="btn primary" data-panel-target="backendFormPanel" data-panel-focus="#backendName">Add backend</button>
           </div>
         </header>
         <section class="page-content">
           <article class="card table-card">
             <header>
               <p class="eyebrow">Inventaire</p>
-              <h2>Backends enregistres</h2>
+              <h2>Registered Backends</h2>
             </header>
             <section>
               <table id="backendsTable" class="data-table">
                 <thead>
                   <tr>
-                    <th>Nom</th>
-                    <th>Cible</th>
-                    <th>Protocole</th>
+                    <th>Name</th>
+                    <th>Target</th>
+                    <th>Protocol</th>
                     <th aria-label="actions"></th>
                   </tr>
                 </thead>
                 <tbody></tbody>
               </table>
-              <div id="backendsEmpty" class="empty-state" hidden>Aucun backend.</div>
+              <div id="backendsEmpty" class="empty-state" hidden>No backends.</div>
             </section>
           </article>
         </section>
@@ -52,7 +52,7 @@
             <div class="panel-head">
               <div>
                 <p class="eyebrow">Provisioning</p>
-                <h2 id="backendFormTitle">Add un backend</h2>
+                <h2 id="backendFormTitle">Add backend</h2>
               </div>
               <button class="btn ghost small" type="button" data-panel-close="backendFormPanel">Close</button>
             </div>
@@ -60,19 +60,19 @@
               <input type="hidden" name="id" id="backendId">
               <div class="form-grid">
                 <div class="form-field">
-                  <label for="backendName">Nom</label>
+                  <label for="backendName">Name</label>
                   <input id="backendName" name="name" placeholder="api-cluster" required>
                 </div>
                 <div class="form-field">
-                  <label for="backendHost">Hote cible</label>
+                  <label for="backendHost">Target Host</label>
                   <input id="backendHost" name="targetHost" placeholder="10.2.0.5" required>
                 </div>
                 <div class="form-field">
-                  <label for="backendPort">Port cible</label>
+                  <label for="backendPort">Target Port</label>
                   <input id="backendPort" type="number" name="targetPort" value="8080" required>
                 </div>
                 <div class="form-field">
-                  <label for="backendProtocol">Protocole</label>
+                  <label for="backendProtocol">Protocol</label>
                   <select id="backendProtocol" name="targetProtocol">
                     <option value="http">HTTP</option>
                     <option value="https">HTTPS</option>
@@ -82,7 +82,7 @@
               </div>
               <div class="form-actions">
                 <button class="btn ghost" type="button" data-panel-close="backendFormPanel">Cancel</button>
-                <button class="btn primary" type="submit">Creer le backend</button>
+                <button class="btn primary" type="submit">Create backend</button>
               </div>
             </form>
           </div>

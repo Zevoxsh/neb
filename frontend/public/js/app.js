@@ -915,14 +915,14 @@
     tbody.innerHTML = '';
     try {
       const rows = await fetchAndCache('/api/backends', 'backends');
-      toggleEmpty(empty, rows.length > 0, 'Aucun backend defini.');
+      toggleEmpty(empty, rows.length > 0, 'No backend defined.');
       if (!rows.length) return;
       rows.forEach((b) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${escapeHtml(b.name || '')}</strong></td>
-          <td class="mono">${escapeHtml(b.targetHost || b.target_host || '')}:${b.targetPort || b.target_Port}</td>
-          <td>${escapeHtml((b.targetProtocol || b.target_protocol || '').toUpperCase())}</td>
+          <td class="mono">${escapeHtml(b.target_host || '')}:${b.target_port || ''}</td>
+          <td>${escapeHtml((b.target_protocol || '').toUpperCase())}</td>
           <td>
             <a class="btn ghost small" href="/backend?id=${b.id}">Manage</a>
             <button class="btn ghost small delete-backend" data-id="${b.id}">Delete</button>
@@ -931,8 +931,8 @@
         tbody.appendChild(tr);
       });
     } catch (e) {
-      toggleEmpty(empty, false, 'Impossible de charger les backends.');
-      showToast('Loading des backends impossible', 'error');
+      toggleEmpty(empty, false, 'Unable to load backends.');
+      showToast('Backend loading failed', 'error');
     }
   }
 
