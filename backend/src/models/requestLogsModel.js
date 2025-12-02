@@ -24,8 +24,6 @@ async function getRecentRequestLogs({ limit = 500, minutes = 5 } = {}) {
     SELECT 
       client_ip,
       hostname,
-      method,
-      path,
       status_code,
       bytes_sent,
       bytes_received,
