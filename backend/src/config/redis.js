@@ -17,7 +17,7 @@ async function connectRedis() {
   const redisEnabled = process.env.REDIS_ENABLED !== 'false';
 
   if (!redisEnabled) {
-    console.log('[Redis] Redis is disabled via REDIS_ENABLED=false');
+    console.log('[Redis] Désactivé via REDIS_ENABLED=false');
     return null;
   }
 
@@ -25,49 +25,55 @@ async function connectRedis() {
     redisClient = createClient({
       url: redisUrl,
       socket: {
-        connectTimeout: 5000,
+        connectTimeout: 2000,
         reconnectStrategy: (retries) => {
-          if (retries > 10) {
-            console.error('[Redis] Max reconnection attempts reached');
-            return new Error('Max reconnection attempts reached');
+          // Arrêter après 3 tentatives pour éviter le spam
+          if (retries > 3) {
+            console.warn('[Redis] ⚠️  Redis non disponible - fonctionnement sans cache');
+            return false; // Stop reconnecting
           }
-          const delay = Math.min(retries * 100, 3000);
-          console.log(`[Redis] Reconnecting in ${delay}ms (attempt ${retries})`);
-          return delay;
+          return Math.min(retries * 100, 500);
         }
       }
     });
 
+    // Réduire les logs d'erreur
     redisClient.on('error', (err) => {
-      console.error('[Redis] Client error:', err);
+      if (err.code === 'ECONNREFUSED') {
+        // Ne logger qu'une fois
+        if (retries === 0) {
+          console.warn('[Redis] ⚠️  Non disponible - l\'application continuera sans Redis');
+        }
+      } else {
+        console.error('[Redis] Erreur:', err.message);
+      }
       isConnected = false;
     });
 
-    redisClient.on('connect', () => {
-      console.log('[Redis] Client connecting...');
+    let retries = 0;
+    redisClient.on('reconnecting', () => {
+      retries++;
+      isConnected = false;
     });
 
     redisClient.on('ready', () => {
-      console.log('[Redis] Client ready');
+      console.log('[Redis] ✅ Connecté');
       isConnected = true;
-    });
-
-    redisClient.on('reconnecting', () => {
-      console.log('[Redis] Client reconnecting...');
-      isConnected = false;
+      retries = 0;
     });
 
     redisClient.on('end', () => {
-      console.log('[Redis] Client connection closed');
       isConnected = false;
     });
 
     await redisClient.connect();
-    console.log('[Redis] Connected successfully to', redisUrl);
     return redisClient;
   } catch (error) {
-    console.error('[Redis] Failed to connect:', error.message);
-    console.warn('[Redis] Application will continue without Redis caching');
+    if (error.code === 'ECONNREFUSED') {
+      console.warn('[Redis] ⚠️  Non disponible - l\'application continuera sans cache Redis');
+    } else {
+      console.error('[Redis] Erreur de connexion:', error.message);
+    }
     redisClient = null;
     isConnected = false;
     return null;
