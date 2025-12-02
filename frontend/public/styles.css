@@ -567,7 +567,8 @@ label {
     gap: 16px;
   }
 
-  .stat-grid {
+  .stat-grid,
+  .stats-grid {
     grid-template-columns: 1fr;
   }
 
@@ -578,6 +579,53 @@ label {
   .data-table th,
   .data-table td {
     padding: 16px 20px;
+  }
+
+  /* Reports page mobile */
+  .modal-content {
+    width: 95%;
+    max-width: 95%;
+    margin: 20px auto;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .button-group {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .button-group .btn {
+    width: 100%;
+  }
+
+  .stats-section h3 {
+    font-size: 14px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  .pagination {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .pagination .btn {
+    width: 100%;
   }
 }
 
@@ -1201,9 +1249,15 @@ body[data-page="security"] .btn.primary {
 /* Reports page styles */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
   margin-top: 16px;
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .stat-item {
