@@ -3221,22 +3221,36 @@
       <div class="stat-item">
         <span class="stat-label">Total Domains</span>
         <span class="stat-value">${report.domains_total || 0}</span>
+        <span class="stat-meta">+${report.domains_added || 0} / -${report.domains_deleted || 0}</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">Total Proxies</span>
         <span class="stat-value">${report.proxies_total || 0}</span>
+        <span class="stat-meta">+${report.proxies_added || 0} / -${report.proxies_deleted || 0}</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">Total Backends</span>
         <span class="stat-value">${report.backends_total || 0}</span>
+        <span class="stat-meta">+${report.backends_added || 0} / -${report.backends_deleted || 0}</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">Total Requests</span>
         <span class="stat-value">${formatNumber(report.total_requests || 0)}</span>
+        <span class="stat-meta">${formatNumber(report.unique_ips || 0)} unique IPs</span>
       </div>
       <div class="stat-item">
-        <span class="stat-label">Total Alerts</span>
+        <span class="stat-label">Unique Domains</span>
+        <span class="stat-value">${formatNumber(report.unique_domains || 0)}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Security Alerts</span>
         <span class="stat-value">${formatNumber(report.total_alerts || 0)}</span>
+        <span class="stat-meta">${report.blocked_ips || 0} blocked IPs</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Active Certificates</span>
+        <span class="stat-value">${report.active_certificates || 0}</span>
+        <span class="stat-meta">${report.certificates_issued || 0} issued this month</span>
       </div>
     `;
   }
@@ -3277,7 +3291,13 @@
         year: 'numeric', 
         month: 'long' 
       });
-      const generatedStr = new Date(r.generated_at).toLocaleString();
+      const generatedStr = new Date(r.generated_at).toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
 
       const domainChange = (r.domains_added || 0) - (r.domains_deleted || 0);
       const proxyChange = (r.proxies_added || 0) - (r.proxies_deleted || 0);
@@ -3288,19 +3308,30 @@
           <td><strong>${monthStr}</strong></td>
           <td>${generatedStr}</td>
           <td>
-            ${r.domains_total || 0}
-            ${domainChange !== 0 ? `<span class="${domainChange > 0 ? 'green' : 'red'}">(${domainChange > 0 ? '+' : ''}${domainChange})</span>` : ''}
+            <strong>${r.domains_total || 0}</strong><br>
+            <small style="color: #22c55e;">+${r.domains_added || 0}</small> / 
+            <small style="color: #ef4444;">-${r.domains_deleted || 0}</small>
           </td>
           <td>
-            ${r.proxies_total || 0}
-            ${proxyChange !== 0 ? `<span class="${proxyChange > 0 ? 'green' : 'red'}">(${proxyChange > 0 ? '+' : ''}${proxyChange})</span>` : ''}
+            <strong>${r.proxies_total || 0}</strong><br>
+            <small style="color: #22c55e;">+${r.proxies_added || 0}</small> / 
+            <small style="color: #ef4444;">-${r.proxies_deleted || 0}</small>
           </td>
           <td>
-            ${r.backends_total || 0}
-            ${backendChange !== 0 ? `<span class="${backendChange > 0 ? 'green' : 'red'}">(${backendChange > 0 ? '+' : ''}${backendChange})</span>` : ''}
+            <strong>${r.backends_total || 0}</strong><br>
+            <small style="color: #22c55e;">+${r.backends_added || 0}</small> / 
+            <small style="color: #ef4444;">-${r.backends_deleted || 0}</small>
           </td>
-          <td>${formatNumber(r.total_requests || 0)}</td>
-          <td>${formatNumber(r.total_alerts || 0)}</td>
+          <td>
+            <strong>${formatNumber(r.total_requests || 0)}</strong><br>
+            <small>${formatNumber(r.unique_ips || 0)} IPs</small> • 
+            <small>${formatNumber(r.unique_domains || 0)} domains</small>
+          </td>
+          <td>
+            <strong>${formatNumber(r.total_alerts || 0)}</strong><br>
+            <small style="color: #ef4444;">${r.blocked_ips || 0} blocked</small> • 
+            <small style="color: #22c55e;">${r.trusted_ips || 0} trusted</small>
+          </td>
           <td>
             <button class="btn" onclick="viewReportDetails('${r.report_month}')">View Details</button>
           </td>
