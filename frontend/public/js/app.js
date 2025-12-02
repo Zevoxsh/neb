@@ -532,7 +532,7 @@
   async function loadLiveActivityStats() {
     try {
       // Load live request logs (last 60 seconds)
-      const logsRes = await window.api.requestJson('/api/metrics/logs?limit=500&offset=0');
+      const logsRes = await window.api.requestJson('/api/request-logs?limit=500&offset=0');
       if (logsRes && logsRes.status === 200 && logsRes.body && logsRes.body.logs) {
         const now = Date.now();
         const last60s = now - 60000;
