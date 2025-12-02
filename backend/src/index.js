@@ -188,6 +188,13 @@ async function initDbAndStart() {
 
       // Add columns to backends table
       await pool.query(`ALTER TABLE backends ADD COLUMN IF NOT EXISTS weight INT DEFAULT 1`);
+
+      // Migration: Add 2FA support
+      console.log('Running 2FA migration...');
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS twofa_enabled BOOLEAN DEFAULT FALSE`);
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS twofa_secret TEXT`);
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS twofa_backup_codes JSONB`);
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS twofa_verified_at TIMESTAMP`);
       await pool.query(`ALTER TABLE backends ADD COLUMN IF NOT EXISTS health_status VARCHAR(20) DEFAULT 'unknown'`);
       await pool.query(`ALTER TABLE backends ADD COLUMN IF NOT EXISTS last_health_check TIMESTAMP WITH TIME ZONE`);
       await pool.query(`ALTER TABLE backends ADD COLUMN IF NOT EXISTS consecutive_failures INT DEFAULT 0`);

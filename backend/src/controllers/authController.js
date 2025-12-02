@@ -40,9 +40,9 @@ function cookieOptions() {
 
 // Web login (redirects on success)
 const webLogin = asyncHandler(async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, twoFactorToken } = req.body;
 
-  logger.debug('Web login attempt', { username });
+  logger.debug('Web login attempt', { username, has2FA: !!twoFactorToken });
 
   if (!username || !password) {
     return res.status(400).send('Username and password required');
@@ -62,6 +62,38 @@ const webLogin = asyncHandler(async (req, res) => {
     return res.status(401).send('Invalid credentials');
   }
 
+  // Check if 2FA is enabled
+  const twoFactorAuth = require('../services/twoFactorAuth');
+  if (twoFactorAuth.isRequired(user)) {
+    if (!twoFactorToken) {
+      // Credentials valid, but need 2FA token
+      logger.debug('2FA required for login', { username });
+      return res.status(200).send(`
+        <html>
+          <body>
+            <h2>Two-Factor Authentication Required</h2>
+            <form method="POST" action="/login">
+              <input type="hidden" name="username" value="${username}">
+              <input type="hidden" name="password" value="${password}">
+              <label>Enter 2FA Code:</label>
+              <input type="text" name="twoFactorToken" pattern="[0-9]{6}" required autofocus>
+              <button type="submit">Verify</button>
+            </form>
+          </body>
+        </html>
+      `);
+    }
+
+    // Verify 2FA token
+    const isValid = twoFactorAuth.verifyToken(twoFactorToken, user.twofa_secret);
+    if (!isValid) {
+      logger.warn('Login failed - invalid 2FA token', { username });
+      return res.status(401).send('Invalid 2FA token');
+    }
+
+    logger.info('2FA verification successful', { username });
+  }
+
   const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, {
     expiresIn: '1h'
   });
@@ -74,9 +106,9 @@ const webLogin = asyncHandler(async (req, res) => {
 
 // API login (returns JSON)
 const apiLogin = asyncHandler(async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, twoFactorToken } = req.body;
 
-  logger.debug('API login attempt', { username });
+  logger.debug('API login attempt', { username, has2FA: !!twoFactorToken });
 
   if (!username || !password) {
     throw new AppError('Username and password required', 400);
@@ -94,6 +126,29 @@ const apiLogin = asyncHandler(async (req, res) => {
   if (!match) {
     logger.warn('API login failed - wrong password', { username });
     throw new AppError('Invalid credentials', 401);
+  }
+
+  // Check if 2FA is enabled
+  const twoFactorAuth = require('../services/twoFactorAuth');
+  if (twoFactorAuth.isRequired(user)) {
+    if (!twoFactorToken) {
+      // Credentials valid, but need 2FA token
+      logger.debug('2FA required for API login', { username });
+      return res.status(200).json({
+        ok: false,
+        requires2FA: true,
+        message: 'Two-factor authentication required'
+      });
+    }
+
+    // Verify 2FA token
+    const isValid = twoFactorAuth.verifyToken(twoFactorToken, user.twofa_secret);
+    if (!isValid) {
+      logger.warn('API login failed - invalid 2FA token', { username });
+      throw new AppError('Invalid 2FA token', 401);
+    }
+
+    logger.info('2FA verification successful', { username });
   }
 
   const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, {

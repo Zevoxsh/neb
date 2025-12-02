@@ -18,8 +18,12 @@ const botChallengeRoutes = require('./routes/botChallengeRoutes');
 const requestLogsRoutes = require('./routes/requestLogsRoutes');
 const alertRoutes = require('./routes/alertRoutes');
 const cacheRoutes = require('./routes/cacheRoutes');
+const websocketRoutes = require('./routes/websocketRoutes');
+const twoFactorRoutes = require('./routes/twoFactorRoutes');
+const ddosRoutes = require('./routes/ddosRoutes');
 const { botChallengeMiddleware } = require('./middleware/botChallenge');
 const { cacheMiddleware } = require('./middleware/cacheMiddleware');
+const { ddosProtectionMiddleware } = require('./middleware/ddosMiddleware');
 const debugRoutes = require('./routes/debugRoutes');
 
 function createApp() {
@@ -89,6 +93,9 @@ function createApp() {
   app.use(express.json());
   app.use(cookieParser());
 
+  // DDoS protection middleware (must be early in chain)
+  app.use(ddosProtectionMiddleware);
+
   // Bot protection middleware (must be before routes)
   app.use(botChallengeMiddleware);
 
@@ -121,6 +128,9 @@ function createApp() {
   app.use(requestLogsRoutes);
   app.use(alertRoutes);
   app.use(cacheRoutes);
+  app.use(websocketRoutes);
+  app.use(twoFactorRoutes);
+  app.use(ddosRoutes);
   app.use(debugRoutes);
 
   // Simple profile route
