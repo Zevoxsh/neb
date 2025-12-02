@@ -3176,7 +3176,6 @@
     }
 
     // Load initial data
-    loadLatestReport();
     loadReports();
   }
 
@@ -3257,7 +3256,7 @@
 
   async function loadReports() {
     const tbody = document.getElementById('reportsTableBody');
-    tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading...</td></tr>';
 
     try {
       const res = await window.api.requestJson(
@@ -3282,7 +3281,7 @@
     const tbody = document.getElementById('reportsTableBody');
 
     if (!reports || reports.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" class="empty">No reports found. Reports are generated on the 1st of each month.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">No reports found. Reports are generated on the 1st of each month.</td></tr>';
       return;
     }
 
@@ -3299,39 +3298,14 @@
         minute: '2-digit'
       });
 
-      const domainChange = (r.domains_added || 0) - (r.domains_deleted || 0);
-      const proxyChange = (r.proxies_added || 0) - (r.proxies_deleted || 0);
-      const backendChange = (r.backends_added || 0) - (r.backends_deleted || 0);
-
       return `
         <tr>
           <td><strong>${monthStr}</strong></td>
           <td>${generatedStr}</td>
-          <td>
-            <strong>${r.domains_total || 0}</strong><br>
-            <small style="color: #22c55e;">+${r.domains_added || 0}</small> / 
-            <small style="color: #ef4444;">-${r.domains_deleted || 0}</small>
-          </td>
-          <td>
-            <strong>${r.proxies_total || 0}</strong><br>
-            <small style="color: #22c55e;">+${r.proxies_added || 0}</small> / 
-            <small style="color: #ef4444;">-${r.proxies_deleted || 0}</small>
-          </td>
-          <td>
-            <strong>${r.backends_total || 0}</strong><br>
-            <small style="color: #22c55e;">+${r.backends_added || 0}</small> / 
-            <small style="color: #ef4444;">-${r.backends_deleted || 0}</small>
-          </td>
-          <td>
-            <strong>${formatNumber(r.total_requests || 0)}</strong><br>
-            <small>${formatNumber(r.unique_ips || 0)} IPs</small> • 
-            <small>${formatNumber(r.unique_domains || 0)} domains</small>
-          </td>
-          <td>
-            <strong>${formatNumber(r.total_alerts || 0)}</strong><br>
-            <small style="color: #ef4444;">${r.blocked_ips || 0} blocked</small> • 
-            <small style="color: #22c55e;">${r.trusted_ips || 0} trusted</small>
-          </td>
+          <td>${r.domains_total || 0}</td>
+          <td>${r.proxies_total || 0}</td>
+          <td>${r.backends_total || 0}</td>
+          <td>${r.certificates_active || 0}</td>
           <td>
             <button class="btn" onclick="viewReportDetails('${r.report_month}')">View Details</button>
           </td>
@@ -3494,7 +3468,6 @@
 
       if (res && res.status === 200) {
         showToast('✅ Monthly report generated successfully', 'success');
-        loadLatestReport();
         loadReports();
       } else {
         throw new Error(res.body?.error || 'Failed to generate report');
