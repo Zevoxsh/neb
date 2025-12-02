@@ -524,6 +524,5 @@ async function initDbAndStart() {
     }
   });
 }
-}
 
 initDbAndStart();
