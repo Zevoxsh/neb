@@ -59,14 +59,14 @@ router.post('/api/system/restart', authenticateToken, asyncHandler(async (req, r
     if (reloaded) {
         // Réinitialiser la connexion à la base de données
         const dbState = require('../utils/dbState');
-        const { recreatePool } = require('../config/db');
+        const pool = require('../config/db');
         
         try {
             // Recréer le pool avec les nouvelles variables d'environnement
             logger.info('Recreating database pool with new configuration');
-            const pool = await recreatePool();
+            await pool.recreatePool();
             
-            // Tester la nouvelle connexion
+            // Tester la nouvelle connexion avec le pool mis à jour
             const client = await pool.connect();
             await client.query('SELECT 1');
             client.release();

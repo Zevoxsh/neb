@@ -73,6 +73,30 @@ async function recreatePool() {
   return pool;
 }
 
-// Exporter le pool et la fonction de recréation
-module.exports = pool;
-module.exports.recreatePool = recreatePool;
+// Fonction pour obtenir le pool actuel
+function getPool() {
+  return pool;
+}
+
+// Proxy pour rediriger toutes les méthodes vers le pool actuel
+const poolProxy = new Proxy({}, {
+  get(target, prop) {
+    // Si c'est une de nos fonctions spéciales
+    if (prop === 'recreatePool') return recreatePool;
+    if (prop === 'getPool') return getPool;
+    
+    // Sinon, rediriger vers le pool actuel
+    const currentPool = pool;
+    const value = currentPool[prop];
+    
+    // Si c'est une fonction, la binder au pool actuel
+    if (typeof value === 'function') {
+      return value.bind(currentPool);
+    }
+    
+    return value;
+  }
+});
+
+// Exporter le proxy au lieu du pool directement
+module.exports = poolProxy;
