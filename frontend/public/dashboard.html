@@ -62,6 +62,23 @@
               <button id="btnView24h" class="chip" type="button">24 h</button>
             </div>
           </div>
+          <div id="live-metrics" style="display: flex; gap: 24px; padding: 16px 24px; border-bottom: 1px solid var(--border); font-size: 13px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="width: 12px; height: 12px; background: #3b82f6; border-radius: 50%;"></span>
+              <span style="color: var(--text-muted);">Incoming:</span>
+              <span id="live-traffic-in" style="color: var(--text-main); font-weight: 600; font-family: var(--font-mono);">0 B/s</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="width: 12px; height: 12px; background: #a855f7; border-radius: 50%;"></span>
+              <span style="color: var(--text-muted);">Outgoing:</span>
+              <span id="live-traffic-out" style="color: var(--text-main); font-weight: 600; font-family: var(--font-mono);">0 B/s</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="width: 12px; height: 12px; background: #22c55e; border-radius: 50%;"></span>
+              <span style="color: var(--text-muted);">Requests:</span>
+              <span id="live-requests" style="color: var(--text-main); font-weight: 600; font-family: var(--font-mono);">0 req/s</span>
+            </div>
+          </div>
           <div id="chartWrapper" class="chart-shell">
             <canvas id="trafficChart"></canvas>
             <div id="chartPlaceholder" class="chart-placeholder">

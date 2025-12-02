@@ -282,7 +282,44 @@
               }
             },
             tooltip: {
-              enabled: false
+              enabled: true,
+              mode: 'index',
+              intersect: false,
+              backgroundColor: 'rgba(10, 10, 10, 0.95)',
+              titleColor: '#ffffff',
+              bodyColor: '#ffffff',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              borderWidth: 1,
+              padding: 12,
+              displayColors: true,
+              titleFont: {
+                size: 13,
+                weight: 'bold'
+              },
+              bodyFont: {
+                size: 12
+              },
+              callbacks: {
+                title: function(context) {
+                  return context[0].label || '';
+                },
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  if (context.parsed.y !== null) {
+                    if (context.datasetIndex === 2) {
+                      // Requests/s
+                      label += formatNumber(context.parsed.y) + ' req/s';
+                    } else {
+                      // Traffic
+                      label += formatBytes(context.parsed.y) + '/s';
+                    }
+                  }
+                  return label;
+                }
+              }
             }
           },
           scales: {
@@ -426,6 +463,14 @@
     stats.rps.textContent = `${formatNumber(rpsValue >= 100 ? Math.round(rpsValue) : Number(rpsValue.toFixed(1)))} /s`;
     stats.trafficIn.textContent = `${formatBytes(inValue)}/s`;
     stats.trafficOut.textContent = `${formatBytes(outValue)}/s`;
+    
+    // Update live metrics display
+    const liveTrafficIn = document.getElementById('live-traffic-in');
+    const liveTrafficOut = document.getElementById('live-traffic-out');
+    const liveRequests = document.getElementById('live-requests');
+    if (liveTrafficIn) liveTrafficIn.textContent = `${formatBytes(inValue)}/s`;
+    if (liveTrafficOut) liveTrafficOut.textContent = `${formatBytes(outValue)}/s`;
+    if (liveRequests) liveRequests.textContent = `${formatNumber(rpsValue >= 100 ? Math.round(rpsValue) : Number(rpsValue.toFixed(1)))} req/s`;
     
     // Update Chart.js - always update, even with empty data
     if (dashboardState.chart) {
