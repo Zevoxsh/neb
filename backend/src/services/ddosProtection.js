@@ -19,20 +19,20 @@ class DDoSProtectionService {
 
     // HTTP flood detection
     this.httpFloodLimiter = new RateLimiter(
-      parseInt(process.env.DDOS_HTTP_REQUESTS_PER_MINUTE) || 120,
+      parseInt(process.env.DDOS_HTTP_REQUESTS_PER_MINUTE) || 600,
       60000
     );
 
     // Connection limits
-    this.maxConnectionsPerIP = parseInt(process.env.DDOS_MAX_CONNECTIONS_PER_IP) || 50;
-    this.maxHalfOpenConnections = parseInt(process.env.DDOS_MAX_HALF_OPEN) || 10;
+    this.maxConnectionsPerIP = parseInt(process.env.DDOS_MAX_CONNECTIONS_PER_IP) || 200;
+    this.maxHalfOpenConnections = parseInt(process.env.DDOS_MAX_HALF_OPEN) || 50;
 
     // Slowloris protection (tracked elsewhere via timeouts)
     this.slowRequestTimeout = parseInt(process.env.DDOS_SLOW_REQUEST_TIMEOUT_MS) || 30000;
 
     // Pattern detection thresholds
     this.patternDetectionWindow = 60000; // 1 minute
-    this.suspiciousPatternThreshold = 50; // Requests to same path
+    this.suspiciousPatternThreshold = 200; // Requests to same path
 
     // Ban durations (progressive)
     this.banDurations = [
@@ -158,10 +158,10 @@ class DDoSProtectionService {
         return { allowed: false, reason: 'http_flood_detected' };
       }
 
-      // Request burst detection
-      if (recentRequests.length > 100) {
+      // Request burst detection - only warn on extreme bursts
+      if (recentRequests.length > 500) {
         logger.warn('Request burst detected', { ip, count: recentRequests.length });
-        this.addSuspicionScore(ip, 15, 'request_burst');
+        this.addSuspicionScore(ip, 5, 'request_burst');
       }
     }
 
@@ -197,7 +197,7 @@ class DDoSProtectionService {
 
     // Keep only recent data (last minute)
     pattern.timestamps = pattern.timestamps.filter(t => now - t < this.patternDetectionWindow);
-    pattern.paths = pattern.paths.slice(-100); // Keep last 100 paths
+    pattern.paths = pattern.paths.slice(-500); // Keep last 500 paths
   }
 
   /**

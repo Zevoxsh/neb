@@ -10,6 +10,11 @@ const logger = createLogger('DDoSMiddleware');
  */
 
 function ddosProtectionMiddleware(req, res, next) {
+  // Skip DDoS protection for authenticated users
+  if (req.cookies?.token) {
+    return next();
+  }
+
   // Extract real IP
   const ip = req.headers['cf-connecting-ip'] ||
              req.headers['x-real-ip'] ||
