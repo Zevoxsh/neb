@@ -1023,7 +1023,7 @@
         let protectionText = '';
         if (botProtection === 'protected') {
           protectionBadge = 'warning';
-          protectionText = '🛡️ Protected';
+          protectionText = ' Protected';
         } else {
           protectionBadge = 'success';
           protectionText = '✓ Open';

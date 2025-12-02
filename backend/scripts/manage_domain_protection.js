@@ -20,8 +20,8 @@ async function listDomains() {
     
     result.rows.forEach(d => {
         const protection = (d.bot_protection || 'default').padEnd(13);
-        const emoji = d.bot_protection === 'protected' ? '🛡️' : 
-                     d.bot_protection === 'unprotected' ? '✅' : '⚙️';
+        const emoji = d.bot_protection === 'protected' ? '' : 
+                     d.bot_protection === 'unprotected' ? '' : '';
         console.log(`${emoji} ${d.hostname.padEnd(28)} | ${protection}`);
     });
     

@@ -44,8 +44,8 @@ async function setVaultUnprotected() {
         console.log('\n📋 Domaines paxcia.net:');
         paxciaDomains.rows.forEach(d => {
             const protection = d.bot_protection || 'default';
-            const emoji = protection === 'protected' ? '🛡️' : 
-                         protection === 'unprotected' ? '✅' : '⚙️';
+            const emoji = protection === 'protected' ? '' : 
+                         protection === 'unprotected' ? '' : '';
             console.log(`${emoji} ${d.hostname}: ${protection}`);
         });
         
