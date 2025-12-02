@@ -149,6 +149,7 @@
                 <div class="topbar-actions">
                     <button onclick="exportEnv()" class="btn ghost">📥 Exporter .env</button>
                     <button onclick="saveAll()" class="btn">💾 Sauvegarder Tout</button>
+                    <button onclick="restartApp()" class="btn ghost" id="restartBtn" style="display: none;">🔄 Redémarrer</button>
                 </div>
             </header>
             
@@ -318,7 +319,7 @@
             if (category === 'database') {
                 headerMessage = `
                     <div class="alert alert-info" style="margin-bottom: 20px;">
-                        ℹ️ Ces paramètres sont en lecture seule. Ils proviennent du fichier <code>.env</code> et nécessitent un redémarrage de l'application pour être modifiés.
+                        ℹ️ Ces paramètres modifient le fichier <code>.env</code>. Un redémarrage de l'application sera nécessaire après la sauvegarde.
                     </div>
                 `;
             }
@@ -327,15 +328,13 @@
                 const value = configData[category][key];
                 const fieldId = `${category}.${key}`;
                 const required = schema.required ? '*' : '';
-                const readonly = schema.readonly ? 'readonly disabled' : '';
 
                 let inputHtml = '';
                 if (schema.type === 'boolean') {
                     inputHtml = `
                         <label style="display: flex; align-items: center; cursor: pointer;">
                             <input type="checkbox" id="${fieldId}" ${value ? 'checked' : ''}
-                                   ${schema.readonly ? 'disabled' : ''}
-                                   onchange="markChanged('${category}', '${key}', this.checked)">
+                                   onchange="markChanged('${category}', '${key}', this.checked, ${schema.requiresRestart || false})">
                             <span>${getFieldLabel(key)}</span>
                         </label>
                     `;
@@ -343,36 +342,32 @@
                     inputHtml = `
                         <label>${getFieldLabel(key)}${required}</label>
                         <input type="password" id="${fieldId}" value="${value || ''}" 
-                               ${readonly}
                                placeholder="${schema.default}"
-                               onchange="markChanged('${category}', '${key}', this.value)">
+                               onchange="markChanged('${category}', '${key}', this.value, ${schema.requiresRestart || false})">
                     `;
                 } else if (schema.type === 'number') {
                     const unit = schema.unit ? ` ${schema.unit}` : '';
                     inputHtml = `
                         <label>${getFieldLabel(key)}${required}</label>
                         <input type="number" id="${fieldId}" value="${value || schema.default}"
-                               ${readonly}
                                min="${schema.min || 0}" max="${schema.max || 999999}"
-                               onchange="markChanged('${category}', '${key}', Number(this.value))"
+                               onchange="markChanged('${category}', '${key}', Number(this.value), ${schema.requiresRestart || false})"
                                placeholder="${schema.default}${unit}">
                     `;
                 } else if (schema.type === 'array') {
                     inputHtml = `
                         <label>${getFieldLabel(key)}${required}</label>
                         <input type="text" id="${fieldId}" 
-                               ${readonly}
                                value="${Array.isArray(value) ? value.join(', ') : ''}"
                                placeholder="Valeurs séparées par des virgules"
-                               onchange="markChanged('${category}', '${key}', this.value.split(',').map(v => v.trim()))">
+                               onchange="markChanged('${category}', '${key}', this.value.split(',').map(v => v.trim()), ${schema.requiresRestart || false})">
                     `;
                 } else {
                     inputHtml = `
                         <label>${getFieldLabel(key)}${required}</label>
                         <input type="text" id="${fieldId}" value="${value || ''}" 
-                               ${readonly}
                                placeholder="${schema.default}"
-                               onchange="markChanged('${category}', '${key}', this.value)">
+                               onchange="markChanged('${category}', '${key}', this.value, ${schema.requiresRestart || false})">
                     `;
                 }
 
@@ -399,21 +394,47 @@
             document.getElementById(`category-${category}`).classList.add('active');
         }
 
-        function markChanged(category, key, value) {
+        function markChanged(category, key, value, requiresRestart = false) {
             configData[category][key] = value;
-            unsavedChanges.add(`${category}.${key}`);
+            const changeKey = `${category}.${key}`;
+            unsavedChanges.add(changeKey);
+            
+            // Marquer si nécessite redémarrage
+            if (requiresRestart) {
+                if (!window.changesRequiringRestart) {
+                    window.changesRequiringRestart = new Set();
+                }
+                window.changesRequiringRestart.add(changeKey);
+            }
             
             clearTimeout(window.autoSaveTimer);
             window.autoSaveTimer = setTimeout(() => {
-                saveChanges(category, key, value);
+                saveChanges(category, key, value, requiresRestart);
             }, 1000);
         }
 
-        async function saveChanges(category, key, value) {
+        async function saveChanges(category, key, value, requiresRestart = false) {
             try {
-                await api.put('/api/config', { category, key, value });
-                unsavedChanges.delete(`${category}.${key}`);
-                showNotification('✓ Sauvegardé', 'success');
+                if (requiresRestart) {
+                    // Sauvegarder dans le .env
+                    const updates = {};
+                    updates[key] = value;
+                    
+                    await fetch('/api/config/update-env', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ category, updates })
+                    });
+                    
+                    unsavedChanges.delete(`${category}.${key}`);
+                    showNotification('✓ Sauvegardé dans .env - Redémarrage requis', 'success');
+                } else {
+                    // Sauvegarder en DB (comportement normal)
+                    await api.put('/api/config', { category, key, value });
+                    unsavedChanges.delete(`${category}.${key}`);
+                    showNotification('✓ Sauvegardé', 'success');
+                }
             } catch (error) {
                 console.error('Failed to save:', error);
                 showNotification('Erreur de sauvegarde', 'error');
@@ -426,22 +447,79 @@
                 return;
             }
 
-            const updates = Array.from(unsavedChanges).map(key => {
-                const [category, field] = key.split('.');
-                return {
-                    category,
-                    key: field,
-                    value: configData[category][field]
-                };
-            });
+            const dbUpdates = [];
+            const envUpdatesByCategory = {};
+            let hasEnvChanges = false;
+            
+            // Séparer les changements DB vs .env
+            for (const changeKey of unsavedChanges) {
+                const [category, field] = changeKey.split('.');
+                const schema = configSchema[category]?.[field];
+                
+                if (schema?.requiresRestart) {
+                    if (!envUpdatesByCategory[category]) {
+                        envUpdatesByCategory[category] = {};
+                    }
+                    envUpdatesByCategory[category][field] = configData[category][field];
+                    hasEnvChanges = true;
+                } else {
+                    dbUpdates.push({
+                        category,
+                        key: field,
+                        value: configData[category][field]
+                    });
+                }
+            }
 
             try {
-                await api.post('/api/config/bulk', { updates });
+                // Sauvegarder les changements .env par catégorie
+                for (const [category, updates] of Object.entries(envUpdatesByCategory)) {
+                    await fetch('/api/config/update-env', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ category, updates })
+                    });
+                }
+                
+                // Sauvegarder les changements DB
+                if (dbUpdates.length > 0) {
+                    await api.post('/api/config/bulk', { updates: dbUpdates });
+                }
+                
                 unsavedChanges.clear();
-                showNotification(`✓ ${updates.length} paramètres sauvegardés`, 'success');
+                
+                if (hasEnvChanges) {
+                    showNotification(`✓ Fichier .env mis à jour - REDÉMARRAGE REQUIS`, 'success');
+                    document.getElementById('restartBtn').style.display = 'block';
+                } else {
+                    showNotification(`✓ ${dbUpdates.length} paramètres sauvegardés`, 'success');
+                }
             } catch (error) {
                 console.error('Failed to save all:', error);
                 showNotification('Erreur de sauvegarde', 'error');
+            }
+        }
+
+        async function restartApp() {
+            if (!confirm('Redémarrer l\'application maintenant ? Cela peut prendre quelques secondes.')) {
+                return;
+            }
+            
+            showNotification('Redémarrage en cours...', 'success');
+            
+            try {
+                await fetch('/api/system/restart', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                // Attendre quelques secondes puis recharger
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
+            } catch (error) {
+                showNotification('Veuillez redémarrer manuellement l\'application', 'error');
             }
         }
 

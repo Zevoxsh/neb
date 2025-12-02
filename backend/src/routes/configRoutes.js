@@ -9,6 +9,9 @@ router.get('/api/config', authenticateToken, configController.getAllConfig);
 // Tester la connexion à la base de données
 router.get('/api/config/test-db', authenticateToken, configController.testDatabaseConnection);
 
+// Mettre à jour le fichier .env
+router.post('/api/config/update-env', authenticateToken, configController.updateEnvFile);
+
 // Mettre à jour un paramètre
 router.put('/api/config', authenticateToken, configController.updateConfig);
 

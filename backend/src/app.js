@@ -14,6 +14,7 @@ const metricsRoutes = require('./routes/metricsRoutes');
 const certRoutes = require('./routes/certRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const configRoutes = require('./routes/configRoutes');
+const systemRoutes = require('./routes/systemRoutes');
 const securityRoutes = require('./routes/securityRoutes');
 const backupRoutes = require('./routes/backupRoutes');
 const botChallengeRoutes = require('./routes/botChallengeRoutes');
@@ -126,6 +127,7 @@ function createApp() {
   app.use(certRoutes);
   app.use(settingsRoutes);
   app.use(configRoutes);
+  app.use(systemRoutes);
   app.use(securityRoutes);
   app.use(backupRoutes);
   app.use(botChallengeRoutes);

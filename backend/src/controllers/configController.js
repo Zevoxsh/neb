@@ -14,13 +14,13 @@ const logger = createLogger('ConfigController');
 
 // Définition de tous les paramètres configurables
 const CONFIG_SCHEMA = {
-    // Base de données (lecture seule - modifiable uniquement via .env)
+    // Base de données (modifiable via .env)
     database: {
-        host: { type: 'string', default: 'localhost', env: 'DB_HOST', category: 'Database', readonly: true },
-        port: { type: 'number', default: 5432, env: 'DB_PORT', category: 'Database', readonly: true },
-        user: { type: 'string', default: 'postgres', env: 'DB_USER', category: 'Database', readonly: true },
-        password: { type: 'password', default: '', env: 'DB_PASSWORD', category: 'Database', readonly: true },
-        name: { type: 'string', default: 'nebuladb', env: 'DB_NAME', category: 'Database', readonly: true }
+        host: { type: 'string', default: 'localhost', env: 'DB_HOST', category: 'Database', requiresRestart: true },
+        port: { type: 'number', default: 5432, env: 'DB_PORT', category: 'Database', requiresRestart: true },
+        user: { type: 'string', default: 'postgres', env: 'DB_USER', category: 'Database', requiresRestart: true },
+        password: { type: 'password', default: '', env: 'DB_PASSWORD', category: 'Database', requiresRestart: true },
+        name: { type: 'string', default: 'nebuladb', env: 'DB_NAME', category: 'Database', requiresRestart: true }
     },
     
     // Sécurité & JWT
@@ -118,6 +118,103 @@ const testDatabaseConnection = asyncHandler(async (req, res) => {
             error: error.message,
             details: error.code || 'UNKNOWN_ERROR'
         });
+    }
+});
+
+// Mettre à jour le fichier .env
+const updateEnvFile = asyncHandler(async (req, res) => {
+    const fs = require('fs').promises;
+    const path = require('path');
+    const { category, updates } = req.body; // updates = { key: value, ... }
+    
+    if (!updates || typeof updates !== 'object') {
+        throw new AppError('Updates object required', 400);
+    }
+    
+    try {
+        const envPath = path.join(process.cwd(), '.env');
+        let envContent = '';
+        
+        // Lire le fichier .env actuel
+        try {
+            envContent = await fs.readFile(envPath, 'utf8');
+        } catch (error) {
+            // Si le fichier n'existe pas, on part d'un fichier vide
+            envContent = '';
+        }
+        
+        // Parser le fichier .env en lignes
+        const lines = envContent.split('\n');
+        const envMap = new Map();
+        const comments = [];
+        
+        // Construire une map des variables existantes
+        lines.forEach((line, index) => {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('#') || trimmed === '') {
+                comments.push({ index, line });
+            } else {
+                const match = line.match(/^([^=]+)=(.*)$/);
+                if (match) {
+                    const [, key, value] = match;
+                    envMap.set(key.trim(), value);
+                }
+            }
+        });
+        
+        // Appliquer les mises à jour
+        for (const [key, value] of Object.entries(updates)) {
+            const schema = CONFIG_SCHEMA[category]?.[key];
+            if (!schema || !schema.env) continue;
+            
+            const envKey = schema.env;
+            envMap.set(envKey, String(value));
+        }
+        
+        // Reconstruire le fichier .env
+        let newContent = `# Configuration Nebula Proxy\n`;
+        newContent += `# Updated: ${new Date().toISOString()}\n\n`;
+        
+        // Grouper par catégorie
+        const categoryKeys = {
+            'Database': ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'],
+            'Security': ['JWT_SECRET', 'COOKIE_SECURE', 'BOT_SECRET'],
+            'ACME': ['ACME_EMAIL'],
+            'Server': ['PORT', 'NODE_ENV']
+        };
+        
+        for (const [cat, keys] of Object.entries(categoryKeys)) {
+            newContent += `# ${cat}\n`;
+            for (const key of keys) {
+                if (envMap.has(key)) {
+                    newContent += `${key}=${envMap.get(key)}\n`;
+                    envMap.delete(key);
+                }
+            }
+            newContent += '\n';
+        }
+        
+        // Ajouter les clés restantes
+        if (envMap.size > 0) {
+            newContent += `# Other\n`;
+            for (const [key, value] of envMap.entries()) {
+                newContent += `${key}=${value}\n`;
+            }
+        }
+        
+        // Sauvegarder le fichier
+        await fs.writeFile(envPath, newContent, 'utf8');
+        
+        logger.info('Environment file updated', { category, keys: Object.keys(updates) });
+        
+        res.json({ 
+            success: true, 
+            message: 'Fichier .env mis à jour. Redémarrage requis pour appliquer les changements.',
+            requiresRestart: true
+        });
+    } catch (error) {
+        logger.error('Failed to update .env file', { error: error.message });
+        throw new AppError('Erreur lors de la mise à jour du fichier .env: ' + error.message, 500);
     }
 });
 
@@ -386,6 +483,7 @@ const exportEnv = asyncHandler(async (req, res) => {
 module.exports = {
     getAllConfig,
     testDatabaseConnection,
+    updateEnvFile,
     updateConfig,
     updateBulkConfig,
     resetToDefaults,
