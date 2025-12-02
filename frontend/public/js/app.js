@@ -2227,6 +2227,21 @@
             <td><span style="color: #22c55e; font-weight: 600;">${formatNumber(log.request_count)}</span></td>
             <td style="color: rgba(255,255,255,0.6); font-size: 13px;">${formatDate(firstSeen)}</td>
             <td style="color: rgba(255,255,255,0.6); font-size: 13px;">${formatDate(lastSeen)}</td>
+            <td style="text-align: center;">
+              <div class="dropdown" style="position: relative; display: inline-block;">
+                <button class="btn-icon" onclick="toggleDropdown(event, '${escapeHtml(log.client_ip).replace(/'/g, "\\'")}')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="1" fill="currentColor"/>
+                    <circle cx="12" cy="5" r="1" fill="currentColor"/>
+                    <circle cx="12" cy="19" r="1" fill="currentColor"/>
+                  </svg>
+                </button>
+                <div class="dropdown-menu" id="dropdown-${escapeHtml(log.client_ip)}" style="display: none;">
+                  <button onclick="addToWhitelist('${escapeHtml(log.client_ip).replace(/'/g, "\\'")}')">✅ Add to Whitelist</button>
+                  <button onclick="addToBlacklist('${escapeHtml(log.client_ip).replace(/'/g, "\\'")}')">🚫 Block IP</button>
+                </div>
+              </div>
+            </td>
           </tr>
         `;
       }).join('');
@@ -2467,9 +2482,10 @@
         const createdAt = new Date(alert.created_at);
         const severityIcon = getSeverityIcon(alert.severity);
         const typeLabel = getAlertTypeLabel(alert.alert_type);
+        const ip = escapeHtml(alert.ip_address || '');
         
         return `
-          <div class="alert-item ${alert.severity}" data-alert-ip="${escapeHtml(alert.ip_address || '')}">
+          <div class="alert-item ${alert.severity}" data-alert-ip="${ip}">
             <div class="alert-header">
               <div class="alert-icon">${severityIcon}</div>
               <div class="alert-content">
@@ -2479,9 +2495,26 @@
                   <div class="alert-meta-item">
                     <span class="severity-badge severity-${alert.severity}">${alert.severity}</span>
                   </div>
-                  ${alert.ip_address ? `<div class="alert-meta-item alert-ip-container"><span class="flag-placeholder">⏳</span> ${escapeHtml(alert.ip_address)}</div>` : ''}
+                  ${alert.ip_address ? `<div class="alert-meta-item alert-ip-container"><span class="flag-placeholder">⏳</span> ${ip}</div>` : ''}
                   ${alert.hostname ? `<div class="alert-meta-item">🌐 ${escapeHtml(alert.hostname)}</div>` : ''}
                   <div class="alert-meta-item">🕒 ${formatDate(createdAt)}</div>
+                  ${alert.ip_address ? `
+                  <div class="alert-meta-item" style="margin-left: auto;">
+                    <div class="dropdown">
+                      <button class="btn-icon" onclick="toggleDropdown(event, '${ip}')" title="IP Actions">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                          <circle cx="8" cy="3" r="1.5"/>
+                          <circle cx="8" cy="8" r="1.5"/>
+                          <circle cx="8" cy="13" r="1.5"/>
+                        </svg>
+                      </button>
+                      <div class="dropdown-menu" id="dropdown-${ip}" style="display: none;">
+                        <button onclick="addToWhitelist('${ip}')">✅ Add to Whitelist</button>
+                        <button onclick="addToBlacklist('${ip}')">🚫 Block IP</button>
+                      </div>
+                    </div>
+                  </div>
+                  ` : ''}
                 </div>
               </div>
             </div>
@@ -2818,6 +2851,94 @@
       setTimeout(() => toast.remove(), 300);
     }, 3000);
   }
+
+  // ========== Global Dropdown Functions ==========
+  window.toggleDropdown = function(event, ip) {
+    event.stopPropagation();
+    const dropdownId = `dropdown-${ip}`;
+    const menu = document.getElementById(dropdownId);
+    
+    if (!menu) return;
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.dropdown-menu').forEach(m => {
+      if (m.id !== dropdownId) m.style.display = 'none';
+    });
+    
+    // Toggle this dropdown
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  };
+
+  window.addToWhitelist = async function(ip) {
+    try {
+      const response = await window.api.requestJson('/api/security/trusted-ips', {
+        method: 'POST',
+        body: {
+          ip: ip,
+          label: `Added from logs on ${new Date().toLocaleString()}`
+        }
+      });
+
+      if (response && (response.status === 200 || response.status === 201)) {
+        showToast(`✅ ${ip} added to whitelist`, 'success');
+        
+        // Close dropdown
+        const menu = document.getElementById(`dropdown-${ip}`);
+        if (menu) menu.style.display = 'none';
+        
+        // Refresh IP Management tables if on that page
+        const currentPage = window.location.hash.replace('#', '') || 'dashboard';
+        if (currentPage === 'ip-management') {
+          if (typeof loadTrustedIps === 'function') loadTrustedIps();
+        }
+      } else {
+        throw new Error(response.message || 'Failed to add IP to whitelist');
+      }
+    } catch (err) {
+      console.error('Error adding to whitelist:', err);
+      showToast('❌ Error: ' + err.message, 'error');
+    }
+  };
+
+  window.addToBlacklist = async function(ip) {
+    try {
+      const response = await window.api.requestJson('/api/security/blocked-ips', {
+        method: 'POST',
+        body: {
+          ip: ip,
+          reason: `Blocked from logs on ${new Date().toLocaleString()}`
+        }
+      });
+
+      if (response && (response.status === 200 || response.status === 201)) {
+        showToast(`🚫 ${ip} added to blocklist`, 'success');
+        
+        // Close dropdown
+        const menu = document.getElementById(`dropdown-${ip}`);
+        if (menu) menu.style.display = 'none';
+        
+        // Refresh IP Management tables if on that page
+        const currentPage = window.location.hash.replace('#', '') || 'dashboard';
+        if (currentPage === 'ip-management') {
+          if (typeof loadBlockedIps === 'function') loadBlockedIps();
+        }
+      } else {
+        throw new Error(response.message || 'Failed to block IP');
+      }
+    } catch (err) {
+      console.error('Error blocking IP:', err);
+      showToast('❌ Error: ' + err.message, 'error');
+    }
+  };
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', function(event) {
+    if (!event.target.closest('.dropdown')) {
+      document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        menu.style.display = 'none';
+      });
+    }
+  });
 
 })();
 
