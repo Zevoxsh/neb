@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IP Management - Nebula Proxy</title>
+  <link rel="stylesheet" href="/public/styles.css">
+  <script src="/public/js/api.js" defer></script>
+  <script src="/public/js/include-partials.js" defer></script>
+  <script src="/public/js/ui.js" defer></script>
+  <script src="/public/js/app.js?v=14" defer></script>
+</head>
+<body data-page="ip-management">
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+    <div class="app-main">
+      <header class="topbar">
+        <div class="page-heading">
+          <div>
+            <div class="page-breadcrumb">SECURITY</div>
+            <h1>IP Management</h1>
+            <p class="subtitle">Manage trusted and blocked IP addresses</p>
+          </div>
+        </div>
+      </header>
+
+      <main class="page-content">
+        <!-- Trusted IPs Section -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-eyebrow">WHITELIST</div>
+              <h2 class="card-title">Trusted IPs</h2>
+              <p class="card-subtitle">These IPs will bypass rate limiting and bot protection</p>
+            </div>
+            <button id="addTrustedBtn" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; margin-right: 8px;">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              Add Trusted IP
+            </button>
+          </div>
+          <div class="card-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>IP Address</th>
+                  <th>Label / Description</th>
+                  <th>Added</th>
+                  <th style="width: 100px; text-align: center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="trustedIpsTable">
+                <tr>
+                  <td colspan="4" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 12px;">Loading...</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Blocked IPs Section -->
+        <div class="card" style="margin-top: 24px;">
+          <div class="card-header">
+            <div>
+              <div class="card-eyebrow">BLACKLIST</div>
+              <h2 class="card-title">Blocked IPs</h2>
+              <p class="card-subtitle">These IPs are permanently blocked from accessing the proxy</p>
+            </div>
+            <button id="addBlockedBtn" class="btn btn-danger">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; margin-right: 8px;">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M4.93 4.93l14.14 14.14"/>
+              </svg>
+              Block IP
+            </button>
+          </div>
+          <div class="card-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>IP Address</th>
+                  <th>Reason</th>
+                  <th>Blocked On</th>
+                  <th style="width: 100px; text-align: center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="blockedIpsTable">
+                <tr>
+                  <td colspan="4" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 12px;">Loading...</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Add Trusted IP Modal -->
+  <div id="addTrustedModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add Trusted IP</h3>
+        <button class="modal-close" onclick="document.getElementById('addTrustedModal').style.display='none'">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="trustedIpInput">IP Address *</label>
+          <input type="text" id="trustedIpInput" placeholder="e.g., 82.64.136.176" class="form-control" required>
+          <small style="color: rgba(255,255,255,0.5);">Enter a valid IPv4 or IPv6 address</small>
+        </div>
+        <div class="form-group">
+          <label for="trustedLabelInput">Label / Description</label>
+          <input type="text" id="trustedLabelInput" placeholder="e.g., Office IP, Admin Home" class="form-control">
+          <small style="color: rgba(255,255,255,0.5);">Optional: Add a note to identify this IP</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('addTrustedModal').style.display='none'">Cancel</button>
+        <button class="btn btn-primary" id="confirmAddTrusted">Add to Whitelist</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Blocked IP Modal -->
+  <div id="addBlockedModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Block IP Address</h3>
+        <button class="modal-close" onclick="document.getElementById('addBlockedModal').style.display='none'">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="blockedIpInput">IP Address *</label>
+          <input type="text" id="blockedIpInput" placeholder="e.g., 192.168.1.100" class="form-control" required>
+          <small style="color: rgba(255,255,255,0.5);">Enter a valid IPv4 or IPv6 address</small>
+        </div>
+        <div class="form-group">
+          <label for="blockedReasonInput">Reason</label>
+          <input type="text" id="blockedReasonInput" placeholder="e.g., DDoS attack, Brute force attempt" class="form-control">
+          <small style="color: rgba(255,255,255,0.5);">Optional: Explain why this IP is blocked</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('addBlockedModal').style.display='none'">Cancel</button>
+        <button class="btn btn-danger" id="confirmAddBlocked">Block IP</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

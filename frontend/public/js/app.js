@@ -142,6 +142,10 @@
         console.log('[DEBUG] Calling initAlertsPage');
         initAlertsPage();
         break;
+      case 'ip-management':
+        console.log('[DEBUG] Calling initIpManagementPage');
+        initIpManagementPage();
+        break;
       default:
         break;
     }
@@ -2193,35 +2197,28 @@
       }
 
       if (!data.logs || data.logs.length === 0) {
-        table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">Aucune requ�te trouv�e</td></tr>';
+        table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">No requests found</td></tr>';
         if (pageInfo) pageInfo.textContent = '';
         if (prevBtn) prevBtn.disabled = true;
         if (nextBtn) nextBtn.disabled = true;
         return;
       }
 
-      // Fetch country codes for all IPs in parallel
-      const ipPromises = data.logs.map(log => getCountryFromIP(log.client_ip));
-      const countries = await Promise.all(ipPromises);
-
-      table.innerHTML = data.logs.map((log, index) => {
+      // Render table immediately with placeholder flags
+      table.innerHTML = data.logs.map((log) => {
         const firstSeen = new Date(log.first_seen);
         const lastSeen = new Date(log.last_seen);
-        const countryCode = countries[index];
-        const flagImg = countryCode && countryCode !== 'LOCAL' 
-          ? `<img src="https://flagsapi.com/${countryCode}/flat/32.png" style="width: 24px; height: 18px; border-radius: 2px;" alt="${countryCode}" title="${countryCode}">`
-          : '<span style="font-size: 18px;">??</span>';
         
         return `
-          <tr>
+          <tr data-ip="${escapeHtml(log.client_ip)}">
             <td>
               <div style="display: flex; align-items: center; gap: 8px;">
-                ${flagImg}
+                <span class="flag-placeholder" style="width: 24px; text-align: center;">⏳</span>
                 <a href="https://check-host.net/check-http?host=${encodeURIComponent(log.client_ip)}" 
                    target="_blank" 
                    rel="noopener noreferrer"
                    style="color: #3b82f6; text-decoration: none; font-family: monospace; cursor: pointer;"
-                   title="Voir les infos de ${log.client_ip} sur check-host.net">
+                   title="View info for ${log.client_ip} on check-host.net">
                   ${escapeHtml(log.client_ip)}
                 </a>
               </div>
@@ -2233,6 +2230,24 @@
           </tr>
         `;
       }).join('');
+
+      // Fetch country codes progressively (rate-limited by queue)
+      data.logs.forEach(async (log) => {
+        const countryCode = await getCountryFromIP(log.client_ip);
+        const row = table.querySelector(`tr[data-ip="${log.client_ip}"]`);
+        if (row) {
+          const placeholder = row.querySelector('.flag-placeholder');
+          if (placeholder) {
+            if (countryCode && countryCode !== 'LOCAL') {
+              placeholder.outerHTML = `<img src="https://flagsapi.com/${countryCode}/flat/32.png" style="width: 24px; height: 18px; border-radius: 2px;" alt="${countryCode}" title="${countryCode}">`;
+            } else if (countryCode === 'LOCAL') {
+              placeholder.outerHTML = '<span style="font-size: 18px;">🏠</span>';
+            } else {
+              placeholder.outerHTML = '<span style="font-size: 18px;">🌍</span>';
+            }
+          }
+        }
+      });
 
       // Update pagination
       const currentPage = Math.floor(requestLogsState.offset / requestLogsState.limit) + 1;
@@ -2275,6 +2290,10 @@
   // Cache for IP geolocation to avoid repeated API calls
   const ipCountryCache = new Map();
 
+  // Rate limiting for API calls
+  let apiCallQueue = Promise.resolve();
+  const API_DELAY = 150; // 150ms between calls = max ~6 req/sec
+  
   async function getCountryFromIP(ip) {
     if (!ip) return null;
     
@@ -2298,28 +2317,36 @@
       return 'LOCAL';
     }
     
-    try {
-      // Use ipapi.co (free, HTTPS, no API key needed)
-      const response = await fetch(`https://ipapi.co/${ip}/country_code/`, {
-        method: 'GET',
-        cache: 'force-cache'
-      });
-      
-      if (response.ok) {
-        const countryCode = await response.text();
-        const cleanCode = countryCode.trim();
-        if (cleanCode && cleanCode.length === 2) {
-          ipCountryCache.set(ip, cleanCode);
-          return cleanCode;
+    // Queue API calls with delay to avoid rate limiting
+    return new Promise((resolve) => {
+      apiCallQueue = apiCallQueue.then(async () => {
+        try {
+          // Use ipapi.co (free, HTTPS, no API key needed)
+          const response = await fetch(`https://ipapi.co/${ip}/country_code/`, {
+            method: 'GET',
+            cache: 'force-cache'
+          });
+          
+          if (response.ok) {
+            const countryCode = await response.text();
+            const cleanCode = countryCode.trim();
+            if (cleanCode && cleanCode.length === 2) {
+              ipCountryCache.set(ip, cleanCode);
+              // Wait before next API call
+              await new Promise(r => setTimeout(r, API_DELAY));
+              return resolve(cleanCode);
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to fetch country for IP:', ip, error);
         }
-      }
-    } catch (error) {
-      console.warn('Failed to fetch country for IP:', ip, error);
-    }
-    
-    // Fallback to null
-    ipCountryCache.set(ip, null);
-    return null;
+        
+        // Fallback to null
+        ipCountryCache.set(ip, null);
+        await new Promise(r => setTimeout(r, API_DELAY));
+        resolve(null);
+      });
+    });
   }
 
   function getFlagEmoji(countryCode) {
@@ -2435,32 +2462,14 @@
         filteredAlerts = data.alerts.filter(alert => alert.severity === alertsState.severity);
       }
 
-      // Fetch country codes for all IPs in parallel
-      const ipAddresses = filteredAlerts
-        .map(alert => alert.ip_address)
-        .filter(ip => ip);
-      
-      await Promise.all(ipAddresses.map(ip => getCountryFromIP(ip)));
-
+      // Render alerts immediately with placeholder flags
       alertsList.innerHTML = filteredAlerts.map(alert => {
         const createdAt = new Date(alert.created_at);
         const severityIcon = getSeverityIcon(alert.severity);
         const typeLabel = getAlertTypeLabel(alert.alert_type);
-        const countryCode = alert.ip_address ? ipCountryCache.get(alert.ip_address) : null;
-        
-        let flagHtml = '';
-        if (alert.ip_address) {
-          if (countryCode && countryCode !== 'LOCAL') {
-            flagHtml = `<img src="https://flagsapi.com/${countryCode}/flat/24.png" alt="${countryCode}" style="width: 24px; height: 18px; vertical-align: middle; margin-right: 6px;">`;
-          } else if (countryCode === 'LOCAL') {
-            flagHtml = `<span style="margin-right: 6px;">🏠</span>`;
-          } else {
-            flagHtml = `<span style="margin-right: 6px;">??</span>`;
-          }
-        }
         
         return `
-          <div class="alert-item ${alert.severity}">
+          <div class="alert-item ${alert.severity}" data-alert-ip="${escapeHtml(alert.ip_address || '')}">
             <div class="alert-header">
               <div class="alert-icon">${severityIcon}</div>
               <div class="alert-content">
@@ -2470,7 +2479,7 @@
                   <div class="alert-meta-item">
                     <span class="severity-badge severity-${alert.severity}">${alert.severity}</span>
                   </div>
-                  ${alert.ip_address ? `<div class="alert-meta-item">${flagHtml}${escapeHtml(alert.ip_address)}</div>` : ''}
+                  ${alert.ip_address ? `<div class="alert-meta-item alert-ip-container"><span class="flag-placeholder">⏳</span> ${escapeHtml(alert.ip_address)}</div>` : ''}
                   ${alert.hostname ? `<div class="alert-meta-item">🌐 ${escapeHtml(alert.hostname)}</div>` : ''}
                   <div class="alert-meta-item">🕒 ${formatDate(createdAt)}</div>
                 </div>
@@ -2479,6 +2488,29 @@
           </div>
         `;
       }).join('');
+
+      // Fetch country codes progressively (rate-limited by queue)
+      filteredAlerts.forEach(async (alert) => {
+        if (!alert.ip_address) return;
+        
+        const countryCode = await getCountryFromIP(alert.ip_address);
+        const alertItem = alertsList.querySelector(`[data-alert-ip="${alert.ip_address}"]`);
+        if (alertItem) {
+          const container = alertItem.querySelector('.alert-ip-container');
+          if (container) {
+            const placeholder = container.querySelector('.flag-placeholder');
+            if (placeholder) {
+              if (countryCode && countryCode !== 'LOCAL') {
+                placeholder.outerHTML = `<img src="https://flagsapi.com/${countryCode}/flat/24.png" alt="${countryCode}" style="width: 24px; height: 18px; vertical-align: middle; margin-right: 6px;">`;
+              } else if (countryCode === 'LOCAL') {
+                placeholder.outerHTML = `<span style="margin-right: 6px;">🏠</span>`;
+              } else {
+                placeholder.outerHTML = `<span style="margin-right: 6px;">🌍</span>`;
+              }
+            }
+          }
+        }
+      });
 
       // Update pagination
       const currentPage = Math.floor(alertsState.offset / alertsState.limit) + 1;
@@ -2523,6 +2555,226 @@
       MALICIOUS_REQUEST: '⚠️ Malicious Request'
     };
     return labels[type] || type;
+  }
+
+  // ========================================
+  // IP MANAGEMENT PAGE
+  // ========================================
+  function initIpManagementPage() {
+    loadTrustedIps();
+    loadBlockedIps();
+
+    const addTrustedBtn = document.getElementById('addTrustedBtn');
+    const addBlockedBtn = document.getElementById('addBlockedBtn');
+    const confirmAddTrusted = document.getElementById('confirmAddTrusted');
+    const confirmAddBlocked = document.getElementById('confirmAddBlocked');
+
+    if (addTrustedBtn) {
+      addTrustedBtn.addEventListener('click', () => {
+        document.getElementById('addTrustedModal').style.display = 'flex';
+        document.getElementById('trustedIpInput').value = '';
+        document.getElementById('trustedLabelInput').value = '';
+      });
+    }
+
+    if (addBlockedBtn) {
+      addBlockedBtn.addEventListener('click', () => {
+        document.getElementById('addBlockedModal').style.display = 'flex';
+        document.getElementById('blockedIpInput').value = '';
+        document.getElementById('blockedReasonInput').value = '';
+      });
+    }
+
+    if (confirmAddTrusted) {
+      confirmAddTrusted.addEventListener('click', async () => {
+        const ip = document.getElementById('trustedIpInput').value.trim();
+        const label = document.getElementById('trustedLabelInput').value.trim();
+
+        if (!ip) {
+          alert('Please enter an IP address');
+          return;
+        }
+
+        try {
+          const res = await window.api.requestJson('/api/security/trusted-ips', 'POST', { ip, label });
+          if (res && res.status === 200) {
+            document.getElementById('addTrustedModal').style.display = 'none';
+            loadTrustedIps();
+            showToast('✅ IP added to whitelist', 'success');
+          } else {
+            throw new Error(res?.body?.error || 'Failed to add IP');
+          }
+        } catch (err) {
+          console.error('Error adding trusted IP:', err);
+          showToast('❌ Error: ' + err.message, 'error');
+        }
+      });
+    }
+
+    if (confirmAddBlocked) {
+      confirmAddBlocked.addEventListener('click', async () => {
+        const ip = document.getElementById('blockedIpInput').value.trim();
+        const reason = document.getElementById('blockedReasonInput').value.trim();
+
+        if (!ip) {
+          alert('Please enter an IP address');
+          return;
+        }
+
+        try {
+          const res = await window.api.requestJson('/api/security/blocked-ips', 'POST', { ip, reason });
+          if (res && res.status === 200) {
+            document.getElementById('addBlockedModal').style.display = 'none';
+            loadBlockedIps();
+            showToast('🚫 IP blocked successfully', 'success');
+          } else {
+            throw new Error(res?.body?.error || 'Failed to block IP');
+          }
+        } catch (err) {
+          console.error('Error blocking IP:', err);
+          showToast('❌ Error: ' + err.message, 'error');
+        }
+      });
+    }
+  }
+
+  async function loadTrustedIps() {
+    const table = document.getElementById('trustedIpsTable');
+    if (!table) return;
+
+    table.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;"><div class="spinner"></div><p style="margin-top: 12px; color: rgba(255,255,255,0.5);">Loading...</p></td></tr>';
+
+    try {
+      const res = await window.api.requestJson('/api/security/trusted-ips');
+      if (!res || res.status !== 200) throw new Error('Failed to fetch');
+
+      const ips = res.body || [];
+
+      if (ips.length === 0) {
+        table.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">No trusted IPs configured</td></tr>';
+        return;
+      }
+
+      table.innerHTML = ips.map(item => {
+        const createdAt = new Date(item.created_at);
+        return `
+          <tr>
+            <td><code style="background: rgba(59, 130, 246, 0.1); padding: 4px 8px; border-radius: 4px; color: #60a5fa;">${escapeHtml(item.ip)}</code></td>
+            <td>${escapeHtml(item.label || '-')}</td>
+            <td style="color: rgba(255,255,255,0.6); font-size: 13px;">${formatDate(createdAt)}</td>
+            <td style="text-align: center;">
+              <button class="btn-icon btn-icon-danger" onclick="removeTrustedIp(${item.id})" title="Remove from whitelist">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } catch (err) {
+      console.error('Error loading trusted IPs:', err);
+      table.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #ff4444;">❌ Error loading data</td></tr>';
+    }
+  }
+
+  async function loadBlockedIps() {
+    const table = document.getElementById('blockedIpsTable');
+    if (!table) return;
+
+    table.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;"><div class="spinner"></div><p style="margin-top: 12px; color: rgba(255,255,255,0.5);">Loading...</p></td></tr>';
+
+    try {
+      const res = await window.api.requestJson('/api/security/blocked-ips');
+      if (!res || res.status !== 200) throw new Error('Failed to fetch');
+
+      const ips = res.body || [];
+
+      if (ips.length === 0) {
+        table.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">No blocked IPs</td></tr>';
+        return;
+      }
+
+      table.innerHTML = ips.map(item => {
+        const createdAt = new Date(item.created_at);
+        return `
+          <tr>
+            <td><code style="background: rgba(220, 38, 38, 0.1); padding: 4px 8px; border-radius: 4px; color: #f87171;">${escapeHtml(item.ip)}</code></td>
+            <td>${escapeHtml(item.reason || '-')}</td>
+            <td style="color: rgba(255,255,255,0.6); font-size: 13px;">${formatDate(createdAt)}</td>
+            <td style="text-align: center;">
+              <button class="btn-icon" onclick="removeBlockedIp(${item.id})" title="Unblock IP">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } catch (err) {
+      console.error('Error loading blocked IPs:', err);
+      table.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #ff4444;">❌ Error loading data</td></tr>';
+    }
+  }
+
+  window.removeTrustedIp = async function(id) {
+    if (!confirm('Remove this IP from the whitelist?')) return;
+
+    try {
+      const res = await window.api.requestJson(`/api/security/trusted-ips/${id}`, 'DELETE');
+      if (res && res.status === 200) {
+        loadTrustedIps();
+        showToast('✅ IP removed from whitelist', 'success');
+      } else {
+        throw new Error('Failed to remove IP');
+      }
+    } catch (err) {
+      console.error('Error removing trusted IP:', err);
+      showToast('❌ Error: ' + err.message, 'error');
+    }
+  };
+
+  window.removeBlockedIp = async function(id) {
+    if (!confirm('Unblock this IP address?')) return;
+
+    try {
+      const res = await window.api.requestJson(`/api/security/blocked-ips/${id}`, 'DELETE');
+      if (res && res.status === 200) {
+        loadBlockedIps();
+        showToast('✅ IP unblocked', 'success');
+      } else {
+        throw new Error('Failed to unblock IP');
+      }
+    } catch (err) {
+      console.error('Error unblocking IP:', err);
+      showToast('❌ Error: ' + err.message, 'error');
+    }
+  };
+
+  function showToast(message, type = 'info') {
+    // Simple toast notification
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: ${type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6'};
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 10000;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.3s';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
   }
 
 })();

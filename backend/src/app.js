@@ -162,7 +162,8 @@ function createApp() {
     '/domain': 'domain.html',
     '/backend': 'backend.html',
     '/requests': 'requests.html',
-    '/alerts': 'alerts.html'
+    '/alerts': 'alerts.html',
+    '/ip-management': 'ip-management.html'
   };
 
   // Middleware to block access to /install if already installed
