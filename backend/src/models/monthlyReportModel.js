@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 
-async function createMonthlyReport(reportMonth) {
+async function createMonthlyReport(reportData) {
   const query = `
     INSERT INTO monthly_reports (
       report_month,
@@ -55,27 +55,28 @@ async function createMonthlyReport(reportMonth) {
   `;
 
   const result = await pool.query(query, [
-    reportMonth.domains.total,
-    reportMonth.domains.added,
-    reportMonth.domains.deleted,
-    reportMonth.proxies.total,
-    reportMonth.proxies.added,
-    reportMonth.proxies.deleted,
-    reportMonth.backends.total,
-    reportMonth.backends.added,
-    reportMonth.backends.deleted,
-    reportMonth.requests.total,
-    reportMonth.requests.uniqueIps,
-    reportMonth.requests.uniqueDomains,
-    reportMonth.security.totalAlerts,
-    reportMonth.security.blockedIps,
-    reportMonth.security.trustedIps,
-    reportMonth.certificates.active,
-    reportMonth.certificates.issued,
-    reportMonth.certificates.renewed,
-    reportMonth.users.total,
-    reportMonth.users.active,
-    reportMonth.additionalData
+    reportData.reportMonth,
+    reportData.domains.total,
+    reportData.domains.added,
+    reportData.domains.deleted,
+    reportData.proxies.total,
+    reportData.proxies.added,
+    reportData.proxies.deleted,
+    reportData.backends.total,
+    reportData.backends.added,
+    reportData.backends.deleted,
+    reportData.requests.total,
+    reportData.requests.uniqueIps,
+    reportData.requests.uniqueDomains,
+    reportData.security.totalAlerts,
+    reportData.security.blockedIps,
+    reportData.security.trustedIps,
+    reportData.certificates.active,
+    reportData.certificates.issued,
+    reportData.certificates.renewed,
+    reportData.users.total,
+    reportData.users.active,
+    JSON.stringify(reportData.additionalData)
   ]);
 
   return result.rows[0];
