@@ -61,7 +61,7 @@ async function testRateLimit() {
         if (i % 10 === 0) {
             const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
             const rps = (i / elapsed).toFixed(2);
-            process.stdout.write(`\r✓ ${i}/${numRequests} requêtes | ${rps} req/s | Temps: ${elapsed}s`);
+            process.stdout.write(`\r ${i}/${numRequests} requêtes | ${rps} req/s | Temps: ${elapsed}s`);
         }
 
         // Pause pour espacer les requêtes
@@ -154,7 +154,7 @@ async function testSequentialOverTime() {
 
         if (i % 10 === 0) {
             const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
-            process.stdout.write(`\r✓ ${i}/${numRequests} requêtes | ${elapsed}s écoulées`);
+            process.stdout.write(`\r ${i}/${numRequests} requêtes | ${elapsed}s écoulées`);
         }
 
         // Attendre pour espacer les requêtes

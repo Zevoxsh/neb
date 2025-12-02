@@ -1026,7 +1026,7 @@
           protectionText = ' Protected';
         } else {
           protectionBadge = 'success';
-          protectionText = '✓ Open';
+          protectionText = ' Open';
         }
         
         const tr = document.createElement('tr');
