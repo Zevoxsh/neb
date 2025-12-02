@@ -94,13 +94,13 @@
       return;
     }
     
-    if (/^\/domain/i.test(path)) {
-      console.log('[DEBUG] RETURN: matched /domain');
+    if (/^\/domain\?/i.test(path)) {
+      console.log('[DEBUG] RETURN: matched /domain?id=...');
       return;
     }
     
-    if (/^\/backend/i.test(path)) {
-      console.log('[DEBUG] RETURN: matched /backend');
+    if (/^\/backend\?/i.test(path)) {
+      console.log('[DEBUG] RETURN: matched /backend?id=...');
       return;
     }
 
