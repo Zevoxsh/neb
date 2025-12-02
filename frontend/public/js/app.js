@@ -382,6 +382,7 @@
     updateDashboardStats();
     fetchDashboardMetrics();
     refreshDashboardDomainStats();
+    loadLiveActivityStats(); // Start live activity monitoring
   }
 
   function setDashboardViewMode(mode) {
@@ -526,6 +527,113 @@
     await loadDomainInsights({ tableId: 'dashboardDomainStats', emptyId: 'dashboardDomainStatsEmpty', limit: 5, compact: true });
     if (dashboardState.domainStatsTimer) clearTimeout(dashboardState.domainStatsTimer);
     dashboardState.domainStatsTimer = setTimeout(refreshDashboardDomainStats, 60000);
+  }
+
+  async function loadLiveActivityStats() {
+    try {
+      // Load live IP stats (last 60 seconds)
+      const ipRes = await window.api.requestJson('/api/metrics/requests?limit=1000&offset=0');
+      if (ipRes && ipRes.status === 200 && ipRes.body) {
+        const now = Date.now();
+        const last60s = now - 60000;
+        
+        // Group by IP address
+        const ipStats = {};
+        ipRes.body.requests.forEach(req => {
+          const timestamp = new Date(req.timestamp).getTime();
+          if (timestamp < last60s) return;
+          
+          const ip = req.client_ip || 'unknown';
+          if (!ipStats[ip]) {
+            ipStats[ip] = {
+              ip: ip,
+              requests: 0,
+              traffic: 0,
+              lastSeen: timestamp
+            };
+          }
+          ipStats[ip].requests++;
+          ipStats[ip].traffic += (req.bytes_sent || 0);
+          if (timestamp > ipStats[ip].lastSeen) {
+            ipStats[ip].lastSeen = timestamp;
+          }
+        });
+
+        // Sort by requests
+        const sortedIps = Object.values(ipStats).sort((a, b) => b.requests - a.requests).slice(0, 10);
+        
+        const ipTable = document.getElementById('liveIpStats');
+        const ipEmpty = document.getElementById('liveIpStatsEmpty');
+        
+        if (sortedIps.length === 0) {
+          if (ipTable) ipTable.querySelector('tbody').innerHTML = '';
+          if (ipEmpty) ipEmpty.hidden = false;
+        } else {
+          if (ipEmpty) ipEmpty.hidden = true;
+          if (ipTable) {
+            ipTable.querySelector('tbody').innerHTML = sortedIps.map(stat => `
+              <tr>
+                <td><code>${escapeHtml(stat.ip)}</code></td>
+                <td>${stat.requests}</td>
+                <td>${formatBytes(stat.traffic)}</td>
+                <td>${Math.round((now - stat.lastSeen) / 1000)}s ago</td>
+              </tr>
+            `).join('');
+          }
+        }
+
+        // Group by domain
+        const domainStats = {};
+        ipRes.body.requests.forEach(req => {
+          const timestamp = new Date(req.timestamp).getTime();
+          if (timestamp < last60s) return;
+          
+          const domain = req.hostname || 'unknown';
+          if (!domainStats[domain]) {
+            domainStats[domain] = {
+              domain: domain,
+              requests: 0,
+              traffic: 0,
+              lastRequest: timestamp
+            };
+          }
+          domainStats[domain].requests++;
+          domainStats[domain].traffic += (req.bytes_sent || 0);
+          if (timestamp > domainStats[domain].lastRequest) {
+            domainStats[domain].lastRequest = timestamp;
+          }
+        });
+
+        // Sort by requests
+        const sortedDomains = Object.values(domainStats).sort((a, b) => b.requests - a.requests).slice(0, 10);
+        
+        const domainTable = document.getElementById('liveDomainStats');
+        const domainEmpty = document.getElementById('liveDomainStatsEmpty');
+        
+        if (sortedDomains.length === 0) {
+          if (domainTable) domainTable.querySelector('tbody').innerHTML = '';
+          if (domainEmpty) domainEmpty.hidden = false;
+        } else {
+          if (domainEmpty) domainEmpty.hidden = true;
+          if (domainTable) {
+            domainTable.querySelector('tbody').innerHTML = sortedDomains.map(stat => `
+              <tr>
+                <td><strong>${escapeHtml(stat.domain)}</strong></td>
+                <td>${stat.requests}</td>
+                <td>${formatBytes(stat.traffic)}</td>
+                <td>${Math.round((now - stat.lastRequest) / 1000)}s ago</td>
+              </tr>
+            `).join('');
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error loading live activity stats:', err);
+    }
+
+    // Refresh every 5 seconds
+    if (dashboardState.liveActivityTimer) clearTimeout(dashboardState.liveActivityTimer);
+    dashboardState.liveActivityTimer = setTimeout(loadLiveActivityStats, 5000);
   }
 
   async function initProxiesPage() {
