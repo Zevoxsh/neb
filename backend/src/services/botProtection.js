@@ -103,6 +103,12 @@ class BotProtection {
     }
 
     isRateLimited(ip, domain = null) {
+        // CRITICAL: Check if IP is trusted FIRST - trusted IPs bypass all rate limiting
+        const proxyManager = require('./proxyManager');
+        if (proxyManager.isTrustedIp(ip)) {
+            return false; // Trusted IPs are never rate limited
+        }
+
         const requestsInLastMinute = this.getRequestsPerMinute(ip);
         const requestsInLast10Sec = this.getRequestsInLastSeconds(ip, 10);
         const isVerified = this.verifiedIPs.has(ip) && this.verifiedIPs.get(ip) > Date.now();
@@ -194,6 +200,13 @@ class BotProtection {
     }
 
     banIP(ip, durationMs = 300000) { // 5 minutes by default
+        // CRITICAL: Never ban trusted IPs
+        const proxyManager = require('./proxyManager');
+        if (proxyManager.isTrustedIp(ip)) {
+            console.log(`[BotProtection] ⚠️  Attempt to ban trusted IP ${ip} - BLOCKED`);
+            return; // Don't ban trusted IPs
+        }
+
         const expiration = Date.now() + durationMs;
         this.bannedIPs.set(ip, expiration);
         console.log(`[BotProtection] IP ${ip} banned until ${new Date(expiration).toISOString()}`);
@@ -215,6 +228,12 @@ class BotProtection {
     }
 
     shouldChallenge(ip, forceNewVisitor = false, domain = null) {
+        // CRITICAL: Check if IP is trusted FIRST - trusted IPs bypass all protection
+        const proxyManager = require('./proxyManager');
+        if (proxyManager.isTrustedIp(ip)) {
+            return false; // Trusted IPs never get challenged
+        }
+
         // Check if domain is unprotected (bypass all checks)
         if (domain && this.unprotectedDomains.has(domain)) {
             // Still check for rate limiting even on unprotected domains
