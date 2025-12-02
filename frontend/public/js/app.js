@@ -212,7 +212,7 @@
           labels: [],
           datasets: [
             {
-              label: 'Trafic entrant',
+              label: 'Incoming Traffic',
               data: [],
               borderColor: '#3b82f6',
               backgroundColor: 'rgba(59, 130, 246, 0.2)',
@@ -224,7 +224,7 @@
               pointHitRadius: 0
             },
             {
-              label: 'Trafic sortant',
+              label: 'Outgoing Traffic',
               data: [],
               borderColor: '#a855f7',
               backgroundColor: 'rgba(168, 85, 247, 0.2)',

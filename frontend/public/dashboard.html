@@ -21,51 +21,51 @@
         <div class="page-heading">
           <p class="eyebrow">Monitoring</p>
           <h1>Dashboard</h1>
-          <p class="muted">Vue globale de la passerelle et des metriques en temps reel.</p>
+          <p class="muted">Global overview of the gateway and real-time metrics.</p>
         </div>
         <div class="topbar-actions">
-          <a class="btn ghost" href="/settings.html">Parametres</a>
+          <a class="btn ghost" href="/settings.html">Settings</a>
         </div>
       </header>
       <section class="page-content">
         <div class="stat-grid">
           <article class="stat-card">
-            <p class="stat-label">Requetes</p>
+            <p class="stat-label">Requests</p>
             <p class="stat-value" id="stat-requests">0</p>
-            <span class="stat-subtitle">Total observe</span>
+            <span class="stat-subtitle">Total observed</span>
           </article>
           <article class="stat-card">
             <p class="stat-label">Req / sec</p>
             <p class="stat-value" id="stat-rps">0</p>
-            <span class="stat-subtitle">Derniere minute</span>
+            <span class="stat-subtitle">Last minute</span>
           </article>
           <article class="stat-card">
-            <p class="stat-label">Trafic entrant</p>
+            <p class="stat-label">Incoming Traffic</p>
             <p class="stat-value" id="stat-traffic-in">0 B/s</p>
-            <span class="stat-subtitle">Agrege</span>
+            <span class="stat-subtitle">Aggregate</span>
           </article>
           <article class="stat-card">
-            <p class="stat-label">Trafic sortant</p>
+            <p class="stat-label">Outgoing Traffic</p>
             <p class="stat-value" id="stat-traffic-out">0 B/s</p>
-            <span class="stat-subtitle">Agrege</span>
+            <span class="stat-subtitle">Aggregate</span>
           </article>
         </div>
 
         <article class="card">
           <div class="card-header">
             <div>
-              <p class="eyebrow">Trafic</p>
-              <h2>Charge globale</h2>
+              <p class="eyebrow">Traffic</p>
+              <h2>Global Load</h2>
             </div>
-            <div class="chip-group" role="group" aria-label="Bascules periode">
-              <button id="btnViewRealtime" class="chip active" type="button">Temps reel</button>
+            <div class="chip-group" role="group" aria-label="Period toggles">
+              <button id="btnViewRealtime" class="chip active" type="button">Real-time</button>
               <button id="btnView24h" class="chip" type="button">24 h</button>
             </div>
           </div>
           <div id="chartWrapper" class="chart-shell">
             <canvas id="trafficChart"></canvas>
             <div id="chartPlaceholder" class="chart-placeholder">
-              Les metriques apparaitront des qu'un proxy publiera du trafic.
+              Metrics will appear as soon as a proxy publishes traffic.
             </div>
           </div>
         </article>
@@ -79,15 +79,15 @@
             <table id="dashboardDomainStats" class="data-table">
               <thead>
                 <tr>
-                  <th>Domaine</th>
-                  <th>Requetes</th>
-                  <th>Trafic</th>
-                  <th>Derniere activite</th>
+                  <th>Domain</th>
+                  <th>Requests</th>
+                  <th>Traffic</th>
+                  <th>Last Activity</th>
                 </tr>
               </thead>
               <tbody></tbody>
             </table>
-            <div id="dashboardDomainStatsEmpty" class="empty-state" hidden>Aucune activite.</div>
+            <div id="dashboardDomainStatsEmpty" class="empty-state" hidden>No activity.</div>
           </section>
         </article>
       </section>
