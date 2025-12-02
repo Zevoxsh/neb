@@ -1,4 +1,4 @@
-﻿// Minimal SPA app glue for Nebula (new frontend)
+// Minimal SPA app glue for Nebula (new frontend)
 (function () {
   const cache = { proxies: [], backends: [] };
   const dashboardState = {
@@ -63,11 +63,11 @@
       return;
     }
     
-    if (/^\/domain\.html/i.test(path)) {
+    if (/^\/domain/i.test(path)) {
       return;
     }
     
-    if (/^\/backend\.html/i.test(path)) {
+    if (/^\/backend/i.test(path)) {
       return;
     }
 
@@ -189,7 +189,7 @@
               pointHitRadius: 0
             },
             {
-              label: 'Requêtes/s',
+              label: 'Requ�tes/s',
               data: [],
               borderColor: '#22c55e',
               backgroundColor: 'rgba(34, 197, 94, 0.2)',
@@ -899,7 +899,7 @@
 
         if (rpsEl) rpsEl.textContent = stats.requestsPerSecond;
         if (verifiedEl) verifiedEl.textContent = stats.verifiedIPs;
-        if (statusEl) statusEl.textContent = stats.isUnderAttack ? '🔴 Under Attack' : '🟢 Normal';
+        if (statusEl) statusEl.textContent = stats.isUnderAttack ? '?? Under Attack' : '?? Normal';
         if (modeEl) modeEl.checked = stats.enabled;
         if (thresholdEl) thresholdEl.value = stats.threshold;
       }
@@ -924,7 +924,7 @@
           <td class="mono">${escapeHtml(b.targetHost || b.target_host || '')}:${b.targetPort || b.target_port}</td>
           <td>${escapeHtml((b.targetProtocol || b.target_protocol || '').toUpperCase())}</td>
           <td>
-            <a class="btn ghost small" href="/backend.html?id=${b.id}">Gerer</a>
+            <a class="btn ghost small" href="/backend?id=${b.id}">Gerer</a>
             <button class="btn ghost small delete-backend" data-id="${b.id}">Supprimer</button>
           </td>
         `;
@@ -963,10 +963,10 @@
         let protectionText = '';
         if (botProtection === 'protected') {
           protectionBadge = 'warning';
-          protectionText = '🔒 Protégé';
+          protectionText = '?? Prot�g�';
         } else {
           protectionBadge = 'success';
-          protectionText = '✓ Ouvert';
+          protectionText = '? Ouvert';
         }
         
         const tr = document.createElement('tr');
@@ -976,7 +976,7 @@
           <td>${backendLabel}</td>
           <td><span class="status-badge ${protectionBadge}"><span class="status-dot"></span>${protectionText}</span></td>
           <td>
-            <a class="btn ghost small" href="/domain.html?id=${d.id}">Gerer</a>
+            <a class="btn ghost small" href="/domain?id=${d.id}">Gerer</a>
             <button class="btn ghost small delete-domain" data-id="${d.id}">Supprimer</button>
           </td>
         `;
@@ -1129,7 +1129,7 @@
     const backendId = urlParams.get('id');
     if (!backendId) {
       showToast('ID de backend manquant', 'error');
-      window.location.href = '/backends.html';
+      window.location.href = '/backends';
       return;
     }
 
@@ -1138,7 +1138,7 @@
       const backend = backends.find(b => String(b.id) === String(backendId));
       if (!backend) {
         showToast('Backend introuvable', 'error');
-        window.location.href = '/backends.html';
+        window.location.href = '/backends';
         return;
       }
 
@@ -1184,14 +1184,14 @@
       });
       
       if (res && (res.status === 200 || res.status === 201)) {
-        showToast('Backend mis à jour');
-        window.location.href = '/backends.html';
+        showToast('Backend mis � jour');
+        window.location.href = '/backends';
       } else {
-        showToast('Mise à jour impossible', 'error');
+        showToast('Mise � jour impossible', 'error');
       }
     } catch (e) {
       console.error('[Backend Detail] Update error:', e);
-      showToast('Mise à jour impossible', 'error');
+      showToast('Mise � jour impossible', 'error');
     }
   }
 
@@ -1204,7 +1204,7 @@
       const res = await window.api.requestJson(`/api/backends/${backendId}`, { method: 'DELETE' });
       if (res && (res.status === 200 || res.status === 204)) {
         showToast('Backend supprime');
-        window.location.href = '/backends.html';
+        window.location.href = '/backends';
       } else {
         showToast('Suppression impossible', 'error');
       }
@@ -1288,7 +1288,7 @@
     }
     
     if (!certificate || !privateKey) {
-      showToast('Le certificat et la clé privée sont requis', 'error');
+      showToast('Le certificat et la cl� priv�e sont requis', 'error');
       return;
     }
     
@@ -1303,14 +1303,14 @@
       });
       
       if (res && res.status === 200) {
-        showToast('Certificat importé avec succès', 'success');
+        showToast('Certificat import� avec succ�s', 'success');
         await loadDomainCertificate();
       } else {
         throw new Error('Import failed');
       }
     } catch (e) {
       console.error('[Domain Cert] Import failed:', e);
-      showToast('Échec de l\'importation du certificat', 'error');
+      showToast('�chec de l\'importation du certificat', 'error');
     }
   }
 
@@ -1335,7 +1335,7 @@
     const domainId = urlParams.get('id');
     if (!domainId) {
       showToast('ID de domaine manquant', 'error');
-      window.location.href = '/domains.html';
+      window.location.href = '/domains';
       return;
     }
 
@@ -1347,7 +1347,7 @@
       const domain = domains.find(d => String(d.id) === String(domainId));
       if (!domain) {
         showToast('Domaine introuvable', 'error');
-        window.location.href = '/domains.html';
+        window.location.href = '/domains';
         return;
       }
 
@@ -1356,7 +1356,7 @@
       const backendSelect = document.getElementById('editDomainBackendSelect');
       if (proxySelect && backendSelect) {
         proxySelect.innerHTML = '';
-        backendSelect.innerHTML = '<option value="">Sélectionner...</option>';
+        backendSelect.innerHTML = '<option value="">S�lectionner...</option>';
         
         const proxies = cache.proxies.length ? cache.proxies : await fetchAndCache('/api/proxies', 'proxies');
         const backends = cache.backends.length ? cache.backends : await fetchAndCache('/api/backends', 'backends');
@@ -1460,14 +1460,14 @@
           });
         }
         
-        showToast('Domaine mis à jour');
-        window.location.href = '/domains.html';
+        showToast('Domaine mis � jour');
+        window.location.href = '/domains';
       } else {
-        showToast('Mise à jour impossible', 'error');
+        showToast('Mise � jour impossible', 'error');
       }
     } catch (e) {
       console.error('[Domain Detail] Update error:', e);
-      showToast('Mise à jour impossible', 'error');
+      showToast('Mise � jour impossible', 'error');
     }
   }
 
@@ -1494,7 +1494,7 @@
         }
         
         showToast('Domaine supprime');
-        window.location.href = '/domains.html';
+        window.location.href = '/domains';
       } else {
         showToast('Suppression impossible', 'error');
       }
@@ -1604,7 +1604,7 @@
           const resp = await window.api.requestJson(`/api/proxies/${id}`, { method: 'PUT', body: payload });
           if (resp && resp.status === 200) {
             showToast('Proxy enregistre');
-            window.location.href = '/proxies.html';
+            window.location.href = '/proxies';
           } else {
             showToast('Impossible de sauvegarder', 'error');
           }
@@ -1618,7 +1618,7 @@
           const resp = await window.api.requestJson(`/api/proxies/${id}`, { method: 'DELETE' });
           if (resp && (resp.status === 200 || resp.status === 204)) {
             showToast('Proxy supprime');
-            window.location.href = '/proxies.html';
+            window.location.href = '/proxies';
           } else {
             showToast('Suppression impossible', 'error');
           }
@@ -1983,7 +1983,7 @@
   async function openErrorPageEditor(proxyId, proxyName) {
     currentErrorPageProxyId = proxyId;
     const title = document.getElementById('errorPageTitle');
-    if (title) title.textContent = proxyName ? `Page d'erreur · ${proxyName}` : 'Page d’erreur';
+    if (title) title.textContent = proxyName ? `Page d'erreur � ${proxyName}` : 'Page d�erreur';
     const textarea = document.getElementById('errorPageTextarea');
     if (textarea) {
       textarea.value = '';
@@ -2038,7 +2038,7 @@
       try {
         await window.api.requestJson('/api/bot-protection/toggle', { method: 'POST', body: { enabled } });
         await window.api.requestJson('/api/bot-protection/threshold', { method: 'POST', body: { threshold } });
-        showToast('Configuration sauvegardée');
+        showToast('Configuration sauvegard�e');
         if (typeof loadBotStats === 'function') loadBotStats();
       } catch (err) {
         console.error('Bot config error:', err);
@@ -2130,7 +2130,7 @@
       }
 
       if (!data.logs || data.logs.length === 0) {
-        table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">Aucune requête trouvée</td></tr>';
+        table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">Aucune requ�te trouv�e</td></tr>';
         if (pageInfo) pageInfo.textContent = '';
         if (prevBtn) prevBtn.disabled = true;
         if (nextBtn) nextBtn.disabled = true;
@@ -2147,7 +2147,7 @@
         const countryCode = countries[index];
         const flagImg = countryCode && countryCode !== 'LOCAL' 
           ? `<img src="https://flagsapi.com/${countryCode}/flat/32.png" style="width: 24px; height: 18px; border-radius: 2px;" alt="${countryCode}" title="${countryCode}">`
-          : '<span style="font-size: 18px;">🏠</span>';
+          : '<span style="font-size: 18px;">??</span>';
         
         return `
           <tr>
@@ -2260,8 +2260,8 @@
   }
 
   function getFlagEmoji(countryCode) {
-    if (!countryCode) return '🌐';
-    if (countryCode === 'LOCAL') return '🏠';
+    if (!countryCode) return '??';
+    if (countryCode === 'LOCAL') return '??';
     
     // Convert country code to flag emoji
     // Each letter is converted to its regional indicator symbol
@@ -2359,7 +2359,7 @@
       }
 
       if (!data.alerts || data.alerts.length === 0) {
-        alertsList.innerHTML = '<div class="alert-item-empty"><p>😌 Aucune alerte de sécurité</p></div>';
+        alertsList.innerHTML = '<div class="alert-item-empty"><p>?? Aucune alerte de s�curit�</p></div>';
         if (pageInfo) pageInfo.textContent = '';
         if (prevBtn) prevBtn.disabled = true;
         if (nextBtn) nextBtn.disabled = true;
@@ -2388,9 +2388,9 @@
                   <div class="alert-meta-item">
                     <span class="severity-badge severity-${alert.severity}">${alert.severity}</span>
                   </div>
-                  ${alert.ip_address ? `<div class="alert-meta-item">📍 ${escapeHtml(alert.ip_address)}</div>` : ''}
-                  ${alert.hostname ? `<div class="alert-meta-item">🌐 ${escapeHtml(alert.hostname)}</div>` : ''}
-                  <div class="alert-meta-item">🕒 ${formatDate(createdAt)}</div>
+                  ${alert.ip_address ? `<div class="alert-meta-item">?? ${escapeHtml(alert.ip_address)}</div>` : ''}
+                  ${alert.hostname ? `<div class="alert-meta-item">?? ${escapeHtml(alert.hostname)}</div>` : ''}
+                  <div class="alert-meta-item">?? ${formatDate(createdAt)}</div>
                 </div>
               </div>
             </div>
@@ -2416,29 +2416,29 @@
 
     } catch (err) {
       console.error('Error loading alerts:', err);
-      alertsList.innerHTML = '<div class="alert-item-empty"><p style="color: #ff4444;">❌ Erreur de chargement</p></div>';
+      alertsList.innerHTML = '<div class="alert-item-empty"><p style="color: #ff4444;">? Erreur de chargement</p></div>';
     }
   }
 
   function getSeverityIcon(severity) {
     const icons = {
-      critical: '🔴',
-      high: '🟠',
-      medium: '🟡',
-      low: '🟢'
+      critical: '??',
+      high: '??',
+      medium: '??',
+      low: '??'
     };
-    return icons[severity] || '⚪';
+    return icons[severity] || '?';
   }
 
   function getAlertTypeLabel(type) {
     const labels = {
-      IP_BANNED: '🚫 IP Bannie',
-      RATE_LIMIT: '⚡ Limite de taux dépassée',
-      BRUTE_FORCE: '🔨 Tentative de force brute',
-      DDOS: '💥 Attaque DDoS détectée',
-      SUSPICIOUS_ACTIVITY: '👁️ Activité suspecte',
-      CHALLENGE_FAILED: '❌ Échec de défi',
-      MALICIOUS_REQUEST: '🦠 Requête malveillante'
+      IP_BANNED: '?? IP Bannie',
+      RATE_LIMIT: '? Limite de taux d�pass�e',
+      BRUTE_FORCE: '?? Tentative de force brute',
+      DDOS: '?? Attaque DDoS d�tect�e',
+      SUSPICIOUS_ACTIVITY: '??? Activit� suspecte',
+      CHALLENGE_FAILED: '? �chec de d�fi',
+      MALICIOUS_REQUEST: '?? Requ�te malveillante'
     };
     return labels[type] || type;
   }

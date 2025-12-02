@@ -37,7 +37,7 @@ function createApp() {
     // Content Security Policy
     res.setHeader('Content-Security-Policy',
       "default-src 'self'; " +
-      "script-src 'self' 'unsafe-inline'; " +
+      "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
       "img-src 'self' data:; " +
       "connect-src 'self'; " +
@@ -146,25 +146,38 @@ function createApp() {
     res.json({ ok: true });
   });
 
-  // Serve specific HTML pages (multi-page frontend)
-  app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'dashboard.html')));
-  app.get('/dashboard.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'dashboard.html')));
-  app.get('/proxies.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'proxies.html')));
-  app.get('/backends.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'backends.html')));
-  app.get('/domains.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'domains.html')));
-  app.get('/security.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'security.html')));
-  app.get('/analytics.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'analytics.html')));
-  app.get('/certificates.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'certificates.html')));
-  app.get('/settings.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'settings.html')));
-  app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'login.html')));
-  app.get('/login', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'login.html')));
-  app.get('/domain.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'domain.html')));
-  app.get('/backend.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'backend.html')));
-  app.get('/requests.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'requests.html')));
-  app.get('/alerts.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'alerts.html')));
-  app.get('/config.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'config.html')));
-  app.get('/install.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'install.html')));
-  app.get('/install', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'install.html')));
+  // Define all HTML pages mapping (clean URLs without .html)
+  const pages = {
+    '/': 'dashboard.html',
+    '/dashboard': 'dashboard.html',
+    '/proxies': 'proxies.html',
+    '/backends': 'backends.html',
+    '/domains': 'domains.html',
+    '/security': 'security.html',
+    '/analytics': 'analytics.html',
+    '/certificates': 'certificates.html',
+    '/settings': 'settings.html',
+    '/config': 'config.html',
+    '/login': 'login.html',
+    '/install': 'install.html',
+    '/domain': 'domain.html',
+    '/backend': 'backend.html',
+    '/requests': 'requests.html',
+    '/alerts': 'alerts.html'
+  };
+
+  // Serve pages with and without .html extension
+  Object.entries(pages).forEach(([route, file]) => {
+    const filePath = path.join(__dirname, '..', '..', 'frontend', 'public', file);
+    
+    // Clean URL (without .html)
+    app.get(route, (req, res) => res.sendFile(filePath));
+    
+    // Legacy URL (with .html) - redirect to clean URL
+    if (route !== '/') {
+      app.get(route + '.html', (req, res) => res.redirect(301, route));
+    }
+  });
 
   // SPA Fallback: serve the correct top-level page for known client routes so
   // direct links / refresh on deep routes work (e.g. /proxies/3 -> proxies.html)

@@ -1,6 +1,6 @@
 // Lightweight API helpers attached to window to ease incremental migration
 window.api = (function () {
-  const loginPaths = new Set(['/login', '/login.html']);
+  const loginPaths = new Set(['/login', '/login']);
   let authChecked = false;
 
   function isLoginPage() {
@@ -19,10 +19,10 @@ window.api = (function () {
       const next = window.location.pathname + window.location.search;
       params.set('next', next);
     } catch (e) {
-      params.set('next', '/dashboard.html');
+      params.set('next', '/dashboard');
     }
     params.set('reason', reason);
-    window.location.href = `/login.html?${params.toString()}`;
+    window.location.href = `/login?${params.toString()}`;
   }
 
   async function requestJson(url, opts = {}) {

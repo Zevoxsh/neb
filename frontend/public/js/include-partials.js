@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     nav.querySelectorAll('a.nav-link').forEach((link) => {
       const view = link.dataset.view;
       const href = link.getAttribute('href') || '';
-      const matchDetail = href === '/proxies.html' && /^\/proxies\//.test(path);
+      const matchDetail = href === '/proxies' && /^\/proxies\//.test(path);
       if (view && (view === current || matchDetail)) link.classList.add('active');
       else link.classList.remove('active');
     });
