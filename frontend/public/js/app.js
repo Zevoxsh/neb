@@ -63,9 +63,29 @@
       console.error('[DEBUG] ERROR: page is empty! body.dataset.page not found!');
     }
 
-    setupInlineBackendCreator();
-    attachProxyBackendChange();
-    setupErrorPageEditor();
+    console.log('[DEBUG] Calling setupInlineBackendCreator...');
+    try {
+      setupInlineBackendCreator();
+      console.log('[DEBUG] setupInlineBackendCreator OK');
+    } catch(e) {
+      console.error('[DEBUG] setupInlineBackendCreator ERROR:', e);
+    }
+    
+    console.log('[DEBUG] Calling attachProxyBackendChange...');
+    try {
+      attachProxyBackendChange();
+      console.log('[DEBUG] attachProxyBackendChange OK');
+    } catch(e) {
+      console.error('[DEBUG] attachProxyBackendChange ERROR:', e);
+    }
+    
+    console.log('[DEBUG] Calling setupErrorPageEditor...');
+    try {
+      setupErrorPageEditor();
+      console.log('[DEBUG] setupErrorPageEditor OK');
+    } catch(e) {
+      console.error('[DEBUG] setupErrorPageEditor ERROR:', e);
+    }
 
     // Skip initialization for detail pages, wait for partials-loaded event
     if (/^\/proxies\/\d+$/i.test(path)) {
