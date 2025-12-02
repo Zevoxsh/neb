@@ -945,7 +945,7 @@
       const res = await window.api.requestJson('/api/domains');
       if (!res || res.status !== 200) throw new Error('loadDomains');
       const rows = Array.isArray(res.body) ? res.body : [];
-      toggleEmpty(empty, rows.length > 0, 'Aucun domaine configure.');
+      toggleEmpty(empty, rows.length > 0, 'No domain configured.');
       if (!rows.length) return;
       const proxyMap = new Map((cache.proxies || []).map((p) => [String(p.id), p]));
       const backendMap = new Map((cache.backends || []).map((b) => [String(b.id), b]));
@@ -954,8 +954,8 @@
         const proxy = proxyMap.get(String(d.proxy_id));
         const backend = backendMap.get(String(d.backend_id));
         const backendLabel = backend
-          ? `${escapeHtml(backend.name || '')} (${escapeHtml(backend.targetHost || backend.target_host || '')}:${backend.targetPort || backend.target_Port})`
-          : `${escapeHtml(d.target_host || '')}:${d.target_Port || ''}`;
+          ? `${escapeHtml(backend.name || '')} (${escapeHtml(backend.target_host || '')}:${backend.target_port || ''})`
+          : `${escapeHtml(d.target_host || '')}:${d.target_port || ''}`;
         
         // Bot Protection status
         const botProtection = d.bot_protection || 'unprotected';
@@ -963,10 +963,10 @@
         let protectionText = '';
         if (botProtection === 'protected') {
           protectionBadge = 'warning';
-          protectionText = '?? Prot�g�';
+          protectionText = '🛡️ Protected';
         } else {
           protectionBadge = 'success';
-          protectionText = '? Ouvert';
+          protectionText = '✓ Open';
         }
         
         const tr = document.createElement('tr');
