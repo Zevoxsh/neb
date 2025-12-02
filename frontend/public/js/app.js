@@ -2616,15 +2616,20 @@
           console.log('[IP Management] Sending POST request to /api/security/trusted-ips');
           const res = await window.api.requestJson('/api/security/trusted-ips', 'POST', { ip, label });
           console.log('[IP Management] Response:', res);
+          console.log('[IP Management] Response status:', res?.status);
+          console.log('[IP Management] Response body:', res?.body);
+          
           if (res && res.status === 200) {
             document.getElementById('addTrustedModal').style.display = 'none';
             loadTrustedIps();
             showToast('✅ IP added to whitelist', 'success');
           } else {
-            throw new Error(res?.body?.error || 'Failed to add IP');
+            const errorMsg = res?.body?.error || res?.body?.message || 'Failed to add IP';
+            console.error('[IP Management] Error response:', errorMsg);
+            throw new Error(errorMsg);
           }
         } catch (err) {
-          console.error('Error adding trusted IP:', err);
+          console.error('[IP Management] Exception caught:', err);
           showToast('❌ Error: ' + err.message, 'error');
         }
       });
@@ -2647,15 +2652,20 @@
           console.log('[IP Management] Sending POST request to /api/security/blocked-ips');
           const res = await window.api.requestJson('/api/security/blocked-ips', 'POST', { ip, reason });
           console.log('[IP Management] Response:', res);
+          console.log('[IP Management] Response status:', res?.status);
+          console.log('[IP Management] Response body:', res?.body);
+          
           if (res && res.status === 200) {
             document.getElementById('addBlockedModal').style.display = 'none';
             loadBlockedIps();
             showToast('🚫 IP blocked successfully', 'success');
           } else {
-            throw new Error(res?.body?.error || 'Failed to block IP');
+            const errorMsg = res?.body?.error || res?.body?.message || 'Failed to block IP';
+            console.error('[IP Management] Error response:', errorMsg);
+            throw new Error(errorMsg);
           }
         } catch (err) {
-          console.error('Error blocking IP:', err);
+          console.error('[IP Management] Exception caught:', err);
           showToast('❌ Error: ' + err.message, 'error');
         }
       });
