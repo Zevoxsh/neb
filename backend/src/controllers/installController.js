@@ -66,14 +66,19 @@ class InstallController {
             const client = await pool.connect();
 
             // 2. Créer la base de données si elle n'existe pas
+            const dbName = database.name.trim(); // Nettoyer les espaces
             const dbCheckResult = await client.query(
                 "SELECT 1 FROM pg_database WHERE datname = $1",
-                [database.name]
+                [dbName]
             );
 
             if (dbCheckResult.rows.length === 0) {
-                console.log(`📦 Création de la base de données "${database.name}"...`);
-                await client.query(`CREATE DATABASE ${database.name}`);
+                console.log(`📦 Création de la base de données "${dbName}"...`);
+                // Utiliser des identifiants quotés pour gérer les caractères spéciaux
+                await client.query(`CREATE DATABASE "${dbName}"`);
+                console.log(`✅ Base de données "${dbName}" créée avec succès`);
+            } else {
+                console.log(`ℹ️  Base de données "${dbName}" existe déjà`);
             }
 
             client.release();
@@ -85,7 +90,7 @@ class InstallController {
                 port: database.port,
                 user: database.user,
                 password: database.password,
-                database: database.name
+                database: dbName
             });
 
             const appClient = await appPool.connect();
@@ -110,13 +115,14 @@ class InstallController {
             // 6. Enregistrer la configuration dans la table settings
             console.log('⚙️ Enregistrement de la configuration...');
             
+            const dbName = database.name.trim(); // Utiliser le nom nettoyé
             const settings = [
                 // Database
                 { key: 'database.host', value: database.host },
                 { key: 'database.port', value: database.port.toString() },
                 { key: 'database.user', value: database.user },
                 { key: 'database.password', value: database.password },
-                { key: 'database.name', value: database.name },
+                { key: 'database.name', value: dbName },
                 // Security
                 { key: 'security.jwtSecret', value: security.jwtSecret },
                 { key: 'security.cookieSecure', value: security.cookieSecure.toString() },
@@ -138,13 +144,14 @@ class InstallController {
             await appPool.end();
 
             // 7. Créer un fichier .env local avec les informations de connexion
+            const dbName = database.name.trim();
             const envContent = `# Configuration générée automatiquement lors de l'installation
 # Base de données PostgreSQL
 DB_HOST=${database.host}
 DB_PORT=${database.port}
 DB_USER=${database.user}
 DB_PASSWORD=${database.password}
-DB_NAME=${database.name}
+DB_NAME=${dbName}
 
 # Sécurité
 JWT_SECRET=${security.jwtSecret}
