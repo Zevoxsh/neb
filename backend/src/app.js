@@ -1,4 +1,5 @@
 const express = require('express');
+const compression = require('compression');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 const fs = require('fs');
@@ -20,6 +21,67 @@ const debugRoutes = require('./routes/debugRoutes');
 
 function createApp() {
   const app = express();
+
+  // Security Headers (must be first)
+  app.use((req, res, next) => {
+    // Content Security Policy
+    res.setHeader('Content-Security-Policy',
+      "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline'; " +
+      "style-src 'self' 'unsafe-inline'; " +
+      "img-src 'self' data:; " +
+      "connect-src 'self'; " +
+      "font-src 'self';"
+    );
+
+    // Additional security headers
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+    // Remove X-Powered-By header
+    res.removeHeader('X-Powered-By');
+
+    next();
+  });
+
+  // CORS Configuration
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
+    : [];
+
+  if (allowedOrigins.length > 0) {
+    app.use((req, res, next) => {
+      const origin = req.headers.origin;
+      if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      }
+
+      // Handle preflight
+      if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+      }
+
+      next();
+    });
+  }
+
+  // HTTP Compression (reduces response sizes by 60-80%)
+  app.use(compression({
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+    level: 6,  // Compression level (0-9, 6 is good balance)
+    threshold: 1024  // Only compress responses > 1KB
+  }));
+
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
   app.use(cookieParser());

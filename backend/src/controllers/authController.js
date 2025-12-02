@@ -28,11 +28,13 @@ if (BANNED_SECRETS.includes(JWT_SECRET)) {
 
 // Helper for cookie options
 function cookieOptions() {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   return {
     httpOnly: true,
     maxAge: 60 * 60 * 1000, // 1 hour
-    secure: (process.env.COOKIE_SECURE === 'true') || (process.env.NODE_ENV === 'production'),
-    sameSite: 'lax'
+    secure: (process.env.COOKIE_SECURE === 'true') || isProduction,
+    sameSite: isProduction ? 'strict' : 'lax'  // Strict in production for better security
   };
 }
 

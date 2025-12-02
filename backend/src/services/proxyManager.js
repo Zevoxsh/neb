@@ -835,32 +835,70 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
       } catch (e) { }
 
       if (!cert || !key) {
-        // Self-signed fallback
+        // Self-signed fallback (using 4096-bit key for maximum security)
         const attrs = [{ name: 'commonName', value: listenHost }];
-        const opts = { days: 365, keySize: 2048, extensions: [{ name: 'basicConstraints', cA: false }, { name: 'keyUsage', digitalSignature: true, keyEncipherment: true }, { name: 'extKeyUsage', serverAuth: true }, { name: 'subjectAltName', altNames: [{ type: 2, value: listenHost }] }] };
+        const opts = {
+          days: 365,
+          keySize: 4096,  // 4096-bit key for stronger security
+          extensions: [
+            { name: 'basicConstraints', cA: false },
+            { name: 'keyUsage', digitalSignature: true, keyEncipherment: true },
+            { name: 'extKeyUsage', serverAuth: true },
+            { name: 'subjectAltName', altNames: [{ type: 2, value: listenHost }] }
+          ]
+        };
         const pems = selfsigned.generate(attrs, opts);
         cert = pems.cert;
         key = pems.private;
       }
 
       const secureContextCache = new Map();
+      const CACHE_DURATION_MS = 3600000; // 1 hour
+
       function getContextForServername(servername) {
         if (!servername) return null;
-        if (secureContextCache.has(servername)) return secureContextCache.get(servername);
+
+        // Check cache with expiration
+        if (secureContextCache.has(servername)) {
+          const cached = secureContextCache.get(servername);
+          const now = Date.now();
+
+          // Return cached context if still valid (< 1 hour old)
+          if (cached.timestamp && (now - cached.timestamp < CACHE_DURATION_MS)) {
+            return cached.ctx;
+          }
+
+          // Cache expired, remove it
+          secureContextCache.delete(servername);
+        }
+
         try {
           const dir = `/etc/letsencrypt/live/${servername}`;
           const fullchain = path.join(dir, 'fullchain.pem');
           const privkey = path.join(dir, 'privkey.pem');
+
           if (fs.existsSync(fullchain) && fs.existsSync(privkey)) {
-            const ctx = tls.createSecureContext({ cert: fs.readFileSync(fullchain), key: fs.readFileSync(privkey) });
-            secureContextCache.set(servername, ctx);
+            const ctx = tls.createSecureContext({
+              cert: fs.readFileSync(fullchain),
+              key: fs.readFileSync(privkey)
+            });
+
+            // Cache with timestamp
+            secureContextCache.set(servername, {
+              ctx: ctx,
+              timestamp: Date.now()
+            });
+
             return ctx;
           }
+
           // Trigger ACME if missing...
           if (!isIpAddress(servername) && !pm.pendingAcme.has(servername)) {
             // ... async ACME trigger ...
           }
-        } catch (e) { }
+        } catch (e) {
+          console.error(`getContextForServername error for ${servername}:`, e.message);
+        }
         return null;
       }
 

@@ -93,6 +93,17 @@ async function initDbAndStart() {
       console.warn('Migration: failed to add metrics columns', e.message);
     }
 
+    // Performance indexes for metrics queries
+    try {
+      console.log('Creating performance indexes...');
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_metrics_proxy_ts ON metrics(proxy_id, ts DESC);`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_metrics_hostname_ts ON metrics(hostname, ts DESC) WHERE hostname IS NOT NULL;`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_metrics_ts ON metrics(ts DESC);`);
+      console.log('Performance indexes created');
+    } catch (e) {
+      console.warn('Failed to create performance indexes', e.message);
+    }
+
     // Settings table for key/value config (e.g., local_tlds)
     await pool.query(`CREATE TABLE IF NOT EXISTS settings(
       key VARCHAR(191) PRIMARY KEY,

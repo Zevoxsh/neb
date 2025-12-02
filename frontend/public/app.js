@@ -231,8 +231,14 @@
       renderDomains();
       await (window.metrics && typeof window.metrics.loadMetrics === 'function' ? window.metrics.loadMetrics() : loadMetrics());
 
+      // Optimized metrics loading: only load when dashboard is visible
       setInterval(() => {
-        if (state.viewMode === 'realtime') {
+        // Check if dashboard view is currently visible
+        const dashboardView = document.getElementById('view-dashboard');
+        const isDashboardVisible = dashboardView && dashboardView.style.display !== 'none';
+
+        // Only load metrics if in realtime mode AND dashboard is visible
+        if (state.viewMode === 'realtime' && isDashboardVisible) {
           if (window.metrics && typeof window.metrics.loadMetrics === 'function') window.metrics.loadMetrics(); else loadMetrics();
         }
       }, 1000);
