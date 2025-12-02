@@ -80,6 +80,7 @@
       return;
     }
 
+    console.log('[DEBUG] About to enter switch, page=', page, 'typeof=', typeof page);
     switch (page) {
       case 'dashboard':
         console.log('[DEBUG] Calling initDashboard');
