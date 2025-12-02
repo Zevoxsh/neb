@@ -537,12 +537,22 @@
         const now = Date.now();
         const last60s = now - 60000;
         
+        console.log('[Live Activity] Processing', logsRes.body.logs.length, 'logs');
+        
         // Group by IP address
         const ipStats = {};
+        let recentCount = 0;
+        
         logsRes.body.logs.forEach(log => {
-          const timestamp = new Date(log.timestamp).getTime();
-          if (timestamp < last60s) return;
+          // Parse timestamp properly
+          const timestamp = log.timestamp ? new Date(log.timestamp).getTime() : 0;
           
+          // Skip if invalid timestamp or older than 60s
+          if (!timestamp || isNaN(timestamp) || timestamp < last60s) {
+            return;
+          }
+          
+          recentCount++;
           const ip = log.client_ip || 'unknown';
           if (!ipStats[ip]) {
             ipStats[ip] = {
@@ -559,6 +569,8 @@
           }
         });
 
+        console.log('[Live Activity] Found', recentCount, 'recent requests,', Object.keys(ipStats).length, 'unique IPs');
+
         // Sort by requests
         const sortedIps = Object.values(ipStats).sort((a, b) => b.requests - a.requests).slice(0, 10);
         
@@ -571,22 +583,30 @@
         } else {
           if (ipEmpty) ipEmpty.hidden = true;
           if (ipTable) {
-            ipTable.querySelector('tbody').innerHTML = sortedIps.map(stat => `
+            ipTable.querySelector('tbody').innerHTML = sortedIps.map(stat => {
+              const secondsAgo = Math.max(0, Math.round((now - stat.lastSeen) / 1000));
+              return `
               <tr>
                 <td><code>${escapeHtml(stat.ip)}</code></td>
                 <td><strong>${stat.requests}</strong></td>
                 <td>${formatBytes(stat.traffic)}</td>
-                <td><span style="color: var(--text-muted); font-size: 12px;">${Math.round((now - stat.lastSeen) / 1000)}s ago</span></td>
+                <td><span style="color: var(--text-muted); font-size: 12px;">${secondsAgo}s ago</span></td>
               </tr>
-            `).join('');
+              `;
+            }).join('');
           }
         }
 
         // Group by domain
         const domainStats = {};
         logsRes.body.logs.forEach(log => {
-          const timestamp = new Date(log.timestamp).getTime();
-          if (timestamp < last60s) return;
+          // Parse timestamp properly
+          const timestamp = log.timestamp ? new Date(log.timestamp).getTime() : 0;
+          
+          // Skip if invalid timestamp or older than 60s
+          if (!timestamp || isNaN(timestamp) || timestamp < last60s) {
+            return;
+          }
           
           const domain = log.hostname || log.host || 'unknown';
           if (!domainStats[domain]) {
@@ -607,6 +627,8 @@
         // Sort by requests
         const sortedDomains = Object.values(domainStats).sort((a, b) => b.requests - a.requests).slice(0, 10);
         
+        console.log('[Live Activity] Found', Object.keys(domainStats).length, 'unique domains');
+        
         const domainTable = document.getElementById('liveDomainStats');
         const domainEmpty = document.getElementById('liveDomainStatsEmpty');
         
@@ -616,14 +638,17 @@
         } else {
           if (domainEmpty) domainEmpty.hidden = true;
           if (domainTable) {
-            domainTable.querySelector('tbody').innerHTML = sortedDomains.map(stat => `
+            domainTable.querySelector('tbody').innerHTML = sortedDomains.map(stat => {
+              const secondsAgo = Math.max(0, Math.round((now - stat.lastRequest) / 1000));
+              return `
               <tr>
                 <td><strong>${escapeHtml(stat.domain)}</strong></td>
                 <td><strong>${stat.requests}</strong></td>
                 <td>${formatBytes(stat.traffic)}</td>
-                <td><span style="color: var(--text-muted); font-size: 12px;">${Math.round((now - stat.lastRequest) / 1000)}s ago</span></td>
+                <td><span style="color: var(--text-muted); font-size: 12px;">${secondsAgo}s ago</span></td>
               </tr>
-            `).join('');
+              `;
+            }).join('');
           }
         }
       }
