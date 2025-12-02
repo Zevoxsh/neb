@@ -4,22 +4,529 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Installation - Nebula Proxy</title>
+    <link rel="stylesheet" href="/public/styles.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
-            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            min-height: 100vh;
             padding: 20px;
         }
+
+        .install-container {
+            max-width: 700px;
+            width: 100%;
+        }
+
+        .install-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .install-logo {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 20px;
+            background: var(--primary);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+
+        .install-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            padding: 0 20px;
+        }
+
+        .step {
+            text-align: center;
+            flex: 1;
+            position: relative;
+        }
+
+        .step::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: var(--border);
+            z-index: -1;
+        }
+
+        .step:last-child::after {
+            display: none;
+        }
+
+        .step-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--bg-surface);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-weight: 600;
+            font-size: 14px;
+            border: 2px solid var(--border);
+        }
+
+        .step.active .step-circle {
+            background: var(--primary);
+            color: var(--bg-deep);
+            border-color: var(--primary);
+        }
+
+        .step.completed .step-circle {
+            background: var(--success);
+            color: var(--bg-deep);
+            border-color: var(--success);
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .step.active .step-label {
+            color: var(--primary);
+        }
+
+        .install-form {
+            display: none;
+        }
+
+        .install-form.active {
+            display: block;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn-full {
+            flex: 1;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-error {
+            background: rgba(255, 51, 51, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+
+        .alert-success {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .alert-info {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-hover);
+            color: var(--text-main);
+        }
+
+        .final-step {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .final-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            background: var(--success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="install-container">
+        <div class="install-header">
+            <div class="install-logo">🚀</div>
+            <h1>Installation Nebula Proxy</h1>
+            <p class="muted">Configuration initiale de votre reverse proxy</p>
+        </div>
+
+        <div class="install-steps">
+            <div class="step active" data-step="1">
+                <div class="step-circle">1</div>
+                <div class="step-label">Base de données</div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-circle">2</div>
+                <div class="step-label">Sécurité</div>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-circle">3</div>
+                <div class="step-label">Administration</div>
+            </div>
+            <div class="step" data-step="4">
+                <div class="step-circle">4</div>
+                <div class="step-label">Finalisation</div>
+            </div>
+        </div>
+
+        <div id="errorMessage" class="alert alert-error" style="display: none;"></div>
+        <div id="successMessage" class="alert alert-success" style="display: none;"></div>
+
+        <!-- Étape 1: Base de données -->
+        <article class="card install-form active" id="step1Form">
+            <div class="card-header">
+                <div>
+                    <p class="eyebrow">Étape 1/4</p>
+                    <h2>Configuration PostgreSQL</h2>
+                </div>
+            </div>
+            <form onsubmit="handleStep1(event)">
+                <div class="form-row">
+                    <label>Hôte PostgreSQL</label>
+                    <input type="text" id="dbHost" value="localhost" required>
+                    <small class="muted">Adresse du serveur PostgreSQL</small>
+                </div>
+
+                <div class="form-row">
+                    <label>Port PostgreSQL</label>
+                    <input type="number" id="dbPort" value="5432" required>
+                    <small class="muted">Port par défaut: 5432</small>
+                </div>
+
+                <div class="form-row">
+                    <label>Utilisateur PostgreSQL</label>
+                    <input type="text" id="dbUser" value="postgres" required>
+                    <small class="muted">Utilisateur avec droits de création de base</small>
+                </div>
+
+                <div class="form-row">
+                    <label>Mot de passe PostgreSQL</label>
+                    <input type="password" id="dbPassword" required>
+                </div>
+
+                <div class="form-row">
+                    <label>Nom de la base de données</label>
+                    <input type="text" id="dbName" value="nebuladb" required>
+                    <small class="muted">Nom de la base à créer ou utiliser</small>
+                </div>
+
+                <div id="testResult" class="alert alert-info" style="display: none;"></div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn ghost btn-full" onclick="testConnection()">🔌 Tester</button>
+                    <button type="submit" class="btn btn-full">Suivant →</button>
+                </div>
+            </form>
+        </article>
+
+        <!-- Étape 2: Sécurité -->
+        <article class="card install-form" id="step2Form">
+            <div class="card-header">
+                <div>
+                    <p class="eyebrow">Étape 2/4</p>
+                    <h2>Configuration Sécurité</h2>
+                </div>
+            </div>
+            <form onsubmit="handleStep2(event)">
+                <div class="form-row">
+                    <label>Secret JWT (minimum 32 caractères)</label>
+                    <input type="password" id="jwtSecret" required minlength="32">
+                    <small class="muted">Sera utilisé pour signer les tokens d'authentification</small>
+                </div>
+
+                <div class="form-row">
+                    <button type="button" class="btn ghost" onclick="generateSecret()">
+                        🎲 Générer un secret aléatoire
+                    </button>
+                </div>
+
+                <div class="form-row">
+                    <label>Email ACME (Let's Encrypt)</label>
+                    <input type="email" id="acmeEmail" placeholder="admin@example.com">
+                    <small class="muted">Email pour les notifications de renouvellement SSL</small>
+                </div>
+
+                <div class="form-row">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="cookieSecure" checked style="margin-right: 8px;">
+                        <span>Activer HTTPS uniquement pour les cookies</span>
+                    </label>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn ghost btn-full" onclick="previousStep()">← Précédent</button>
+                    <button type="submit" class="btn btn-full">Suivant →</button>
+                </div>
+            </form>
+        </article>
+
+        <!-- Étape 3: Administration -->
+        <article class="card install-form" id="step3Form">
+            <div class="card-header">
+                <div>
+                    <p class="eyebrow">Étape 3/4</p>
+                    <h2>Compte Administrateur</h2>
+                </div>
+            </div>
+            <form onsubmit="handleStep3(event)">
+                <div class="form-row">
+                    <label>Nom d'utilisateur admin</label>
+                    <input type="text" id="adminUsername" value="admin" required>
+                </div>
+
+                <div class="form-row">
+                    <label>Mot de passe admin</label>
+                    <input type="password" id="adminPassword" required minlength="8">
+                    <small class="muted">Minimum 8 caractères</small>
+                </div>
+
+                <div class="form-row">
+                    <label>Confirmer le mot de passe</label>
+                    <input type="password" id="adminPasswordConfirm" required>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn ghost btn-full" onclick="previousStep()">← Précédent</button>
+                    <button type="submit" class="btn btn-full">Installer →</button>
+                </div>
+            </form>
+        </article>
+
+        <!-- Étape 4: Finalisation -->
+        <article class="card install-form" id="step4Form">
+            <div class="loading show">
+                <div class="spinner"></div>
+                <p class="muted">Installation en cours...</p>
+            </div>
+
+            <div class="final-step" style="display: none;">
+                <div class="final-icon">✓</div>
+                <h2>Installation Terminée !</h2>
+                <p class="muted" style="margin: 16px 0 32px;">Nebula Proxy est maintenant configuré et prêt à l'emploi</p>
+                <button class="btn" onclick="window.location.href='/login'">
+                    🚀 Accéder au panneau d'administration
+                </button>
+            </div>
+        </article>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const installData = {};
+
+        function handleStep1(e) {
+            e.preventDefault();
+            installData.database = {
+                host: document.getElementById('dbHost').value,
+                port: parseInt(document.getElementById('dbPort').value),
+                user: document.getElementById('dbUser').value,
+                password: document.getElementById('dbPassword').value,
+                name: document.getElementById('dbName').value
+            };
+            nextStep();
+        }
+
+        function handleStep2(e) {
+            e.preventDefault();
+            installData.security = {
+                jwtSecret: document.getElementById('jwtSecret').value,
+                acmeEmail: document.getElementById('acmeEmail').value,
+                cookieSecure: document.getElementById('cookieSecure').checked
+            };
+            nextStep();
+        }
+
+        function handleStep3(e) {
+            e.preventDefault();
+            const password = document.getElementById('adminPassword').value;
+            const confirm = document.getElementById('adminPasswordConfirm').value;
+
+            if (password !== confirm) {
+                showError('Les mots de passe ne correspondent pas');
+                return;
+            }
+
+            installData.admin = {
+                username: document.getElementById('adminUsername').value,
+                password: password
+            };
+            
+            nextStep();
+            performInstallation();
+        }
+
+        function nextStep() {
+            const currentForm = document.querySelector('.install-form.active');
+            currentForm.classList.remove('active');
+            
+            const currentStepEl = document.querySelector(`.step[data-step="${currentStep}"]`);
+            currentStepEl.classList.remove('active');
+            currentStepEl.classList.add('completed');
+            
+            currentStep++;
+            
+            const nextStepEl = document.querySelector(`.step[data-step="${currentStep}"]`);
+            nextStepEl.classList.add('active');
+            
+            const nextForm = document.getElementById(`step${currentStep}Form`);
+            nextForm.classList.add('active');
+            
+            hideMessages();
+        }
+
+        function previousStep() {
+            const currentForm = document.querySelector('.install-form.active');
+            currentForm.classList.remove('active');
+            
+            const currentStepEl = document.querySelector(`.step[data-step="${currentStep}"]`);
+            currentStepEl.classList.remove('active');
+            
+            currentStep--;
+            
+            const prevStepEl = document.querySelector(`.step[data-step="${currentStep}"]`);
+            prevStepEl.classList.remove('completed');
+            prevStepEl.classList.add('active');
+            
+            const prevForm = document.getElementById(`step${currentStep}Form`);
+            prevForm.classList.add('active');
+            
+            hideMessages();
+        }
+
+        async function testConnection() {
+            const data = {
+                host: document.getElementById('dbHost').value,
+                port: parseInt(document.getElementById('dbPort').value),
+                user: document.getElementById('dbUser').value,
+                password: document.getElementById('dbPassword').value,
+                name: document.getElementById('dbName').value
+            };
+
+            try {
+                const response = await fetch('/api/install/test-db', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                const testResult = document.getElementById('testResult');
+                
+                if (result.success) {
+                    testResult.className = 'alert alert-success';
+                    testResult.textContent = '✅ Connexion réussie ! Base de données accessible.';
+                } else {
+                    testResult.className = 'alert alert-error';
+                    testResult.textContent = `❌ Échec: ${result.error}`;
+                }
+                testResult.style.display = 'block';
+            } catch (error) {
+                const testResult = document.getElementById('testResult');
+                testResult.className = 'alert alert-error';
+                testResult.textContent = `❌ Erreur: ${error.message}`;
+                testResult.style.display = 'block';
+            }
+        }
+
+        function generateSecret() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+            let secret = '';
+            for (let i = 0; i < 48; i++) {
+                secret += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            document.getElementById('jwtSecret').value = secret;
+            document.getElementById('jwtSecret').type = 'text';
+            showSuccess('Secret généré ! Copiez-le si nécessaire.');
+        }
+
+        async function performInstallation() {
+            try {
+                const response = await fetch('/api/install/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(installData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.querySelector('.loading').classList.remove('show');
+                    document.querySelector('.final-step').style.display = 'block';
+                } else {
+                    throw new Error(result.error || 'Installation échouée');
+                }
+            } catch (error) {
+                document.querySelector('.loading').classList.remove('show');
+                showError('Erreur: ' + error.message);
+                previousStep();
+                previousStep();
+            }
+        }
+
+        function showError(message) {
+            const el = document.getElementById('errorMessage');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        function showSuccess(message) {
+            const el = document.getElementById('successMessage');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
 
         .install-container {
             background: rgba(20, 20, 30, 0.95);
