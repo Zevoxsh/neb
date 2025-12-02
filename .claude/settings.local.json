@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(dir /S /B *.js *.ts *.py *.json *.md *.yml *.yaml)",
+      "Bash(findstr:*)",
+      "Bash(dir /B)",
+      "Bash(dir:*)",
+      "Bash(cat:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
