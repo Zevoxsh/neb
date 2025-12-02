@@ -2504,12 +2504,12 @@
 
   function getSeverityIcon(severity) {
     const icons = {
-      critical: '??',
-      high: '??',
-      medium: '??',
-      low: '??'
+      critical: '🔴',
+      high: '🟠',
+      medium: '🟡',
+      low: '🟢'
     };
-    return icons[severity] || '?';
+    return icons[severity] || '⚪';
   }
 
   function getAlertTypeLabel(type) {
