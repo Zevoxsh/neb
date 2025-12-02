@@ -1,112 +1,217 @@
-# Express JWT + MySQL Auth (minimal)
+# Nebula Proxy - Reverse Proxy & Load Balancer
 
-Instructions rapide pour lancer le backend localement.
+Nebula Proxy est un reverse proxy moderne avec protection DDoS, SSL/TLS automatique, et interface d'administration web.
 
-1) Copier `.env.example` en `.env` et remplir les paramètres MySQL et `JWT_SECRET`.
+## 🚀 Installation Rapide
 
-2) Installer les dépendances:
+### Prérequis
 
-```powershell
-cd c:\Users\Zevox\Documents\proxy
+- **Node.js** 14+ ([télécharger](https://nodejs.org/))
+- **PostgreSQL** 12+ ([télécharger](https://www.postgresql.org/download/))
+
+### Installation Automatique
+
+#### Sur Windows
+
+1. Double-cliquez sur `install.bat`
+2. Suivez les instructions à l'écran
+3. Ouvrez votre navigateur sur `http://localhost:3000/install`
+
+#### Sur Linux/Mac
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+Puis ouvrez `http://localhost:3000/install` dans votre navigateur.
+
+### Installation Manuelle
+
+1. **Installer les dépendances**
+
+```bash
 npm install
 ```
 
-Commandes pour un serveur Linux (bash)
+2. **Démarrer le serveur**
+
 ```bash
-cd /path/to/project
-npm install
-# Copier .env.example -> .env et éditer
-cp .env.example .env
-# (Éditer .env avec vos valeurs DB et DEFAULT_ADMIN_* si besoin)
 npm start
 ```
 
-Déploiement recommandé sur Linux
-- Exécutez derrière un reverse-proxy (nginx) qui gère TLS, ou lancez directement avec TLS.
-- Si TLS est géré par le reverse-proxy, exportez `NODE_ENV=production` et `COOKIE_SECURE=true` dans l'environnement pour que le cookie JWT soit marqué `Secure`.
+3. **Configurer via l'interface web**
 
-Exemple de service `systemd` (optionnel)
-1. Créez `/etc/systemd/system/proxy-auth.service` avec le contenu suivant (adaptez les chemins et l'utilisateur):
+Ouvrez `http://localhost:3000/install` et suivez l'assistant d'installation en 4 étapes:
+
+- **Étape 1**: Configuration PostgreSQL (hôte, port, utilisateur, mot de passe, base de données)
+- **Étape 2**: Sécurité (secret JWT, email ACME pour Let's Encrypt)
+- **Étape 3**: Compte administrateur (nom d'utilisateur et mot de passe)
+- **Étape 4**: Finalisation automatique
+
+## 📋 Configuration de PostgreSQL
+
+L'assistant d'installation créera automatiquement:
+- La base de données spécifiée (si elle n'existe pas)
+- Toutes les tables nécessaires
+- L'utilisateur administrateur
+- La configuration initiale
+
+**Important**: Votre utilisateur PostgreSQL doit avoir les droits de création de base de données.
+
+## 🔧 Configuration
+
+Après l'installation, toute la configuration se fait via l'interface web à `/config.html`. Plus besoin de modifier le fichier `.env` !
+
+Les paramètres configurables incluent:
+- Base de données
+- Sécurité (JWT, cookies)
+- Certificats SSL/TLS (ACME/Let's Encrypt)
+- Protection bot/DDoS
+- Backends et load balancing
+- Alertes
+- Métriques
+
+## 🛡️ Fonctionnalités
+
+- **Reverse Proxy**: HTTP/HTTPS, TCP/TLS avec SNI
+- **Protection DDoS**: Rate limiting, bot challenge, IP blocking
+- **SSL/TLS Automatique**: Let's Encrypt avec renouvellement auto
+- **Load Balancing**: Round-robin, least connections, IP hash
+- **Métriques en temps réel**: Dashboard avec analytics
+- **Gestion centralisée**: Interface web moderne
+- **Sauvegardes**: Export/import de configuration
+- **Alertes**: Notifications pour événements critiques
+
+## 📁 Structure du Projet
+
+```
+neb/
+├── backend/
+│   ├── db/
+│   │   └── init.sql              # Schéma de base de données
+│   ├── src/
+│   │   ├── controllers/          # Logique métier
+│   │   ├── models/               # Modèles de données
+│   │   ├── routes/               # Routes API
+│   │   ├── services/             # Services (proxy, ACME, etc.)
+│   │   ├── middleware/           # Middleware (auth, bot protection)
+│   │   └── utils/                # Utilitaires
+│   └── scripts/                  # Scripts utilitaires
+├── frontend/
+│   └── public/                   # Interface web
+│       ├── install.html          # Assistant d'installation
+│       ├── dashboard.html        # Tableau de bord
+│       ├── config.html           # Configuration
+│       └── ...
+├── install.bat                   # Script d'installation Windows
+├── install.sh                    # Script d'installation Linux/Mac
+└── package.json
+```
+
+## 🔐 Sécurité
+
+- **Authentification JWT**: Tokens sécurisés avec expiration
+- **Hachage bcrypt**: Mots de passe stockés de manière sécurisée
+- **Rate Limiting**: Protection contre les attaques par force brute
+- **Bot Challenge**: Challenge JavaScript pour bloquer les bots
+- **Headers de sécurité**: CSP, X-Frame-Options, etc.
+- **Protection SQL Injection**: Requêtes paramétrées
+- **Protection XSS**: Validation et échappement des entrées
+
+## 📊 Utilisation
+
+1. **Connexion**: Accédez à `/login` avec vos identifiants admin
+2. **Dashboard**: Vue d'ensemble de vos proxies et métriques
+3. **Proxies**: Créez et gérez vos reverse proxies
+4. **Backends**: Configurez vos serveurs backend
+5. **Domaines**: Associez des domaines à vos backends
+6. **Certificats**: Gérez vos certificats SSL/TLS
+7. **Sécurité**: Configurez la protection bot/DDoS
+8. **Analytics**: Consultez les métriques en temps réel
+
+## 🚀 Production
+
+### Recommandations
+
+1. **HTTPS**: Activez le mode sécurisé pour les cookies
+2. **Secret JWT**: Utilisez un secret fort (32+ caractères)
+3. **Base de données**: Utilisez une base PostgreSQL dédiée
+4. **Sauvegardes**: Configurez des sauvegardes régulières
+5. **Monitoring**: Activez les alertes pour les événements critiques
+
+### Service systemd (Linux)
+
+Créez `/etc/systemd/system/nebula-proxy.service`:
 
 ```ini
 [Unit]
-Description=Express JWT Auth
-After=network.target
+Description=Nebula Proxy
+After=network.target postgresql.service
 
 [Service]
 Type=simple
 User=www-data
-WorkingDirectory=/path/to/project
-Environment=NODE_ENV=production
-Environment=COOKIE_SECURE=true
-Environment=DB_HOST=localhost
-Environment=DB_PORT=5432
-Environment=DB_USER=postgres
-Environment=DB_PASSWORD=yourpassword
-Environment=DB_NAME=test
-Environment=JWT_SECRET=your_jwt_secret
-ExecStart=/usr/bin/node /path/to/project/server.js
+WorkingDirectory=/path/to/neb
+ExecStart=/usr/bin/node backend/src/index.js
 Restart=on-failure
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-2. Activer et démarrer le service:
+Activez et démarrez:
+
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now proxy-auth.service
-sudo journalctl -u proxy-auth.service -f
+sudo systemctl enable nebula-proxy
+sudo systemctl start nebula-proxy
+sudo journalctl -u nebula-proxy -f
 ```
 
-Remarques de sécurité
-- Changez `JWT_SECRET` et le mot de passe admin par défaut avant un déploiement public.
-- Assurez-vous que PostgreSQL n'est pas exposé publiquement sans contrôle d'accès.
-3) Créer la table (exécuter `db/init.sql`) dans votre base PostgreSQL.
+## 📝 Scripts Utilitaires
 
-	Exemple avec `psql`:
+```bash
+# Réinitialiser le mot de passe admin
+node backend/scripts/reset_admin_password.js
 
-```powershell
-psql -h <host> -p <port> -U <user> -d <db> -f db/init.sql
+# Gérer la protection des domaines
+node backend/scripts/manage_domain_protection.js list
+node backend/scripts/manage_domain_protection.js protect <domain>
+node backend/scripts/manage_domain_protection.js unprotect <domain>
+
+# Réinitialiser les métriques
+node backend/scripts/reset-metrics.js
+
+# Migrer la configuration .env vers la base de données
+node backend/scripts/migrate_env_to_db.js
 ```
 
-Note: le serveur initialise maintenant la table `users` automatiquement au démarrage si elle n'existe pas, et crée un utilisateur administrateur par défaut (nom et mot de passe venant de `DEFAULT_ADMIN_USER` / `DEFAULT_ADMIN_PASSWORD` dans `.env`). Si ces variables ne sont pas définies, le serveur créera l'utilisateur `admin` avec le mot de passe `admin123`. Changez ces valeurs dans `.env` avant le premier démarrage en production.
+## 🐛 Dépannage
 
-4) Créer un utilisateur:
+### L'installation ne démarre pas
 
-```powershell
-npm run create-user -- <username> <password>
+Vérifiez que PostgreSQL est démarré et accessible:
+```bash
+psql -h localhost -U postgres -c "SELECT version();"
 ```
 
-5) Lancer le serveur:
+### Erreur de connexion à la base
 
-```powershell
-npm start
+Vérifiez les paramètres de connexion dans l'assistant d'installation.
+
+### Port déjà utilisé
+
+Changez le port dans les variables d'environnement:
+```bash
+PORT=8080 npm start
 ```
 
-6) Ouvrir `http://localhost:3000/login`, se connecter, vous serez redirigé vers l'`index.html` protégé.
+## 📄 Licence
 
-- Pour la production, utilisez HTTPS et réglez `cookie.secure=true`.
-- Changez `JWT_SECRET` pour une valeur robuste.
- - Ce dépôt utilise maintenant PostgreSQL; installez `postgres` et créez la base/les accès avant d'exécuter `db/init.sql`.
-Project structure
+MIT
 
-```
-proxy/                    # repo root
-├─ backend/               # server code, DB init and helpers
-│  ├─ server.js
-│  ├─ create-user.js
-│  ├─ proxy-manager.js
-│  └─ db/init.sql
-├─ frontend/              # simple static frontend
-│  └─ public/
-│     ├─ login.html
-│     └─ index.html
-├─ .env.example
-├─ package.json           # scripts point to backend/*
-└─ README.md
-```
+## 🤝 Support
 
-Notes: run `npm install` at repo root and `npm start` will launch `backend/server.js`.
-- Pour la production, utilisez HTTPS et réglez `cookie.secure=true`.
-- Changez `JWT_SECRET` pour une valeur robuste.
+Pour toute question ou problème, consultez la documentation ou créez une issue.

@@ -16,7 +16,6 @@ if (process.env.DATABASE_URL !== undefined && typeof process.env.DATABASE_URL !=
   process.env.DATABASE_URL = String(process.env.DATABASE_URL);
 }
 const createApp = require('./app');
-const pool = require('./config/db');
 const bcrypt = require('bcrypt');
 const proxyModel = require('./models/proxyModel');
 const proxyManager = require('./services/proxyManager');
@@ -27,12 +26,72 @@ const blockedIpModel = require('./models/blockedIpModel');
 const trustedIpModel = require('./models/trustedIpModel');
 const { normalizeSecurityConfig, DEFAULT_SECURITY_CONFIG } = require('./utils/securityConfig');
 const { connectRedis } = require('./config/redis');
+const http = require('http');
+const path = require('path');
 
+// Check if installation is needed
+async function checkInstallation() {
+  const fs = require('fs').promises;
+  const envPath = path.join(__dirname, '../../.env');
+  
+  try {
+    const envContent = await fs.readFile(envPath, 'utf8');
+    const hasDbConfig = envContent.includes('DB_HOST') && envContent.includes('DB_NAME');
+    return hasDbConfig;
+  } catch (error) {
+    return false;
+  }
+}
 
-const app = createApp();
+// Start installation server
+async function startInstallationServer() {
+  console.log('🔧 Installation requise - démarrage du serveur d\'installation...');
+  
+  const app = createApp();
+  const PORT = process.env.PORT || 3000;
+  
+  // Redirect all requests to install page except install routes
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api/install') || 
+        req.path === '/install.html' || 
+        req.path === '/install' ||
+        req.path.startsWith('/public/')) {
+      return next();
+    }
+    res.redirect('/install.html');
+  });
+  
+  const server = http.createServer(app);
+  
+  server.listen(PORT, () => {
+    console.log(`✅ Serveur d'installation démarré sur http://localhost:${PORT}`);
+    console.log(`📝 Ouvrez http://localhost:${PORT}/install pour configurer votre installation`);
+  });
+  
+  return server;
+}
+
+// Initialize database connection (only after installation)
+async function initializeDatabase() {
+  const pool = require('./config/db');
+  return pool;
+}
+
 const PORT = process.env.PORT || 3000;
 
 async function initDbAndStart() {
+  // Check if installation is needed
+  const isInstalled = await checkInstallation();
+  
+  if (!isInstalled) {
+    await startInstallationServer();
+    return;
+  }
+  
+  // Continue with normal startup
+  const pool = await initializeDatabase();
+  const app = createApp();
+  
   try {
     // create tables if not exists
     await pool.query(`CREATE TABLE IF NOT EXISTS users(
@@ -358,6 +417,49 @@ async function initDbAndStart() {
         }
       }
     } catch (e) { console.error('Failed to load settings', e); }
+
+    // Load all configuration from database
+    try {
+      const configController = require('./controllers/configController');
+      const settings = await settingsModel.listSettings();
+      const settingsMap = new Map(settings.map(s => [s.key, s.value]));
+      
+      // Apply bot protection settings
+      const botProtection = require('./services/botProtection');
+      const loadConfigValue = (key, defaultValue, type = 'string') => {
+        const value = settingsMap.get(key);
+        if (value === undefined || value === null) return defaultValue;
+        if (type === 'number') return Number(value);
+        if (type === 'boolean') return value === 'true' || value === true;
+        return value;
+      };
+      
+      botProtection.setEnabled(loadConfigValue('botProtection.enabled', false, 'boolean'));
+      botProtection.setThreshold(loadConfigValue('botProtection.threshold', 100, 'number'));
+      botProtection.setPerIpLimit(loadConfigValue('botProtection.perIpLimit', 60, 'number'));
+      botProtection.perIpLimitProtected = loadConfigValue('botProtection.perIpLimitProtected', 30, 'number');
+      botProtection.verifiedIpLimit = loadConfigValue('botProtection.verifiedIpLimit', 600, 'number');
+      botProtection.burstLimit = loadConfigValue('botProtection.burstLimit', 10, 'number');
+      botProtection.maxConnectionsPerIP = loadConfigValue('botProtection.maxConnectionsPerIP', 100, 'number');
+      botProtection.maxAttempts = loadConfigValue('botProtection.maxAttempts', 3, 'number');
+      botProtection.setChallengeFirstVisit(loadConfigValue('botProtection.challengeFirstVisit', false, 'boolean'));
+      
+      const verificationHours = loadConfigValue('botProtection.verificationDuration', 6, 'number');
+      botProtection.setVerificationDuration(verificationHours);
+      
+      // Apply backend settings
+      const healthCheckInterval = loadConfigValue('backends.healthCheckInterval', 30000, 'number');
+      proxyManager.healthProbeIntervalMs = healthCheckInterval;
+      proxyManager.failureThreshold = loadConfigValue('backends.failureThreshold', 3, 'number');
+      
+      // Apply metrics settings
+      proxyManager.flushIntervalSec = loadConfigValue('metrics.flushInterval', 5, 'number');
+      
+      console.log('✓ Configuration loaded from database');
+    } catch (e) { 
+      console.error('Failed to load configuration from DB:', e);
+      console.log('Using default configuration values');
+    }
 
     // Connect to Redis (optional - graceful fallback to memory cache)
     try {

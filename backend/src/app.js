@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 const fs = require('fs');
 
+const installRoutes = require('./routes/installRoutes');
 const authRoutes = require('./routes/authRoutes');
 const proxyRoutes = require('./routes/proxyRoutes');
 const backendRoutes = require('./routes/backendRoutes');
@@ -12,6 +13,7 @@ const domainRoutes = require('./routes/domainRoutes');
 const metricsRoutes = require('./routes/metricsRoutes');
 const certRoutes = require('./routes/certRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
+const configRoutes = require('./routes/configRoutes');
 const securityRoutes = require('./routes/securityRoutes');
 const backupRoutes = require('./routes/backupRoutes');
 const botChallengeRoutes = require('./routes/botChallengeRoutes');
@@ -114,6 +116,7 @@ function createApp() {
   });
 
   // API Routes
+  app.use('/api/install', installRoutes);
   app.use(authRoutes);
   app.use(proxyRoutes);
   app.use(backendRoutes);
@@ -122,6 +125,7 @@ function createApp() {
   app.use(metricsRoutes);
   app.use(certRoutes);
   app.use(settingsRoutes);
+  app.use(configRoutes);
   app.use(securityRoutes);
   app.use(backupRoutes);
   app.use(botChallengeRoutes);
@@ -156,6 +160,9 @@ function createApp() {
   app.get('/backend.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'backend.html')));
   app.get('/requests.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'requests.html')));
   app.get('/alerts.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'alerts.html')));
+  app.get('/config.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'config.html')));
+  app.get('/install.html', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'install.html')));
+  app.get('/install', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'install.html')));
 
   // SPA Fallback: serve the correct top-level page for known client routes so
   // direct links / refresh on deep routes work (e.g. /proxies/3 -> proxies.html)

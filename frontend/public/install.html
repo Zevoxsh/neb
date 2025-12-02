@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Installation - Nebula Proxy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .install-container {
+            background: rgba(20, 20, 30, 0.95);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+        }
+
+        .install-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .install-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .install-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding: 0 20px;
+        }
+
+        .step {
+            text-align: center;
+            flex: 1;
+            position: relative;
+        }
+
+        .step::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: #333;
+            z-index: -1;
+        }
+
+        .step:last-child::after {
+            display: none;
+        }
+
+        .step-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #333;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-weight: 600;
+            font-size: 14px;
+            border: 2px solid #333;
+        }
+
+        .step.active .step-circle {
+            background: #00d4ff;
+            color: #000;
+            border-color: #00d4ff;
+        }
+
+        .step.completed .step-circle {
+            background: #00ff88;
+            color: #000;
+            border-color: #00ff88;
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .step.active .step-label {
+            color: #00d4ff;
+        }
+
+        .install-form {
+            display: none;
+        }
+
+        .install-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #00d4ff;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        input[type="email"] {
+            width: 100%;
+            padding: 12px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background: #00b8e6;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #333;
+            color: #fff;
+        }
+
+        .btn-secondary:hover {
+            background: #444;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .success-message {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .test-connection {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff;
+            color: #00d4ff;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .test-connection.show {
+            display: block;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        .final-step {
+            text-align: center;
+        }
+
+        .final-step svg {
+            width: 80px;
+            height: 80px;
+            margin: 20px auto;
+            color: #00ff88;
+        }
+
+        .final-step h2 {
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .final-step p {
+            color: #888;
+            margin-bottom: 30px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #333;
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="install-container">
+        <div class="install-header">
+            <div class="install-logo">🚀</div>
+            <h1>Installation Nebula Proxy</h1>
+            <p class="subtitle">Configuration initiale de votre reverse proxy</p>
+        </div>
+
+        <div class="install-steps">
+            <div class="step active" data-step="1">
+                <div class="step-circle">1</div>
+                <div class="step-label">Base de données</div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-circle">2</div>
+                <div class="step-label">Sécurité</div>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-circle">3</div>
+                <div class="step-label">Administration</div>
+            </div>
+            <div class="step" data-step="4">
+                <div class="step-circle">4</div>
+                <div class="step-label">Finalisation</div>
+            </div>
+        </div>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        <div id="successMessage" class="success-message" style="display: none;"></div>
+
+        <!-- Étape 1: Base de données -->
+        <form class="install-form active" id="step1Form">
+            <div class="form-group">
+                <label>Hôte PostgreSQL</label>
+                <input type="text" id="dbHost" value="localhost" required>
+                <div class="help-text">Adresse du serveur PostgreSQL</div>
+            </div>
+
+            <div class="form-group">
+                <label>Port PostgreSQL</label>
+                <input type="number" id="dbPort" value="5432" required>
+                <div class="help-text">Port par défaut: 5432</div>
+            </div>
+
+            <div class="form-group">
+                <label>Utilisateur PostgreSQL</label>
+                <input type="text" id="dbUser" value="postgres" required>
+                <div class="help-text">Utilisateur avec droits de création de base</div>
+            </div>
+
+            <div class="form-group">
+                <label>Mot de passe PostgreSQL</label>
+                <input type="password" id="dbPassword" required>
+                <div class="help-text">Mot de passe de l'utilisateur PostgreSQL</div>
+            </div>
+
+            <div class="form-group">
+                <label>Nom de la base de données</label>
+                <input type="text" id="dbName" value="nebuladb" required>
+                <div class="help-text">Nom de la base à créer ou utiliser</div>
+            </div>
+
+            <div id="testResult" class="test-connection"></div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="testConnection()">🔌 Tester la connexion</button>
+                <button type="submit" class="btn btn-primary">Suivant →</button>
+            </div>
+        </form>
+
+        <!-- Étape 2: Sécurité -->
+        <form class="install-form" id="step2Form">
+            <div class="form-group">
+                <label>Secret JWT (minimum 32 caractères)</label>
+                <input type="password" id="jwtSecret" required minlength="32">
+                <div class="help-text">Sera utilisé pour signer les tokens d'authentification</div>
+            </div>
+
+            <div class="form-group">
+                <button type="button" class="btn btn-secondary" onclick="generateSecret()">
+                    🎲 Générer un secret aléatoire
+                </button>
+            </div>
+
+            <div class="form-group">
+                <label>Email ACME (Let's Encrypt)</label>
+                <input type="email" id="acmeEmail" placeholder="admin@example.com">
+                <div class="help-text">Email pour les notifications de renouvellement SSL</div>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="cookieSecure" checked>
+                <label style="margin: 0;">Activer HTTPS uniquement pour les cookies</label>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="previousStep()">← Précédent</button>
+                <button type="submit" class="btn btn-primary">Suivant →</button>
+            </div>
+        </form>
+
+        <!-- Étape 3: Administration -->
+        <form class="install-form" id="step3Form">
+            <div class="form-group">
+                <label>Nom d'utilisateur admin</label>
+                <input type="text" id="adminUsername" value="admin" required>
+                <div class="help-text">Nom de l'administrateur principal</div>
+            </div>
+
+            <div class="form-group">
+                <label>Mot de passe admin</label>
+                <input type="password" id="adminPassword" required minlength="8">
+                <div class="help-text">Minimum 8 caractères</div>
+            </div>
+
+            <div class="form-group">
+                <label>Confirmer le mot de passe</label>
+                <input type="password" id="adminPasswordConfirm" required>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="previousStep()">← Précédent</button>
+                <button type="submit" class="btn btn-primary">Suivant →</button>
+            </div>
+        </form>
+
+        <!-- Étape 4: Finalisation -->
+        <div class="install-form" id="step4Form">
+            <div class="loading show">
+                <div class="spinner"></div>
+                <p style="color: #888;">Installation en cours...</p>
+            </div>
+
+            <div class="final-step" style="display: none;">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <h2>Installation Terminée !</h2>
+                <p>Nebula Proxy est maintenant configuré et prêt à l'emploi</p>
+                <button class="btn btn-primary" onclick="window.location.href='/login'">
+                    🚀 Accéder au panneau d'administration
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const installData = {};
+
+        // Gestion des étapes
+        document.getElementById('step1Form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            installData.database = {
+                host: document.getElementById('dbHost').value,
+                port: parseInt(document.getElementById('dbPort').value),
+                user: document.getElementById('dbUser').value,
+                password: document.getElementById('dbPassword').value,
+                name: document.getElementById('dbName').value
+            };
+            nextStep();
+        });
+
+        document.getElementById('step2Form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            installData.security = {
+                jwtSecret: document.getElementById('jwtSecret').value,
+                acmeEmail: document.getElementById('acmeEmail').value,
+                cookieSecure: document.getElementById('cookieSecure').checked
+            };
+            nextStep();
+        });
+
+        document.getElementById('step3Form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const password = document.getElementById('adminPassword').value;
+            const confirm = document.getElementById('adminPasswordConfirm').value;
+
+            if (password !== confirm) {
+                showError('Les mots de passe ne correspondent pas');
+                return;
+            }
+
+            installData.admin = {
+                username: document.getElementById('adminUsername').value,
+                password: password
+            };
+            
+            nextStep();
+            performInstallation();
+        });
+
+        function nextStep() {
+            const currentForm = document.querySelector('.install-form.active');
+            currentForm.classList.remove('active');
+            
+            const currentStepEl = document.querySelector(`.step[data-step="${currentStep}"]`);
+            currentStepEl.classList.remove('active');
+            currentStepEl.classList.add('completed');
+            
+            currentStep++;
+            
+            const nextStepEl = document.querySelector(`.step[data-step="${currentStep}"]`);
+            nextStepEl.classList.add('active');
+            
+            const nextForm = document.getElementById(`step${currentStep}Form`);
+            nextForm.classList.add('active');
+            
+            hideMessages();
+        }
+
+        function previousStep() {
+            const currentForm = document.querySelector('.install-form.active');
+            currentForm.classList.remove('active');
+            
+            const currentStepEl = document.querySelector(`.step[data-step="${currentStep}"]`);
+            currentStepEl.classList.remove('active');
+            
+            currentStep--;
+            
+            const prevStepEl = document.querySelector(`.step[data-step="${currentStep}"]`);
+            prevStepEl.classList.remove('completed');
+            prevStepEl.classList.add('active');
+            
+            const prevForm = document.getElementById(`step${currentStep}Form`);
+            prevForm.classList.add('active');
+            
+            hideMessages();
+        }
+
+        async function testConnection() {
+            const data = {
+                host: document.getElementById('dbHost').value,
+                port: parseInt(document.getElementById('dbPort').value),
+                user: document.getElementById('dbUser').value,
+                password: document.getElementById('dbPassword').value,
+                name: document.getElementById('dbName').value
+            };
+
+            try {
+                const response = await fetch('/api/install/test-db', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                const testResult = document.getElementById('testResult');
+                
+                if (result.success) {
+                    testResult.innerHTML = '✅ Connexion réussie ! Base de données accessible.';
+                    testResult.style.borderColor = '#00ff88';
+                    testResult.style.color = '#00ff88';
+                } else {
+                    testResult.innerHTML = `❌ Échec de connexion: ${result.error}`;
+                    testResult.style.borderColor = '#ff4444';
+                    testResult.style.color = '#ff4444';
+                }
+                testResult.classList.add('show');
+            } catch (error) {
+                const testResult = document.getElementById('testResult');
+                testResult.innerHTML = `❌ Erreur: ${error.message}`;
+                testResult.style.borderColor = '#ff4444';
+                testResult.style.color = '#ff4444';
+                testResult.classList.add('show');
+            }
+        }
+
+        function generateSecret() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+            let secret = '';
+            for (let i = 0; i < 48; i++) {
+                secret += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            document.getElementById('jwtSecret').value = secret;
+            showSuccess('Secret généré ! Copiez-le maintenant si vous en avez besoin.');
+        }
+
+        async function performInstallation() {
+            try {
+                const response = await fetch('/api/install/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(installData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.querySelector('.loading').classList.remove('show');
+                    document.querySelector('.final-step').style.display = 'block';
+                } else {
+                    throw new Error(result.error || 'Installation échouée');
+                }
+            } catch (error) {
+                document.querySelector('.loading').classList.remove('show');
+                showError('Erreur lors de l\'installation: ' + error.message);
+                previousStep();
+                previousStep();
+            }
+        }
+
+        function showError(message) {
+            const el = document.getElementById('errorMessage');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        function showSuccess(message) {
+            const el = document.getElementById('successMessage');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
