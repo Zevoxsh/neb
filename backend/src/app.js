@@ -10,6 +10,7 @@ const proxyRoutes = require('./routes/proxyRoutes');
 const backendRoutes = require('./routes/backendRoutes');
 const backendPoolRoutes = require('./routes/backendPoolRoutes');
 const domainRoutes = require('./routes/domainRoutes');
+const maintenanceRoutes = require('./routes/maintenanceRoutes');
 const metricsRoutes = require('./routes/metricsRoutes');
 const certRoutes = require('./routes/certRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
@@ -125,6 +126,7 @@ function createApp() {
   app.use(backendRoutes);
   app.use('/api/backend-pools', backendPoolRoutes);
   app.use(domainRoutes);
+  app.use('/api/maintenance', maintenanceRoutes);
   app.use(geoipRoutes);
   app.use(metricsRoutes);
   app.use(certRoutes);

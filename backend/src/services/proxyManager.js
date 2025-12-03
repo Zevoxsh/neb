@@ -14,6 +14,7 @@ const trustedIpModel = require('../models/trustedIpModel');
 const alertService = require('./alertService');
 const botProtection = require('./botProtection');
 const requestLogger = require('../utils/requestLogger');
+const maintenanceManager = require('./maintenanceManager');
 
 // simple helper to detect IP addresses (IPv4 or IPv6 heuristics)
 function isIpAddress(host) {
@@ -443,7 +444,32 @@ class ProxyManager {
         // Redirect logic
         try {
           const hostHeader = req.headers && req.headers.host ? req.headers.host.split(':')[0] : listenHost;
-          
+
+          // Check if domain is in maintenance mode
+          if (hostHeader && !isIpAddress(hostHeader)) {
+            try {
+              const maintenanceStatus = await domainModel.getMaintenanceStatusByHostname(hostHeader);
+              if (maintenanceStatus && maintenanceStatus.maintenance_enabled) {
+                console.log(`[HTTP] Domain ${hostHeader} is in maintenance mode`);
+
+                // Get maintenance page (custom or default)
+                const maintenancePage = maintenanceManager.getMaintenancePage(
+                  hostHeader,
+                  maintenanceStatus.maintenance_page_path
+                );
+
+                res.writeHead(503, {
+                  'Content-Type': 'text/html; charset=utf-8',
+                  'Retry-After': '3600'
+                });
+                res.end(maintenancePage);
+                return;
+              }
+            } catch (e) {
+              console.error(`[HTTP] Error checking maintenance status for ${hostHeader}:`, e.message);
+            }
+          }
+
           // Check and generate SSL certificate BEFORE redirect
           if (hostHeader && !isIpAddress(hostHeader)) {
             const certDir = `/etc/letsencrypt/live/${hostHeader}`;
@@ -558,7 +584,32 @@ animation:spin 1s linear infinite;margin:30px auto}
             return;
           }
         }
-        
+
+        // Check if domain is in maintenance mode
+        if (hostname && !isIpAddress(hostname)) {
+          try {
+            const maintenanceStatus = await domainModel.getMaintenanceStatusByHostname(hostname);
+            if (maintenanceStatus && maintenanceStatus.maintenance_enabled) {
+              console.log(`[HTTPS] Domain ${hostname} is in maintenance mode`);
+
+              // Get maintenance page (custom or default)
+              const maintenancePage = maintenanceManager.getMaintenancePage(
+                hostname,
+                maintenanceStatus.maintenance_page_path
+              );
+
+              res.writeHead(503, {
+                'Content-Type': 'text/html; charset=utf-8',
+                'Retry-After': '3600'
+              });
+              res.end(maintenancePage);
+              return;
+            }
+          } catch (e) {
+            console.error(`[HTTPS] Error checking maintenance status for ${hostname}:`, e.message);
+          }
+        }
+
         // Log request
         const clientIp = normalizeIp(
           req.headers['cf-connecting-ip'] ||
@@ -567,11 +618,11 @@ animation:spin 1s linear infinite;margin:30px auto}
           req.connection?.remoteAddress ||
           req.socket?.remoteAddress
         );
-        
+
         if (hostname && clientIp) {
           requestLogger.logRequest(clientIp, hostname);
         }
-        
+
         try {
           // Get client IP - prioritize Cloudflare header
           const clientIp = normalizeIp(

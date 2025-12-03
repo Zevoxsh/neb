@@ -725,17 +725,26 @@
 
     document.addEventListener('click', async (ev) => {
       if ((document.body.dataset.page || '') !== 'domains') return;
-      
+
       // Handle delete button
       const deleteBtn = ev.target.closest && ev.target.closest('.delete-domain');
-      if (!deleteBtn || !deleteBtn.dataset.id) return;
-      if (!confirm('Delete this domain?')) return;
-      const res = await window.api.requestJson(`/api/domains/${deleteBtn.dataset.id}`, { method: 'DELETE' });
-      if (res && (res.status === 200 || res.status === 204)) {
-        showToast('Domain deleted');
-        await loadDomains();
-      } else {
-        showToast('Deletion failed', 'error');
+      if (deleteBtn && deleteBtn.dataset.id) {
+        if (!confirm('Delete this domain?')) return;
+        const res = await window.api.requestJson(`/api/domains/${deleteBtn.dataset.id}`, { method: 'DELETE' });
+        if (res && (res.status === 200 || res.status === 204)) {
+          showToast('Domain deleted');
+          await loadDomains();
+        } else {
+          showToast('Deletion failed', 'error');
+        }
+        return;
+      }
+
+      // Handle maintenance button
+      const maintenanceBtn = ev.target.closest && ev.target.closest('.manage-maintenance');
+      if (maintenanceBtn && maintenanceBtn.dataset.id) {
+        await openMaintenancePanel(maintenanceBtn.dataset.id, maintenanceBtn.dataset.hostname);
+        return;
       }
     });
   }
@@ -1204,13 +1213,20 @@
           protectionText = ' Open';
         }
         
+        // Maintenance status
+        const maintenanceEnabled = d.maintenance_enabled || false;
+        const maintenanceBadge = maintenanceEnabled ? 'warning' : 'success';
+        const maintenanceText = maintenanceEnabled ? ' Active' : ' Disabled';
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${escapeHtml(d.hostname || '')}</strong></td>
           <td>${proxy ? escapeHtml(proxy.name || '') : `Proxy #${d.proxy_id}`}</td>
           <td>${backendLabel}</td>
           <td><span class="status-badge ${protectionBadge}"><span class="status-dot"></span>${protectionText}</span></td>
+          <td><span class="status-badge ${maintenanceBadge}"><span class="status-dot"></span>${maintenanceText}</span></td>
           <td>
+            <button class="btn ghost small manage-maintenance" data-id="${d.id}" data-hostname="${escapeHtml(d.hostname || '')}">Maintenance</button>
             <a class="btn ghost small" href="/domain?id=${d.id}">Manage</a>
             <button class="btn ghost small delete-domain" data-id="${d.id}">Delete</button>
           </td>
@@ -3489,6 +3505,136 @@
     }
     return num.toString();
   }
+
+  // Maintenance Management Functions
+  let currentMaintenanceDomainId = null;
+
+  async function openMaintenancePanel(domainId, hostname) {
+    currentMaintenanceDomainId = domainId;
+
+    // Set domain name
+    const domainNameEl = document.getElementById('maintenanceDomainName');
+    if (domainNameEl) domainNameEl.textContent = hostname;
+
+    // Load current maintenance status
+    try {
+      const res = await window.api.requestJson(`/api/maintenance/status/${domainId}`);
+      if (res && res.status === 200) {
+        const data = res.body;
+        const toggle = document.getElementById('maintenanceToggle');
+        const statusText = document.getElementById('maintenanceStatusText');
+
+        if (toggle) toggle.checked = data.maintenance_enabled || false;
+        if (statusText) statusText.textContent = (data.maintenance_enabled ? 'Enabled' : 'Disabled');
+
+        // Update toggle event listener
+        if (toggle) {
+          toggle.onchange = function() {
+            statusText.textContent = this.checked ? 'Enabled' : 'Disabled';
+          };
+        }
+      }
+    } catch (e) {
+      console.error('Error loading maintenance status:', e);
+    }
+
+    // Clear custom page textarea
+    const textarea = document.getElementById('customMaintenancePage');
+    if (textarea) textarea.value = '';
+
+    // Show panel
+    showPanel('maintenancePanel');
+  }
+
+  // Load current maintenance page
+  document.getElementById('loadCurrentPageBtn')?.addEventListener('click', async () => {
+    if (!currentMaintenanceDomainId) return;
+
+    try {
+      const res = await window.api.requestJson(`/api/maintenance/page/${currentMaintenanceDomainId}`);
+      if (res && res.status === 200) {
+        const textarea = document.getElementById('customMaintenancePage');
+        if (textarea && res.body && res.body.content) {
+          textarea.value = res.body.content;
+          showToast('Current page loaded');
+        }
+      }
+    } catch (e) {
+      console.error('Error loading current page:', e);
+      showToast('Failed to load current page', 'error');
+    }
+  });
+
+  // Clear custom page
+  document.getElementById('clearCustomPageBtn')?.addEventListener('click', () => {
+    const textarea = document.getElementById('customMaintenancePage');
+    if (textarea) {
+      textarea.value = '';
+      showToast('Custom page cleared');
+    }
+  });
+
+  // Save maintenance settings
+  document.getElementById('saveMaintenanceBtn')?.addEventListener('click', async function() {
+    if (!currentMaintenanceDomainId) return;
+
+    const btn = this;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      const toggle = document.getElementById('maintenanceToggle');
+      const textarea = document.getElementById('customMaintenancePage');
+
+      const maintenanceEnabled = toggle ? toggle.checked : false;
+      const customHtml = textarea ? textarea.value.trim() : '';
+
+      // Update maintenance mode
+      const modeRes = await window.api.requestJson(`/api/maintenance/mode/${currentMaintenanceDomainId}`, {
+        method: 'PUT',
+        body: {
+          enabled: maintenanceEnabled,
+          maintenancePagePath: null  // Will be set after uploading custom page
+        }
+      });
+
+      if (!modeRes || modeRes.status !== 200) {
+        throw new Error('Failed to update maintenance mode');
+      }
+
+      // Upload custom page if provided
+      if (customHtml) {
+        const pageRes = await window.api.requestJson(`/api/maintenance/page/${currentMaintenanceDomainId}`, {
+          method: 'POST',
+          body: { htmlContent: customHtml }
+        });
+
+        if (!pageRes || pageRes.status !== 200) {
+          throw new Error('Failed to upload custom maintenance page');
+        }
+      } else {
+        // Delete custom page if textarea is empty
+        await window.api.requestJson(`/api/maintenance/page/${currentMaintenanceDomainId}`, {
+          method: 'DELETE'
+        });
+      }
+
+      showToast('Maintenance settings saved successfully', 'success');
+      hidePanel('maintenancePanel');
+
+      // Reload domains to reflect changes
+      if (document.body.dataset.page === 'domains') {
+        await loadDomains();
+      }
+    } catch (e) {
+      console.error('Error saving maintenance settings:', e);
+      showToast('Failed to save settings: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  });
 
 })();
 
