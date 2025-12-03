@@ -17,6 +17,9 @@ function getClientIp(req) {
 function botChallengeMiddleware(req, res, next) {
     const ip = getClientIp(req);
 
+    // Récupérer le domaine depuis les headers
+    const domain = req.headers.host?.split(':')[0] || null;
+
     // Skip challenge for:
     // - API endpoints (authenticated)
     // - Static assets
@@ -30,14 +33,18 @@ function botChallengeMiddleware(req, res, next) {
 
     // Only track and check requests that can be challenged
     if (!shouldSkip) {
-        // Track request
-        botProtection.trackRequest(ip);
+        // Track request - passer le domaine pour tracking par domaine
+        botProtection.trackRequest(ip, domain);
 
-        // Check if we should challenge this IP
-        const challengeStatus = botProtection.shouldChallenge(ip);
-        
-        if (challengeStatus === 'banned') {
-            // IP is banned
+        // Check if we should challenge this IP - passer le domaine pour filtrage
+        const challengeStatus = botProtection.shouldChallenge(ip, false, domain);
+
+        if (challengeStatus === 'banned' || challengeStatus === 'banned_for_domain') {
+            // IP is banned (globally or for this domain)
+            const message = challengeStatus === 'banned_for_domain'
+                ? `Votre adresse IP a été temporairement bloquée pour ce domaine (${domain}) en raison d'un taux de requêtes trop élevé.`
+                : `Votre adresse IP a été temporairement bloquée en raison de tentatives suspectes.`;
+
             res.status(403);
             res.send(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Accès refusé</title>
@@ -45,7 +52,7 @@ function botChallengeMiddleware(req, res, next) {
 .box{background:#0a0a0a;border:1px solid #333;border-radius:12px;padding:40px;max-width:500px;margin:0 auto}
 h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="box">
 <h1>🚫 Accès Refusé</h1>
-<p>Votre adresse IP a été temporairement bloquée en raison de tentatives suspectes.</p>
+<p>${message}</p>
 <p>Veuillez réessayer dans quelques minutes.</p></div></body></html>`);
             return;
         }

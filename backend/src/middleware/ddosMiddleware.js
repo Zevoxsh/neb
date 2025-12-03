@@ -1,4 +1,5 @@
 const ddosProtection = require('../services/ddosProtection');
+const botProtection = require('../services/botProtection');
 const geoBlocking = require('../services/geoBlocking');
 const { createLogger } = require('../utils/logger');
 
@@ -41,12 +42,17 @@ function ddosProtectionMiddleware(req, res, next) {
     ddosProtection.releaseConnection(ip);
   });
 
-  // Analyze request
+  // Vérifier si l'IP est vérifiée par le bot protection
+  const isVerifiedBot = botProtection.verifiedIPs.has(ip) &&
+                        botProtection.verifiedIPs.get(ip) > Date.now();
+
+  // Analyze request - Passer l'info de vérification pour des limites plus permissives
   const requestAnalysis = ddosProtection.analyzeRequest(
     ip,
     req.path,
     req.method,
-    req.headers
+    req.headers,
+    isVerifiedBot
   );
 
   if (!requestAnalysis.allowed) {

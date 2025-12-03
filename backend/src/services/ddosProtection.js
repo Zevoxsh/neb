@@ -17,29 +17,30 @@ class DDoSProtectionService {
     // Request pattern tracking
     this.requestPatterns = new Map(); // IP -> { timestamps[], paths[] }
 
-    // HTTP flood detection
+    // HTTP flood detection - Limites beaucoup plus permissives
+    // 1000 req/min = limite normale, peut aller jusqu'à 12000 req/min (200 req/s)
     this.httpFloodLimiter = new RateLimiter(
-      parseInt(process.env.DDOS_HTTP_REQUESTS_PER_MINUTE) || 600,
+      parseInt(process.env.DDOS_HTTP_REQUESTS_PER_MINUTE) || 12000,
       60000
     );
 
-    // Connection limits
-    this.maxConnectionsPerIP = parseInt(process.env.DDOS_MAX_CONNECTIONS_PER_IP) || 200;
-    this.maxHalfOpenConnections = parseInt(process.env.DDOS_MAX_HALF_OPEN) || 50;
+    // Connection limits - Limites très élevées pour ne pas bloquer facilement
+    this.maxConnectionsPerIP = parseInt(process.env.DDOS_MAX_CONNECTIONS_PER_IP) || 1000;
+    this.maxHalfOpenConnections = parseInt(process.env.DDOS_MAX_HALF_OPEN) || 500;
 
     // Slowloris protection (tracked elsewhere via timeouts)
-    this.slowRequestTimeout = parseInt(process.env.DDOS_SLOW_REQUEST_TIMEOUT_MS) || 30000;
+    this.slowRequestTimeout = parseInt(process.env.DDOS_SLOW_REQUEST_TIMEOUT_MS) || 60000;
 
-    // Pattern detection thresholds
+    // Pattern detection thresholds - Seuils beaucoup plus élevés
     this.patternDetectionWindow = 60000; // 1 minute
-    this.suspiciousPatternThreshold = 200; // Requests to same path
+    this.suspiciousPatternThreshold = 2000; // Requests to same path (augmenté de 200 à 2000)
 
-    // Ban durations (progressive)
+    // Ban durations (progressive) - Durées plus courtes
     this.banDurations = [
-      5 * 60 * 1000,    // 5 minutes
-      30 * 60 * 1000,   // 30 minutes
-      2 * 60 * 60 * 1000, // 2 hours
-      24 * 60 * 60 * 1000 // 24 hours
+      2 * 60 * 1000,    // 2 minutes
+      10 * 60 * 1000,   // 10 minutes
+      30 * 60 * 1000, // 30 minutes
+      2 * 60 * 60 * 1000 // 2 hours
     ];
 
     // Cleanup old data every 5 minutes
@@ -70,12 +71,12 @@ class DDoSProtectionService {
 
     // Check connection limits
     if (conn.count > this.maxConnectionsPerIP) {
-      this.addSuspicionScore(ip, 20, 'connection_limit_exceeded');
+      this.addSuspicionScore(ip, 50, 'connection_limit_exceeded');
       return false;
     }
 
     if (conn.halfOpen > this.maxHalfOpenConnections) {
-      this.addSuspicionScore(ip, 30, 'syn_flood_detected');
+      this.addSuspicionScore(ip, 80, 'syn_flood_detected');
       return false;
     }
 
@@ -130,15 +131,33 @@ class DDoSProtectionService {
   /**
    * Analyze HTTP request for flood patterns
    */
-  analyzeRequest(ip, path, method, headers) {
+  analyzeRequest(ip, path, method, headers, isVerifiedBot = false) {
     // Check if banned
     if (!this.isAllowed(ip)) {
       return { allowed: false, reason: 'ip_banned' };
     }
 
-    // Check rate limit
+    // IPs vérifiées ont des limites beaucoup plus permissives
+    if (isVerifiedBot) {
+      // Pour les IPs vérifiées, on ne vérifie que les abus extrêmes
+      const pattern = this.requestPatterns.get(ip);
+      if (pattern) {
+        const recentRequests = pattern.timestamps.filter(t => Date.now() - t < this.patternDetectionWindow);
+        // Seulement bloquer si vraiment excessif (>20000 req/min pour IPs vérifiées)
+        if (recentRequests.length > 20000) {
+          logger.warn('Verified IP exceeded extreme limit', { ip, count: recentRequests.length });
+          this.addSuspicionScore(ip, 50, 'verified_ip_extreme_abuse');
+          return { allowed: false, reason: 'extreme_rate_limit_exceeded' };
+        }
+      }
+      // Track pattern mais ne pas bloquer
+      this.trackRequestPattern(ip, path, method);
+      return { allowed: true };
+    }
+
+    // Check rate limit - Score plus élevé car c'est vraiment excessif maintenant
     if (!this.httpFloodLimiter.isAllowed(ip)) {
-      this.addSuspicionScore(ip, 10, 'rate_limit_exceeded');
+      this.addSuspicionScore(ip, 100, 'rate_limit_exceeded');
       return { allowed: false, reason: 'rate_limit_exceeded' };
     }
 
@@ -154,12 +173,12 @@ class DDoSProtectionService {
       const samePaths = pattern.paths.filter(p => p === path);
       if (samePaths.length > this.suspiciousPatternThreshold) {
         logger.warn('HTTP flood pattern detected', { ip, path, count: samePaths.length });
-        this.addSuspicionScore(ip, 25, 'http_flood_pattern');
+        this.addSuspicionScore(ip, 80, 'http_flood_pattern');
         return { allowed: false, reason: 'http_flood_detected' };
       }
 
-      // Request burst detection - only warn on extreme bursts
-      if (recentRequests.length > 500) {
+      // Request burst detection - only warn on VERY extreme bursts
+      if (recentRequests.length > 5000) {
         logger.warn('Request burst detected', { ip, count: recentRequests.length });
         this.addSuspicionScore(ip, 5, 'request_burst');
       }
@@ -241,8 +260,8 @@ class DDoSProtectionService {
 
     logger.debug('Added suspicion score', { ip, points, reason, totalScore: suspicious.score });
 
-    // Progressive banning based on score
-    if (suspicious.score >= 200) {
+    // Progressive banning based on score - Seuil beaucoup plus élevé
+    if (suspicious.score >= 500) {
       const banIndex = Math.min(suspicious.banCount, this.banDurations.length - 1);
       const banDuration = this.banDurations[banIndex];
       suspicious.bannedUntil = Date.now() + banDuration;

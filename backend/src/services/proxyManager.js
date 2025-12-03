@@ -674,27 +674,32 @@ animation:spin 1s linear infinite;margin:30px auto}
           
           // Only track requests that are not challenge-related
           if (!shouldSkip) {
-            botProtection.trackRequest(clientIp);
-            
             // Get domain from Host header
             const domain = req.headers.host ? req.headers.host.split(':')[0] : null;
-            
+
+            // Track request with domain for per-domain rate limiting
+            botProtection.trackRequest(clientIp, domain);
+
             // Log request asynchronously
             if (domain) {
               requestLogger.logRequest(clientIp, domain);
             }
-            
+
             // Force challenge for new IPs on HTTPS proxy, pass domain for filtering
             const challengeStatus = botProtection.shouldChallenge(clientIp, true, domain);
-            
-            if (challengeStatus === 'banned') {
+
+            if (challengeStatus === 'banned' || challengeStatus === 'banned_for_domain') {
+              const message = challengeStatus === 'banned_for_domain'
+                ? `Votre adresse IP a été temporairement bloquée pour ce domaine (${domain}) en raison d'un taux de requêtes trop élevé.`
+                : `Votre adresse IP a été temporairement bloquée.`;
+
               const bannedHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Accès refusé</title>
 <style>body{font-family:sans-serif;background:#000;color:#fff;text-align:center;padding:50px}
 .box{background:#0a0a0a;border:1px solid #333;border-radius:12px;padding:40px;max-width:500px;margin:0 auto}
 h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="box">
 <h1>🚫 Accès Refusé</h1>
-<p>Votre adresse IP a été temporairement bloquée.</p>
+<p>${message}</p>
 <p>Veuillez réessayer dans quelques minutes.</p></div></body></html>`;
               res.writeHead(403, { 'Content-Type': 'text/html; charset=utf-8' });
               res.end(bannedHtml);

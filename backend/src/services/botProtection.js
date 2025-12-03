@@ -8,19 +8,23 @@ const crypto = require('crypto');
 class BotProtection {
     constructor() {
         this.requestsPerSecond = 0;
-        this.threshold = 100; // Configurable - requests per second
+        this.threshold = 10000; // Configurable - requests per second (très élevé maintenant)
         this.enabled = false; // Mode "Under Attack" off by default
         this.verifiedIPs = new Map(); // IP => expiration timestamp
         this.requestCounts = new Map(); // IP => count per second
         this.ipRequestHistory = new Map(); // IP => array of timestamps for rate limiting
+        this.ipDomainRequestHistory = new Map(); // key: "IP:domain" => array of timestamps
+        this.bannedIpDomains = new Map(); // key: "IP:domain" => ban expiration timestamp
         this.activeConnections = new Map(); // IP => count (pour limiter connexions)
-        this.maxConnectionsPerIP = 100; // Max connexions simultanées par IP
-        
-        // Strict rate limits
-        this.perIpLimit = 60; // Max requests per IP per minute (reduced from 100)
-        this.perIpLimitProtected = 30; // Max requests per IP per minute for protected domains
-        this.verifiedIpLimit = 600; // Higher limit for verified IPs (10 req/s)
-        this.burstLimit = 10; // Max requests in 10 seconds
+        this.maxConnectionsPerIP = 1000; // Max connexions simultanées par IP (augmenté de 100 à 1000)
+
+        // Limites très permissives
+        this.perIpLimit = 1000; // Max requests per IP per minute (augmenté de 60 à 1000)
+        this.perIpLimitProtected = 600; // Max requests per IP per minute for protected domains (augmenté de 30 à 600)
+        this.perIpLimitUnprotected = 10000; // Limite TRÈS élevée pour domaines non protégés (10000 req/min)
+        this.verifiedIpLimit = 12000; // Higher limit for verified IPs (200 req/s) (augmenté de 600 à 12000)
+        this.burstLimit = 200; // Max requests in 10 seconds (augmenté de 10 à 200)
+        this.burstLimitUnprotected = 2000; // Burst limit for unprotected domains (augmenté)
         
         this.challengeFirstVisit = false; // DISABLED by default - only on proxy HTTPS
         this.activeChallenges = new Map(); // IP => { code, timestamp, attempts }
@@ -52,16 +56,33 @@ class BotProtection {
                     console.log(`[BotProtection] IP ${ip} unbanned`);
                 }
             }
+            // Clean expired domain-specific bans
+            for (const [key, expiration] of this.bannedIpDomains.entries()) {
+                if (expiration < now) {
+                    this.bannedIpDomains.delete(key);
+                    console.log(`[BotProtection] ${key} unbanned`);
+                }
+            }
             // Clean expired challenges
             for (const [ip, challenge] of this.activeChallenges.entries()) {
                 if (now - challenge.timestamp > 300000) { // 5 minutes
                     this.activeChallenges.delete(ip);
                 }
             }
+            // Clean old domain request histories
+            const oneMinuteAgo = now - 60000;
+            for (const [key, history] of this.ipDomainRequestHistory.entries()) {
+                while (history.length > 0 && history[0] < oneMinuteAgo) {
+                    history.shift();
+                }
+                if (history.length === 0) {
+                    this.ipDomainRequestHistory.delete(key);
+                }
+            }
         }, 60000);
     }
 
-    trackRequest(ip) {
+    trackRequest(ip, domain = null) {
         this.requestsPerSecond++;
         const count = (this.requestCounts.get(ip) || 0) + 1;
         this.requestCounts.set(ip, count);
@@ -72,20 +93,64 @@ class BotProtection {
             this.ipRequestHistory.set(ip, []);
         }
         const history = this.ipRequestHistory.get(ip);
-        
+
         // Add current request
         history.push(now);
-        
+
         // Remove requests older than 1 minute
         const oneMinuteAgo = now - 60000;
         while (history.length > 0 && history[0] < oneMinuteAgo) {
             history.shift();
         }
-        
+
+        // Track per-domain request history if domain is provided
+        if (domain) {
+            const key = `${ip}:${domain}`;
+            if (!this.ipDomainRequestHistory.has(key)) {
+                this.ipDomainRequestHistory.set(key, []);
+            }
+            const domainHistory = this.ipDomainRequestHistory.get(key);
+            domainHistory.push(now);
+
+            // Remove requests older than 1 minute
+            while (domainHistory.length > 0 && domainHistory[0] < oneMinuteAgo) {
+                domainHistory.shift();
+            }
+        }
+
         // Debug logging
         // if (history.length % 10 === 0) {
         //     console.log(`[BotProtection] IP ${ip}: ${history.length} requests in last minute`);
         // }
+    }
+
+    getRequestsPerMinuteForDomain(ip, domain) {
+        const key = `${ip}:${domain}`;
+        const history = this.ipDomainRequestHistory.get(key);
+        return history ? history.length : 0;
+    }
+
+    getRequestsInLastSecondsForDomain(ip, domain, seconds) {
+        const key = `${ip}:${domain}`;
+        const history = this.ipDomainRequestHistory.get(key);
+        if (!history) return 0;
+
+        const now = Date.now();
+        const cutoff = now - (seconds * 1000);
+        return history.filter(ts => ts > cutoff).length;
+    }
+
+    isIpDomainBanned(ip, domain) {
+        const key = `${ip}:${domain}`;
+        const banExpiration = this.bannedIpDomains.get(key);
+        return banExpiration && banExpiration > Date.now();
+    }
+
+    banIpForDomain(ip, domain, durationMs = 300000) { // 5 minutes by default
+        const key = `${ip}:${domain}`;
+        const expiration = Date.now() + durationMs;
+        this.bannedIpDomains.set(key, expiration);
+        console.log(`[BotProtection] IP ${ip} banned for domain ${domain} until ${new Date(expiration).toISOString()}`);
     }
 
     getRequestsPerMinute(ip) {
@@ -113,12 +178,12 @@ class BotProtection {
         const requestsInLast10Sec = this.getRequestsInLastSeconds(ip, 10);
         const isVerified = this.verifiedIPs.has(ip) && this.verifiedIPs.get(ip) > Date.now();
         
-        // Check burst protection (10 requests in 10 seconds)
+        // Check burst protection (200 requests in 10 seconds)
         if (requestsInLast10Sec > this.burstLimit) {
-            // Auto-ban if extreme burst (more than 3x the limit)
-            if (requestsInLast10Sec > this.burstLimit * 3) {
+            // Auto-ban if extreme burst (more than 5x the limit = 1000 req/10s)
+            if (requestsInLast10Sec > this.burstLimit * 5) {
                 console.log(`[BotProtection] 🚫 IP ${ip} auto-banned: burst ${requestsInLast10Sec} req/10s (limit: ${this.burstLimit})`);
-                this.banIP(ip, 600000); // Ban for 10 minutes (will also create alert if not trusted)
+                this.banIP(ip, 300000); // Ban for 5 minutes (will also create alert if not trusted)
             } else {
                 // Create alert for burst attack (only if not trusted)
                 const alertService = require('./alertService');
@@ -161,12 +226,12 @@ class BotProtection {
             const exceededPercent = (exceededBy / limit) * 100;
             let severity = 'medium';
             
-            if (exceededPercent > 100) {
-                severity = 'critical'; // More than double the limit
-                // Auto-ban for extreme abuse (more than 2x limit)
+            if (exceededPercent > 300) {
+                severity = 'critical'; // More than 4x the limit
+                // Auto-ban for extreme abuse (more than 4x limit)
                 console.log(`[BotProtection] 🚫 IP ${ip} auto-banned: ${requestsInLastMinute} req/min (limit: ${limit})`);
-                this.banIP(ip, 600000); // Ban for 10 minutes (will also create alert if not trusted)
-            } else if (exceededPercent > 50) {
+                this.banIP(ip, 300000); // Ban for 5 minutes (will also create alert if not trusted)
+            } else if (exceededPercent > 200) {
                 severity = 'high';
             } else {
                 // Only create rate limit alert if not auto-banned (to avoid duplicate)
@@ -234,13 +299,32 @@ class BotProtection {
             return false; // Trusted IPs never get challenged
         }
 
-        // Check if domain is unprotected (bypass all checks)
+        // Check if domain is unprotected - Pas de challenge, uniquement ban par domaine si VRAIMENT excessif
         if (domain && this.unprotectedDomains.has(domain)) {
-            // Still check for rate limiting even on unprotected domains
-            if (this.isRateLimited(ip, domain)) {
-                console.log(`[BotProtection] IP ${ip} rate limited on unprotected domain ${domain}`);
-                return true;
+            // Vérifier si IP est bannie pour ce domaine spécifique
+            if (this.isIpDomainBanned(ip, domain)) {
+                return 'banned_for_domain';
             }
+
+            // Vérifier le rate limit TRÈS élevé pour domaines non protégés
+            const requestsInLastMinute = this.getRequestsPerMinuteForDomain(ip, domain);
+            const requestsInLast10Sec = this.getRequestsInLastSecondsForDomain(ip, domain, 10);
+
+            // Burst check pour domaines non protégés (2000 req/10s)
+            if (requestsInLast10Sec > this.burstLimitUnprotected) {
+                console.log(`[BotProtection] IP ${ip} exceeded burst limit on unprotected domain ${domain}: ${requestsInLast10Sec} req/10s`);
+                this.banIpForDomain(ip, domain, 300000); // Ban 5 minutes pour ce domaine uniquement
+                return 'banned_for_domain';
+            }
+
+            // Rate limit check pour domaines non protégés (10000 req/min)
+            if (requestsInLastMinute > this.perIpLimitUnprotected) {
+                console.log(`[BotProtection] IP ${ip} exceeded rate limit on unprotected domain ${domain}: ${requestsInLastMinute} req/min`);
+                this.banIpForDomain(ip, domain, 300000); // Ban 5 minutes pour ce domaine uniquement
+                return 'banned_for_domain';
+            }
+
+            // Pas de challenge pour domaines non protégés, juste laisser passer
             return false;
         }
 
@@ -469,13 +553,20 @@ class BotProtection {
             enabled: this.enabled,
             threshold: this.threshold,
             perIpLimit: this.perIpLimit,
+            perIpLimitProtected: this.perIpLimitProtected,
+            perIpLimitUnprotected: this.perIpLimitUnprotected,
+            verifiedIpLimit: this.verifiedIpLimit,
+            burstLimit: this.burstLimit,
+            burstLimitUnprotected: this.burstLimitUnprotected,
             challengeFirstVisit: this.challengeFirstVisit,
             verificationDuration: this.verificationDuration / (60 * 60 * 1000), // Convert to hours
             requestsPerSecond: this.requestsPerSecond,
             verifiedIPs: this.verifiedIPs.size,
             bannedIPs: this.bannedIPs.size,
+            bannedIpDomains: this.bannedIpDomains.size,
             activeChallenges: this.activeChallenges.size,
             trackedIPs: this.ipRequestHistory.size,
+            trackedIpDomains: this.ipDomainRequestHistory.size,
             protectedDomains: Array.from(this.protectedDomains),
             unprotectedDomains: Array.from(this.unprotectedDomains),
             isUnderAttack: this.isUnderAttack(),
