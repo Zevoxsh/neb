@@ -220,6 +220,14 @@ async function initDbAndStart() {
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS error_page_html TEXT;");
     await pool.query("ALTER TABLE domain_mappings ADD COLUMN IF NOT EXISTS bot_protection VARCHAR(20) DEFAULT 'unprotected';");
 
+    // Maintenance mode support
+    await pool.query(`ALTER TABLE domain_mappings
+      ADD COLUMN IF NOT EXISTS maintenance_enabled BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS maintenance_page_path VARCHAR(500);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_domain_maintenance
+      ON domain_mappings(maintenance_enabled)
+      WHERE maintenance_enabled = TRUE;`);
+
     // Request logs table for tracking all requests
     await pool.query(`CREATE TABLE IF NOT EXISTS request_logs(
       id SERIAL PRIMARY KEY,
