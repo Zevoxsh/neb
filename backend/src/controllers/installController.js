@@ -117,14 +117,14 @@ class InstallController {
             
             const settings = [
                 // Database
-                { key: 'database.host', value: database.host },
-                { key: 'database.port', value: database.port.toString() },
-                { key: 'database.user', value: database.user },
-                { key: 'database.password', value: database.password },
+                { key: 'database.host', value: database.host || 'localhost' },
+                { key: 'database.port', value: String(database.port || 5432) },
+                { key: 'database.user', value: database.user || 'postgres' },
+                { key: 'database.password', value: database.password || '' },
                 { key: 'database.name', value: dbName },
                 // Security
-                { key: 'security.jwtSecret', value: security.jwtSecret },
-                { key: 'security.cookieSecure', value: security.cookieSecure.toString() },
+                { key: 'security.jwtSecret', value: security.jwtSecret || '' },
+                { key: 'security.cookieSecure', value: String(security.cookieSecure || false) },
                 { key: 'security.acmeEmail', value: security.acmeEmail || '' },
                 // Installation flag
                 { key: 'system.installed', value: 'true' }
