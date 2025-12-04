@@ -1300,11 +1300,30 @@
         const img = document.createElement('img');
         // Add cache buster for retries to force reload
         const cacheBuster = retryCount > 0 ? `?t=${Date.now()}` : '';
+
         // If server returned inline data URL, use it to avoid another HTTP request
         if (res.body.inline) {
           img.src = res.body.inline;
         } else {
-          img.src = res.body.path + cacheBuster;
+          // Attempt to fetch the image via fetch() and set a blob URL.
+          // This gives clearer error reporting and works around some image loading quirks.
+          const imgUrl = res.body.path + cacheBuster;
+          console.log(`[Screenshot] Fetching image blob for ${hostname} from:`, imgUrl);
+          fetch(imgUrl, { credentials: 'same-origin' })
+            .then(response => {
+              console.log(`[Screenshot] Fetch response for ${hostname}:`, response.status);
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              return response.blob();
+            })
+            .then(blob => {
+              const objectUrl = URL.createObjectURL(blob);
+              img.src = objectUrl;
+            })
+            .catch(err => {
+              console.error(`[Screenshot] Failed to fetch blob for ${hostname}:`, err);
+              // Fallback: set src directly to the path (may trigger browser image load)
+              img.src = imgUrl;
+            });
         }
         img.alt = `Preview of ${hostname}`;
         img.style.width = '100%';
