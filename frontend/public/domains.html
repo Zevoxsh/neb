@@ -25,29 +25,14 @@
           </div>
         </header>
         <section class="page-content">
-          <article class="card table-card">
-            <header>
+          <div class="domains-header">
+            <div>
               <p class="eyebrow">Inventaire</p>
               <h2>Domains actifs</h2>
-            </header>
-            <section>
-              <table id="domainsTable" class="data-table">
-                <thead>
-                  <tr>
-                    <th>Hostname</th>
-                    <th>Proxy</th>
-                    <th>Backend</th>
-                    <th>Protection CAPTCHA</th>
-                    <th>Maintenance</th>
-                    <th aria-label="actions"></th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-              <div id="domainsEmpty" class="empty-state" hidden>Aucun domaine configure.</div>
-            </section>
-          </article>
-
+            </div>
+          </div>
+          <div id="domainsGrid" class="domains-grid"></div>
+          <div id="domainsEmpty" class="empty-state" hidden>Aucun domaine configure.</div>
         </section>
         <div id="footer-placeholder"></div>
         <div class="panel-overlay" id="domainFormPanel" hidden>

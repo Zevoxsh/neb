@@ -1533,3 +1533,168 @@ body[data-page="security"] .btn.primary {
   width: 16px;
   height: 16px;
 }
+
+/* Domain Cards */
+.domains-header {
+  margin-bottom: 30px;
+}
+
+.domains-header h2 {
+  font-size: 1.8rem;
+  margin-top: 8px;
+}
+
+.domains-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.domain-card {
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.domain-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.domain-card-preview {
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.domain-card-preview iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  pointer-events: none;
+  transform: scale(0.5);
+  transform-origin: 0 0;
+  width: 200%;
+  height: 200%;
+}
+
+.domain-card-preview-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--text-muted);
+}
+
+.domain-card-preview-placeholder svg {
+  width: 48px;
+  height: 48px;
+  opacity: 0.3;
+}
+
+.domain-card-preview-placeholder span {
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+
+.domain-card-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+
+.domain-card-hostname {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 0;
+  word-break: break-all;
+}
+
+.domain-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.domain-card-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.domain-card-meta-row svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.5;
+}
+
+.domain-card-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.domain-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.domain-card-actions .btn {
+  flex: 1;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+}
+
+/* Responsive domain cards */
+@media (max-width: 1200px) {
+  .domains-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .domains-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .domain-card-preview {
+    height: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .domain-card-content {
+    padding: 16px;
+  }
+
+  .domain-card-preview {
+    height: 160px;
+  }
+}

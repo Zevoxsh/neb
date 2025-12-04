@@ -726,8 +726,8 @@
     document.addEventListener('click', async (ev) => {
       if ((document.body.dataset.page || '') !== 'domains') return;
 
-      // Handle delete button
-      const deleteBtn = ev.target.closest && ev.target.closest('.delete-domain');
+      // Handle delete button (both table and card)
+      const deleteBtn = ev.target.closest && ev.target.closest('.delete-domain, .delete-domain-card');
       if (deleteBtn && deleteBtn.dataset.id) {
         if (!confirm('Delete this domain?')) return;
         const res = await window.api.requestJson(`/api/domains/${deleteBtn.dataset.id}`, { method: 'DELETE' });
@@ -740,8 +740,8 @@
         return;
       }
 
-      // Handle maintenance button
-      const maintenanceBtn = ev.target.closest && ev.target.closest('.manage-maintenance');
+      // Handle maintenance button (both table and card)
+      const maintenanceBtn = ev.target.closest && ev.target.closest('.manage-maintenance, .manage-maintenance-card');
       if (maintenanceBtn && maintenanceBtn.dataset.id) {
         await openMaintenancePanel(maintenanceBtn.dataset.id, maintenanceBtn.dataset.hostname);
         return;
@@ -1176,11 +1176,11 @@
 
   async function loadDomains() {
     console.log('[DEBUG] loadDomains: Starting...');
-    const tbody = document.querySelector('#domainsTable tbody');
+    const grid = document.getElementById('domainsGrid');
     const empty = document.getElementById('domainsEmpty');
-    console.log('[DEBUG] loadDomains: tbody=', tbody, 'empty=', empty);
-    if (!tbody) return;
-    tbody.innerHTML = '';
+    console.log('[DEBUG] loadDomains: grid=', grid, 'empty=', empty);
+    if (!grid) return;
+    grid.innerHTML = '';
     try {
       const res = await window.api.requestJson('/api/domains');
       console.log('[DEBUG] loadDomains: API response=', res);
@@ -1200,43 +1200,109 @@
         const backendLabel = backend
           ? `${escapeHtml(backend.name || '')} (${escapeHtml(backend.target_host || '')}:${backend.target_port || ''})`
           : `${escapeHtml(d.target_host || '')}:${d.target_port || ''}`;
-        
+
         // Bot Protection status
         const botProtection = d.bot_protection || 'unprotected';
         let protectionBadge = '';
         let protectionText = '';
         if (botProtection === 'protected') {
           protectionBadge = 'warning';
-          protectionText = ' Protected';
+          protectionText = 'Protected';
         } else {
           protectionBadge = 'success';
-          protectionText = ' Open';
+          protectionText = 'Open';
         }
-        
+
         // Maintenance status
         const maintenanceEnabled = d.maintenance_enabled || false;
         const maintenanceBadge = maintenanceEnabled ? 'warning' : 'success';
-        const maintenanceText = maintenanceEnabled ? ' Active' : ' Disabled';
+        const maintenanceText = maintenanceEnabled ? 'Active' : 'Disabled';
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>${escapeHtml(d.hostname || '')}</strong></td>
-          <td>${proxy ? escapeHtml(proxy.name || '') : `Proxy #${d.proxy_id}`}</td>
-          <td>${backendLabel}</td>
-          <td><span class="status-badge ${protectionBadge}"><span class="status-dot"></span>${protectionText}</span></td>
-          <td><span class="status-badge ${maintenanceBadge}"><span class="status-dot"></span>${maintenanceText}</span></td>
-          <td>
-            <button class="btn ghost small manage-maintenance" data-id="${d.id}" data-hostname="${escapeHtml(d.hostname || '')}">Maintenance</button>
-            <a class="btn ghost small" href="/domain?id=${d.id}">Manage</a>
-            <button class="btn ghost small delete-domain" data-id="${d.id}">Delete</button>
-          </td>
+        const card = document.createElement('div');
+        card.className = 'domain-card';
+        card.dataset.domainId = d.id;
+        card.innerHTML = `
+          <div class="domain-card-preview">
+            <div class="domain-card-preview-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <path d="M3 9h18"/>
+                <circle cx="7" cy="6" r="0.5" fill="currentColor"/>
+                <circle cx="9" cy="6" r="0.5" fill="currentColor"/>
+                <circle cx="11" cy="6" r="0.5" fill="currentColor"/>
+              </svg>
+              <span>${escapeHtml(d.hostname || '')}</span>
+            </div>
+          </div>
+          <div class="domain-card-content">
+            <h3 class="domain-card-hostname">${escapeHtml(d.hostname || '')}</h3>
+            <div class="domain-card-meta">
+              <div class="domain-card-meta-row">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16v6H4zM4 14h16v6H4z"/>
+                </svg>
+                <span>${proxy ? escapeHtml(proxy.name || '') : `Proxy #${d.proxy_id}`}</span>
+              </div>
+              <div class="domain-card-meta-row">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+                <span>${backendLabel}</span>
+              </div>
+            </div>
+            <div class="domain-card-badges">
+              <span class="status-badge ${protectionBadge}"><span class="status-dot"></span>${protectionText}</span>
+              <span class="status-badge ${maintenanceBadge}"><span class="status-dot"></span>${maintenanceText}</span>
+            </div>
+            <div class="domain-card-actions">
+              <button class="btn ghost small manage-maintenance-card" data-id="${d.id}" data-hostname="${escapeHtml(d.hostname || '')}">Maintenance</button>
+              <button class="btn ghost small delete-domain-card" data-id="${d.id}">Delete</button>
+            </div>
+          </div>
         `;
-        tbody.appendChild(tr);
+
+        // Click on card (but not buttons) to navigate
+        card.addEventListener('click', (e) => {
+          if (!e.target.closest('.btn')) {
+            window.location.href = `/domain?id=${d.id}`;
+          }
+        });
+
+        grid.appendChild(card);
+
+        // Try to load preview after a short delay
+        setTimeout(() => loadDomainPreview(d.hostname, card), 100);
       });
     } catch (e) {
       toggleEmpty(empty, false, 'Impossible de charger les Domains.');
       showToast('Loading des Domains impossible', 'error');
     }
+  }
+
+  function loadDomainPreview(hostname, card) {
+    const previewDiv = card.querySelector('.domain-card-preview');
+    if (!previewDiv || !hostname) return;
+
+    // Create iframe for preview
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://${hostname}`;
+    iframe.sandbox = 'allow-same-origin';
+    iframe.loading = 'lazy';
+
+    // Replace placeholder with iframe on load
+    iframe.onload = () => {
+      const placeholder = previewDiv.querySelector('.domain-card-preview-placeholder');
+      if (placeholder) {
+        placeholder.remove();
+      }
+      previewDiv.appendChild(iframe);
+    };
+
+    // If iframe fails to load, keep placeholder
+    iframe.onerror = () => {
+      console.log(`Failed to load preview for ${hostname}`);
+    };
   }
 
   async function loadCerts() {
