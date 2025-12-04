@@ -248,7 +248,12 @@ const refreshScreenshot = asyncHandler(async (req, res) => {
   }
 
   // Force refresh screenshot
-  const screenshotPath = await screenshotService.refreshScreenshot(domain.hostname, id);
+  // Accept optional method in body (e.g., { method: 'local' })
+  const method = req.body && req.body.method ? String(req.body.method) : null;
+  const opts = {};
+  if (method) opts.method = method;
+
+  const screenshotPath = await screenshotService.refreshScreenshot(domain.hostname, id, opts);
 
   if (screenshotPath) {
     res.json({ path: screenshotPath });
@@ -257,4 +262,25 @@ const refreshScreenshot = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { list, create, update, remove, listForProxy, getScreenshot, refreshScreenshot };
+/**
+ * Refresh all screenshots (manual trigger)
+ */
+const refreshAllScreenshots = asyncHandler(async (req, res) => {
+  const screenshotService = require('../services/screenshotService');
+
+  try {
+    // Optional: accept concurrency from body (number) and method (e.g., 'local')
+    const concurrency = req.body && Number(req.body.concurrency) > 0 ? Number(req.body.concurrency) : 5;
+    const method = req.body && req.body.method ? String(req.body.method) : null;
+    const results = await screenshotService.refreshAll(concurrency, method ? { method } : undefined);
+
+    const successCount = results.filter(r => r.path && !r.error).length;
+    const failed = results.filter(r => r.error);
+
+    res.json({ success: true, total: results.length, refreshed: successCount, failures: failed });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err && err.message ? err.message : String(err) });
+  }
+});
+
+module.exports = { list, create, update, remove, listForProxy, getScreenshot, refreshScreenshot, refreshAllScreenshots };

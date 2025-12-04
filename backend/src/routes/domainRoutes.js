@@ -13,6 +13,9 @@ router.get('/api/proxies/:id/mappings', authenticateToken, domainController.list
 router.get('/api/domains/:id/screenshot', authenticateToken, domainController.getScreenshot);
 router.post('/api/domains/:id/screenshot/refresh', authenticateToken, domainController.refreshScreenshot);
 
+// Manual refresh for all screenshots
+router.post('/api/screenshots/refresh-all', authenticateToken, domainController.refreshAllScreenshots);
+
 // Debug route to test screenshot access
 router.get('/api/domains/test-screenshot/:id', authenticateToken, (req, res) => {
   const screenshotService = require('../services/screenshotService');

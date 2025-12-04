@@ -307,10 +307,122 @@ class ScreenshotService {
   }
 
   async refreshScreenshot(hostname, domainId) {
+    // Accept optional options via third argument
+    const opts = arguments[2] || {};
+
     // Delete existing screenshot to force refresh
     await this.deleteScreenshot(domainId);
-    // Capture new screenshot
+
+    // If method is 'local', prefer Puppeteer capture
+    if (opts.method === 'local') {
+      try {
+        const p = await this.captureWithPuppeteer(hostname, domainId, opts);
+        if (p) return p;
+      } catch (e) {
+        console.error('[ScreenshotService] captureWithPuppeteer failed, falling back to external API:', e && e.message ? e.message : e);
+      }
+    }
+
+    // Capture new screenshot via external API
     return await this.captureScreenshot(hostname, domainId);
+  }
+
+  /**
+   * Capture a screenshot locally using Puppeteer.
+   * Attempts to connect to the local server (127.0.0.1:PORT) and sets Host header.
+   * Returns the public path on success.
+   */
+  async captureWithPuppeteer(hostname, domainId, options = {}) {
+    let puppeteer;
+    try {
+      puppeteer = require('puppeteer');
+    } catch (e) {
+      throw new Error('Puppeteer not installed. Run `npm install puppeteer --save` on the server.');
+    }
+
+    const PORT = process.env.PORT || 3000;
+    const targetUrl = `http://127.0.0.1:${PORT}/`;
+    const filename = `domain-${domainId}.png`;
+    const filepath = path.join(this.screenshotsDir, filename);
+
+    const launchOptions = {
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: true,
+    };
+
+    if (options.puppeteer && typeof options.puppeteer === 'object') {
+      Object.assign(launchOptions, options.puppeteer);
+    }
+
+    console.log(`[ScreenshotService] captureWithPuppeteer: launching browser for ${hostname} -> ${targetUrl}`);
+
+    const browser = await puppeteer.launch(launchOptions);
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1280, height: 800 });
+      // Set Host header so the local server serves the requested domain
+      await page.setExtraHTTPHeaders({ Host: hostname });
+
+      // Navigate and wait until network is idle
+      await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+      // Small wait to allow client-side rendering if needed
+      if (options.waitMs) await new Promise(r => setTimeout(r, options.waitMs));
+
+      await page.screenshot({ path: filepath, fullPage: false });
+      console.log(`[ScreenshotService] captureWithPuppeteer: saved ${filepath}`);
+
+      return `/public/screenshots/${filename}`;
+    } finally {
+      try { await browser.close(); } catch (e) { }
+    }
+  }
+
+  /**
+   * Refresh all screenshots listed in the mapping file.
+   * Returns an array of results for each domainId: { domainId, hostname, path, error }
+   */
+  async refreshAll(concurrency = 5) {
+    try {
+      const raw = fs.readFileSync(this.mappingFile, 'utf8') || '{}';
+      const map = JSON.parse(raw);
+      const entries = Object.entries(map);
+
+      if (!entries || entries.length === 0) {
+        console.log('[ScreenshotService] refreshAll: no mappings to refresh');
+        return [];
+      }
+
+      console.log('[ScreenshotService] refreshAll: refreshing', entries.length, 'domains');
+
+      const results = [];
+
+      // Simple concurrency limiter
+      let idx = 0;
+      const workers = new Array(Math.max(1, concurrency)).fill(null).map(async () => {
+        while (true) {
+          const i = idx++;
+          if (i >= entries.length) break;
+          const [domainId, hostname] = entries[i];
+          try {
+            console.log(`[ScreenshotService] refreshAll: refreshing ${hostname} (id=${domainId})`);
+            // allow options as second parameter (method)
+            const opts = typeof arguments[1] === 'object' ? arguments[1] : {};
+            const pathResult = await this.refreshScreenshot(hostname, domainId, opts);
+            results.push({ domainId: String(domainId), hostname, path: pathResult, error: null });
+          } catch (err) {
+            console.error(`[ScreenshotService] refreshAll: failed for ${hostname}:`, err && err.message ? err.message : err);
+            results.push({ domainId: String(domainId), hostname, path: null, error: err && err.message ? err.message : String(err) });
+          }
+        }
+      });
+
+      await Promise.all(workers);
+      return results;
+    } catch (err) {
+      console.error('[ScreenshotService] refreshAll error:', err && err.message ? err.message : err);
+      throw err;
+    }
   }
 
   async cleanup() {
