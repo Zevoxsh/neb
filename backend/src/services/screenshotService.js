@@ -93,6 +93,38 @@ class ScreenshotService {
 
     console.log('[ScreenshotService] Service initialized (using external API)');
     console.log('[ScreenshotService] Screenshots directory:', this.screenshotsDir);
+
+    // Ensure hostname-based copies exist for any pre-existing id-based screenshots
+    try {
+      // Populate hostname copies in background (don't block startup)
+      setImmediate(() => {
+        try {
+          this.populateHostnameCopies().catch(e => {});
+        } catch (e) { }
+      });
+    } catch (e) { }
+  }
+
+  // Create hostname-based copies for any existing id-based screenshot files where mapping exists in DB
+  async populateHostnameCopies() {
+    try {
+      const domainModel = require('../models/domainModel');
+      const mappings = await domainModel.listDomainMappings();
+      if (!Array.isArray(mappings) || mappings.length === 0) return;
+      for (const m of mappings) {
+        try {
+          const id = String(m.id);
+          const hostname = m.hostname;
+          const idFile = path.join(this.screenshotsDir, `domain-${id}.png`);
+          const hostFile = path.join(this.screenshotsDir, `domain-${hostname}.png`);
+          if (fs.existsSync(idFile) && !fs.existsSync(hostFile)) {
+            try { fs.copyFileSync(idFile, hostFile); console.log('[ScreenshotService] populateHostnameCopies: created', hostFile); } catch (e) { console.warn('[ScreenshotService] populateHostnameCopies failed for', hostname, e && e.message ? e.message : e); }
+          }
+        } catch (e) { }
+      }
+    } catch (e) {
+      console.warn('[ScreenshotService] populateHostnameCopies error:', e && e.message ? e.message : e);
+    }
   }
 
   async initialize() {
