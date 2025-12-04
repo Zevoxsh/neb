@@ -1,6 +1,10 @@
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const { createLogger } = require('../utils/logger');
+
+const logger = createLogger('AcmeManager');
 
 // ACME manager that calls certbot in webroot mode to obtain certificates.
 // Uses the webroot at /var/www/letsencrypt so the Node proxy can serve HTTP-01
@@ -73,12 +77,74 @@ function certFilesExist(domain) {
 function getCertExpiry(domain) {
   try {
     let certPath = path.join(CERT_DIR, domain, 'fullchain.pem');
-    if (!fs.existsSync(certPath)) certPath = path.join(CUSTOM_CERT_DIR, domain, 'fullchain.pem');
-    const out = execSync(`openssl x509 -in ${certPath} -noout -enddate`).toString();
-    const m = out.match(/notAfter=(.*)/);
-    if (!m) return null;
-    return new Date(m[1]);
+    if (!fs.existsSync(certPath)) {
+      certPath = path.join(CUSTOM_CERT_DIR, domain, 'fullchain.pem');
+      if (!fs.existsSync(certPath)) {
+        logger.debug('Certificate file not found for domain', { domain });
+        return null;
+      }
+    }
+
+    // Read certificate content
+    const certContent = fs.readFileSync(certPath, 'utf8');
+
+    // Method 1: Use Node.js crypto module to parse X.509 certificate
+    try {
+      const cert = new crypto.X509Certificate(certContent);
+      const validTo = new Date(cert.validTo);
+
+      if (!isNaN(validTo.getTime())) {
+        logger.debug('Certificate expiry parsed successfully via crypto module', {
+          domain,
+          validFrom: cert.validFrom,
+          validTo: validTo.toISOString(),
+          subject: cert.subject,
+          issuer: cert.issuer
+        });
+        return validTo;
+      }
+    } catch (cryptoError) {
+      logger.warn('Crypto module parsing failed, trying openssl', {
+        domain,
+        error: cryptoError.message
+      });
+
+      // Method 2: Fallback to openssl command
+      try {
+        const cmd = process.platform === 'win32'
+          ? `openssl x509 -in "${certPath}" -noout -enddate`
+          : `openssl x509 -in "${certPath}" -noout -enddate`;
+
+        const out = execSync(cmd, { encoding: 'utf8', timeout: 5000 });
+        logger.debug('OpenSSL output', { domain, output: out.trim() });
+
+        const m = out.match(/notAfter=(.*)/);
+        if (m && m[1]) {
+          const expiryDate = new Date(m[1].trim());
+          if (!isNaN(expiryDate.getTime())) {
+            logger.debug('Certificate expiry parsed successfully via openssl', {
+              domain,
+              expiryDate: expiryDate.toISOString()
+            });
+            return expiryDate;
+          }
+        }
+      } catch (opensslError) {
+        logger.error('Both crypto module and openssl failed', {
+          domain,
+          cryptoError: cryptoError.message,
+          opensslError: opensslError.message
+        });
+      }
+    }
+
+    return null;
   } catch (e) {
+    logger.error('Error getting certificate expiry', {
+      domain,
+      error: e.message,
+      stack: e.stack
+    });
     return null;
   }
 }
@@ -93,10 +159,30 @@ function certExpiresSoon(domain, days = 30) {
 
 function getCertStatus(domain) {
   const exists = certFilesExist(domain);
-  if (!exists) return { exists: false, validTo: null, expiresSoon: false };
+
+  if (!exists) {
+    logger.debug('Certificate files do not exist for domain', { domain });
+    return { exists: false, validTo: null, expiresSoon: false };
+  }
 
   const validTo = getCertExpiry(domain);
-  const expiresSoon = validTo ? ((validTo - new Date()) / (1000 * 60 * 60 * 24) < 30) : true;
+
+  if (!validTo) {
+    logger.warn('Could not get expiry date for existing certificate', { domain });
+    return { exists: true, validTo: null, expiresSoon: true };
+  }
+
+  const now = new Date();
+  const daysUntilExpiry = (validTo - now) / (1000 * 60 * 60 * 24);
+  const expiresSoon = daysUntilExpiry < 30;
+
+  logger.debug('Certificate status retrieved', {
+    domain,
+    exists,
+    validTo: validTo.toISOString(),
+    daysUntilExpiry: Math.floor(daysUntilExpiry),
+    expiresSoon
+  });
 
   return { exists: true, validTo, expiresSoon };
 }
