@@ -30,7 +30,7 @@ const listForProxy = asyncHandler(async (req, res) => {
 
 // Create domain mapping (with backend auto-creation logic)
 const create = asyncHandler(async (req, res) => {
-  const { hostname, proxyId, backendId, useProxyTarget } = req.body;
+  const { hostname, proxyId, backendId, useProxyTarget, maintenanceEnabled, maintenancePagePath } = req.body;
 
   logger.debug('Creating domain mapping', { hostname, proxyId, useProxyTarget });
 
@@ -70,7 +70,9 @@ const create = asyncHandler(async (req, res) => {
   const mapping = await domainModel.createDomainMapping({
     hostname,
     proxyId: parseInt(proxyId, 10),
-    backendId: finalBackendId
+    backendId: finalBackendId,
+    maintenanceEnabled: !!maintenanceEnabled,
+    maintenancePagePath: maintenancePagePath || null
   });
 
   logger.info('Domain mapping created', { id: mapping.id, hostname });
@@ -90,7 +92,7 @@ const update = asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) throw new AppError('Invalid ID', 400);
 
-  const { hostname, proxyId, backendId, useProxyTarget, botProtection } = req.body;
+  const { hostname, proxyId, backendId, useProxyTarget, botProtection, maintenanceEnabled, maintenancePagePath } = req.body;
 
   logger.debug('Updating domain mapping', { id, hostname, botProtection });
 
@@ -128,7 +130,9 @@ const update = asyncHandler(async (req, res) => {
     hostname,
     proxyId: parseInt(proxyId, 10),
     backendId: finalBackendId,
-    botProtection
+    botProtection,
+    maintenanceEnabled: !!maintenanceEnabled,
+    maintenancePagePath: maintenancePagePath || null
   });
 
   if (!mapping) throw new AppError('Domain mapping not found', 404);

@@ -7,9 +7,12 @@ async function createDomainMapping(data) {
   }
   const botProtection = data.botProtection || 'default';
   const hostname = data.hostname ? data.hostname.trim() : data.hostname;
+  const maintenanceEnabled = !!data.maintenanceEnabled;
+  const maintenancePagePath = data.maintenancePagePath || null;
+
   const res = await pool.query(
-    'INSERT INTO domain_mappings (hostname, proxy_id, backend_id, bot_protection) VALUES ($1,$2,$3,$4) RETURNING id, hostname, proxy_id, backend_id, bot_protection',
-    [hostname, data.proxyId, data.backendId, botProtection]
+    'INSERT INTO domain_mappings (hostname, proxy_id, backend_id, bot_protection, maintenance_enabled, maintenance_page_path) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, hostname, proxy_id, backend_id, bot_protection, maintenance_enabled, maintenance_page_path',
+    [hostname, data.proxyId, data.backendId, botProtection, maintenanceEnabled, maintenancePagePath]
   );
   return res.rows[0];
 }
@@ -56,9 +59,12 @@ async function listMappingsForProxy(proxyId) {
 async function updateDomainMapping(id, data) {
   const botProtection = data.botProtection || 'default';
   const hostname = data.hostname ? data.hostname.trim() : data.hostname;
+  const maintenanceEnabled = !!data.maintenanceEnabled;
+  const maintenancePagePath = data.maintenancePagePath || null;
+
   const res = await pool.query(
-    'UPDATE domain_mappings SET hostname = $1, proxy_id = $2, backend_id = $3, bot_protection = $4 WHERE id = $5 RETURNING id, hostname, proxy_id, backend_id, bot_protection',
-    [hostname, data.proxyId, data.backendId, botProtection, id]
+    'UPDATE domain_mappings SET hostname = $1, proxy_id = $2, backend_id = $3, bot_protection = $4, maintenance_enabled = $5, maintenance_page_path = $6 WHERE id = $7 RETURNING id, hostname, proxy_id, backend_id, bot_protection, maintenance_enabled, maintenance_page_path',
+    [hostname, data.proxyId, data.backendId, botProtection, maintenanceEnabled, maintenancePagePath, id]
   );
   return res.rows[0];
 }
