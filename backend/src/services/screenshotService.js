@@ -180,6 +180,27 @@ class ScreenshotService {
     return null;
   }
 
+  /**
+   * Return screenshot as data URL (base64) so clients can embed it
+   * and avoid performing an additional HTTP request that may trigger
+   * bot protection on intermediate proxies.
+   */
+  getScreenshotData(domainId) {
+    const filename = `domain-${domainId}.png`;
+    const filepath = path.join(this.screenshotsDir, filename);
+
+    if (!fs.existsSync(filepath)) return null;
+
+    try {
+      const buffer = fs.readFileSync(filepath);
+      const base64 = buffer.toString('base64');
+      return `data:image/png;base64,${base64}`;
+    } catch (err) {
+      console.error(`[ScreenshotService] Error reading screenshot for ${domainId}:`, err.message);
+      return null;
+    }
+  }
+
   async deleteScreenshot(domainId) {
     const filename = `domain-${domainId}.png`;
     const filepath = path.join(this.screenshotsDir, filename);

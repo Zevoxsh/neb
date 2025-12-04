@@ -1289,8 +1289,8 @@
     const retryDelay = 2000 * (retryCount + 1); // 2s, 4s, 6s
 
     try {
-      // Request screenshot from API
-      const res = await window.api.requestJson(`/api/domains/${domainId}/screenshot`);
+      // Request screenshot from API (inline to avoid extra image request through proxy)
+      const res = await window.api.requestJson(`/api/domains/${domainId}/screenshot?inline=1`);
       console.log(`[Screenshot] API response for ${hostname} (attempt ${retryCount + 1}):`, res);
 
       if (res && res.status === 200 && res.body && res.body.path) {
@@ -1300,7 +1300,12 @@
         const img = document.createElement('img');
         // Add cache buster for retries to force reload
         const cacheBuster = retryCount > 0 ? `?t=${Date.now()}` : '';
-        img.src = res.body.path + cacheBuster;
+        // If server returned inline data URL, use it to avoid another HTTP request
+        if (res.body.inline) {
+          img.src = res.body.inline;
+        } else {
+          img.src = res.body.path + cacheBuster;
+        }
         img.alt = `Preview of ${hostname}`;
         img.style.width = '100%';
         img.style.height = '100%';

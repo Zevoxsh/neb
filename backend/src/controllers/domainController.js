@@ -192,6 +192,17 @@ const getScreenshot = asyncHandler(async (req, res) => {
   }
 
   if (screenshotPath) {
+    // If client requests inline image (embed base64), return data URL
+    const inline = req.query && (req.query.inline === '1' || req.query.inline === 'true');
+
+    if (inline) {
+      const dataUrl = screenshotService.getScreenshotData(id);
+      if (dataUrl) {
+        return res.json({ path: screenshotPath, inline: dataUrl });
+      }
+      // If reading data failed, fall back to returning path
+    }
+
     res.json({ path: screenshotPath });
   } else {
     res.status(503).json({ error: 'Screenshot service unavailable' });
