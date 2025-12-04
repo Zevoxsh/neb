@@ -183,8 +183,8 @@ const getScreenshot = asyncHandler(async (req, res) => {
     throw new AppError('Domain not found', 404);
   }
 
-  // Check if screenshot exists
-  let screenshotPath = screenshotService.getScreenshotPath(id);
+  // Check if screenshot exists (prefer hostname-based filename)
+  let screenshotPath = screenshotService.getScreenshotPathWithHostname(id, domain.hostname);
 
   if (!screenshotPath) {
     // Screenshot doesn't exist yet. If client asked for inline, try fetching inline
@@ -253,7 +253,9 @@ const refreshScreenshot = asyncHandler(async (req, res) => {
   const opts = {};
   if (method) opts.method = method;
 
-  const screenshotPath = await screenshotService.refreshScreenshot(domain.hostname, id, opts);
+  const screenshotPathRaw = await screenshotService.refreshScreenshot(domain.hostname, id, opts);
+  // prefer hostname-based filename if present
+  const screenshotPath = screenshotService.getScreenshotPathWithHostname(id, domain.hostname) || screenshotPathRaw;
 
   if (screenshotPath) {
     res.json({ path: screenshotPath });

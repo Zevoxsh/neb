@@ -132,6 +132,8 @@ class ScreenshotService {
       if (fs.existsSync(filepath)) {
         const stats = fs.statSync(filepath);
         console.log(`[ScreenshotService] File size: ${stats.size} bytes`);
+        // also save a hostname-based copy for convenience
+        try { this.saveHostnameCopy(domainId, hostname); } catch (e) { }
       } else {
         console.error(`[ScreenshotService] WARNING: File does not exist after download!`);
       }
@@ -271,6 +273,40 @@ class ScreenshotService {
     return null;
   }
 
+  // Return screenshot path preferring hostname-based filename if provided
+  getScreenshotPathWithHostname(domainId, hostname) {
+    if (hostname) {
+      const hostFile = `domain-${hostname}.png`;
+      const hostPath = path.join(this.screenshotsDir, hostFile);
+      if (fs.existsSync(hostPath)) return `/public/screenshots/${hostFile}`;
+    }
+
+    return this.getScreenshotPath(domainId);
+  }
+
+  // Ensure we save an additional copy using the hostname-based filename for front-end convenience
+  saveHostnameCopy(domainId, hostname) {
+    try {
+      if (!hostname) return;
+      const idFile = path.join(this.screenshotsDir, `domain-${domainId}.png`);
+      const hostFile = path.join(this.screenshotsDir, `domain-${hostname}.png`);
+      if (fs.existsSync(idFile)) {
+        // Only overwrite if the hostFile doesn't exist or is older
+        let copy = true;
+        try {
+          if (fs.existsSync(hostFile)) {
+            const s1 = fs.statSync(idFile);
+            const s2 = fs.statSync(hostFile);
+            if (s2.mtimeMs >= s1.mtimeMs) copy = false;
+          }
+        } catch (e) { }
+        if (copy) {
+          try { fs.copyFileSync(idFile, hostFile); console.log('[ScreenshotService] saved hostname copy', hostFile); } catch (e) { console.warn('[ScreenshotService] failed to save hostname copy', e && e.message ? e.message : e); }
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+
   /**
    * Return screenshot as data URL (base64) so clients can embed it
    * and avoid performing an additional HTTP request that may trigger
@@ -387,6 +423,7 @@ class ScreenshotService {
       await page.screenshot({ path: filepath, fullPage: false });
       console.log(`[ScreenshotService] captureWithPuppeteer: saved ${filepath}`);
 
+      try { this.saveHostnameCopy(domainId, hostname); } catch (e) { }
       return `/public/screenshots/${filename}`;
     } finally {
       try { await browser.close(); } catch (e) { }
@@ -469,7 +506,10 @@ class ScreenshotService {
         if (stderr && stderr.trim()) console.warn('[ScreenshotService] captureWithWkhtmltoimage stderr:', stderr.trim());
         if (code !== 0) return reject(new Error(`wkhtmltoimage exited with code ${code}: ${stderr}`));
         setTimeout(() => {
-          if (fs.existsSync(filepath)) return resolve(`/public/screenshots/${filename}`);
+          if (fs.existsSync(filepath)) {
+            try { this.saveHostnameCopy(domainId, hostname); } catch (e) { }
+            return resolve(`/public/screenshots/${filename}`);
+          }
           return reject(new Error('wkhtmltoimage reported success but file missing; stderr: ' + stderr));
         }, 200);
       });
@@ -607,7 +647,10 @@ class ScreenshotService {
         }
         // Ensure file was created
         setTimeout(() => {
-          if (fs.existsSync(filepath)) return resolve(`/public/screenshots/${filename}`);
+          if (fs.existsSync(filepath)) {
+            try { this.saveHostnameCopy(domainId, hostname); } catch (e) { }
+            return resolve(`/public/screenshots/${filename}`);
+          }
           return reject(new Error('Chrome CLI reported success but file missing; stdout: ' + stdout + '; stderr: ' + stderr));
         }, 200);
       });
