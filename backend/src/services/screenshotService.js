@@ -313,13 +313,19 @@ class ScreenshotService {
     // Delete existing screenshot to force refresh
     await this.deleteScreenshot(domainId);
 
-    // If method is 'local', prefer Puppeteer capture
+    // If method is 'local', try CLI Chrome first (no Puppeteer), then Puppeteer as fallback
     if (opts.method === 'local') {
       try {
-        const p = await this.captureWithPuppeteer(hostname, domainId, opts);
-        if (p) return p;
+        const cli = await this.captureWithChromeCli(hostname, domainId, opts);
+        if (cli) return cli;
       } catch (e) {
-        console.error('[ScreenshotService] captureWithPuppeteer failed, falling back to external API:', e && e.message ? e.message : e);
+        console.warn('[ScreenshotService] captureWithChromeCli failed, trying Puppeteer fallback:', e && e.message ? e.message : e);
+        try {
+          const p = await this.captureWithPuppeteer(hostname, domainId, opts);
+          if (p) return p;
+        } catch (ee) {
+          console.error('[ScreenshotService] captureWithPuppeteer also failed, falling back to external API:', ee && ee.message ? ee.message : ee);
+        }
       }
     }
 
@@ -376,6 +382,90 @@ class ScreenshotService {
     } finally {
       try { await browser.close(); } catch (e) { }
     }
+  }
+
+  /**
+   * Capture using system Chrome/Chromium CLI. Does not depend on Puppeteer.
+   * Returns public path on success.
+   */
+  async captureWithChromeCli(hostname, domainId, options = {}) {
+    const { spawn } = require('child_process');
+
+    const possibleBins = [
+      process.env.PUPPETEER_EXECUTABLE_PATH,
+      '/usr/bin/google-chrome-stable',
+      '/usr/bin/google-chrome',
+      '/usr/bin/chrome',
+      '/usr/bin/chromium',
+      '/usr/bin/chromium-browser'
+    ].filter(Boolean);
+
+    // also check puppeteer cache location if present
+    try {
+      const pp = require('puppeteer');
+      if (pp && typeof pp.executablePath === 'function') {
+        const ppath = pp.executablePath();
+        if (ppath) possibleBins.unshift(ppath);
+      }
+    } catch (e) {
+      // ignore if puppeteer not installed
+    }
+
+    const fs = require('fs');
+    let bin = null;
+    for (const p of possibleBins) {
+      if (!p) continue;
+      try {
+        if (fs.existsSync(p)) { bin = p; break; }
+      } catch (e) { }
+    }
+
+    if (!bin) {
+      throw new Error('No Chrome/Chromium executable found for CLI capture');
+    }
+
+    const filename = `domain-${domainId}.png`;
+    const filepath = path.join(this.screenshotsDir, filename);
+
+    // Remove any existing file
+    try { if (fs.existsSync(filepath)) fs.unlinkSync(filepath); } catch (e) { }
+
+    // Build args. Use host resolver to map hostname to 127.0.0.1
+    const targetUrl = `http://${hostname}:${process.env.PORT || 3000}/`;
+    const args = [];
+    // New headless mode if supported
+    args.push('--headless=new');
+    args.push(`--window-size=1280,800`);
+    args.push(`--screenshot=${filepath}`);
+    args.push('--no-sandbox');
+    args.push('--disable-setuid-sandbox');
+    args.push('--disable-dev-shm-usage');
+    args.push(`--host-resolver-rules=MAP ${hostname} 127.0.0.1`);
+    args.push(targetUrl);
+
+    return new Promise((resolve, reject) => {
+      const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+      let stderr = '';
+      proc.stderr.on('data', d => { stderr += d.toString(); });
+      proc.on('error', (err) => reject(new Error('Failed to spawn chrome: ' + err.message)));
+      const timeoutMs = options.timeoutMs || 30000;
+      const to = setTimeout(() => {
+        try { proc.kill('SIGKILL'); } catch (e) { }
+        reject(new Error('Chrome CLI capture timeout'));
+      }, timeoutMs + 2000);
+
+      proc.on('close', (code) => {
+        clearTimeout(to);
+        if (code !== 0) {
+          return reject(new Error(`Chrome exited with code ${code}: ${stderr}`));
+        }
+        // Ensure file was created
+        setTimeout(() => {
+          if (fs.existsSync(filepath)) return resolve(`/public/screenshots/${filename}`);
+          return reject(new Error('Chrome CLI reported success but file missing'));
+        }, 200);
+      });
+    });
   }
 
   /**
