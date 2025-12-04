@@ -1280,29 +1280,42 @@
     }
   }
 
-  function loadDomainPreview(hostname, card) {
+  async function loadDomainPreview(hostname, card) {
     const previewDiv = card.querySelector('.domain-card-preview');
-    if (!previewDiv || !hostname) return;
+    const domainId = card.dataset.domainId;
+    if (!previewDiv || !hostname || !domainId) return;
 
-    // Create iframe for preview
-    const iframe = document.createElement('iframe');
-    iframe.src = `https://${hostname}`;
-    iframe.sandbox = 'allow-same-origin';
-    iframe.loading = 'lazy';
+    try {
+      // Request screenshot from API
+      const res = await window.api.requestJson(`/api/domains/${domainId}/screenshot`);
 
-    // Replace placeholder with iframe on load
-    iframe.onload = () => {
-      const placeholder = previewDiv.querySelector('.domain-card-preview-placeholder');
-      if (placeholder) {
-        placeholder.remove();
+      if (res && res.status === 200 && res.body && res.body.path) {
+        // Create image element for screenshot
+        const img = document.createElement('img');
+        img.src = res.body.path;
+        img.alt = `Preview of ${hostname}`;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        img.loading = 'lazy';
+
+        // Replace placeholder with screenshot on load
+        img.onload = () => {
+          const placeholder = previewDiv.querySelector('.domain-card-preview-placeholder');
+          if (placeholder) {
+            placeholder.remove();
+          }
+          previewDiv.appendChild(img);
+        };
+
+        // If image fails to load, keep placeholder
+        img.onerror = () => {
+          console.log(`Failed to load screenshot for ${hostname}`);
+        };
       }
-      previewDiv.appendChild(iframe);
-    };
-
-    // If iframe fails to load, keep placeholder
-    iframe.onerror = () => {
-      console.log(`Failed to load preview for ${hostname}`);
-    };
+    } catch (error) {
+      console.log(`Failed to fetch screenshot for ${hostname}:`, error);
+    }
   }
 
   async function loadCerts() {

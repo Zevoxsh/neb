@@ -165,4 +165,65 @@ const remove = asyncHandler(async (req, res) => {
   res.sendStatus(204);
 });
 
-module.exports = { list, create, update, remove, listForProxy };
+/**
+ * Get screenshot for a domain
+ */
+const getScreenshot = asyncHandler(async (req, res) => {
+  const screenshotService = require('../services/screenshotService');
+  const domainModel = require('../models/domainModel');
+
+  const id = parseInt(req.params.id, 10);
+  if (!id || isNaN(id)) throw new AppError('Invalid ID', 400);
+
+  // Get domain info
+  const domains = await domainModel.listDomainMappings();
+  const domain = domains.find(d => d.id === id);
+
+  if (!domain) {
+    throw new AppError('Domain not found', 404);
+  }
+
+  // Check if screenshot exists
+  let screenshotPath = screenshotService.getScreenshotPath(id);
+
+  if (!screenshotPath) {
+    // Screenshot doesn't exist, capture it
+    screenshotPath = await screenshotService.captureScreenshot(domain.hostname, id);
+  }
+
+  if (screenshotPath) {
+    res.json({ path: screenshotPath });
+  } else {
+    res.status(503).json({ error: 'Screenshot service unavailable' });
+  }
+});
+
+/**
+ * Refresh screenshot for a domain
+ */
+const refreshScreenshot = asyncHandler(async (req, res) => {
+  const screenshotService = require('../services/screenshotService');
+  const domainModel = require('../models/domainModel');
+
+  const id = parseInt(req.params.id, 10);
+  if (!id || isNaN(id)) throw new AppError('Invalid ID', 400);
+
+  // Get domain info
+  const domains = await domainModel.listDomainMappings();
+  const domain = domains.find(d => d.id === id);
+
+  if (!domain) {
+    throw new AppError('Domain not found', 404);
+  }
+
+  // Force refresh screenshot
+  const screenshotPath = await screenshotService.refreshScreenshot(domain.hostname, id);
+
+  if (screenshotPath) {
+    res.json({ path: screenshotPath });
+  } else {
+    res.status(503).json({ error: 'Screenshot service unavailable' });
+  }
+});
+
+module.exports = { list, create, update, remove, listForProxy, getScreenshot, refreshScreenshot };

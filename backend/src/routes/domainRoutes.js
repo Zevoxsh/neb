@@ -9,4 +9,8 @@ router.put('/api/domains/:id', authenticateToken, domainController.update);
 router.delete('/api/domains/:id', authenticateToken, domainController.remove);
 router.get('/api/proxies/:id/mappings', authenticateToken, domainController.listForProxy);
 
+// Screenshot routes
+router.get('/api/domains/:id/screenshot', authenticateToken, domainController.getScreenshot);
+router.post('/api/domains/:id/screenshot/refresh', authenticateToken, domainController.refreshScreenshot);
+
 module.exports = router;
