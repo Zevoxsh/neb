@@ -606,7 +606,26 @@ label {
 
   .data-table th,
   .data-table td {
-    padding: 16px 20px;
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+
+  /* Make tables horizontally scrollable on mobile */
+  .table-card section {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table {
+    min-width: 100%;
+  }
+
+  /* Hide less critical columns on mobile for domains table */
+  body[data-page="domains"] .data-table th:nth-child(2),
+  body[data-page="domains"] .data-table td:nth-child(2),
+  body[data-page="domains"] .data-table th:nth-child(3),
+  body[data-page="domains"] .data-table td:nth-child(3) {
+    display: none;
   }
 
   /* Reports page mobile */
@@ -654,6 +673,35 @@ label {
 
   .pagination .btn {
     width: 100%;
+  }
+}
+
+/* Extra small devices (phones, 480px and down) */
+@media (max-width: 480px) {
+  .data-table th,
+  .data-table td {
+    padding: 10px 6px;
+    font-size: 12px;
+  }
+
+  /* Further optimize domains table for very small screens */
+  body[data-page="domains"] .data-table th:nth-child(4),
+  body[data-page="domains"] .data-table td:nth-child(4) {
+    display: none;
+  }
+
+  /* Make action buttons stack or smaller */
+  .data-table .btn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .page-heading h1 {
+    font-size: 24px;
+  }
+
+  .page-heading .muted {
+    font-size: 13px;
   }
 }
 
