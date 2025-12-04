@@ -1288,8 +1288,11 @@
     try {
       // Request screenshot from API
       const res = await window.api.requestJson(`/api/domains/${domainId}/screenshot`);
+      console.log(`[Screenshot] API response for ${hostname}:`, res);
 
       if (res && res.status === 200 && res.body && res.body.path) {
+        console.log(`[Screenshot] Loading image for ${hostname} from:`, res.body.path);
+
         // Create image element for screenshot
         const img = document.createElement('img');
         img.src = res.body.path;
@@ -1301,6 +1304,7 @@
 
         // Replace placeholder with screenshot on load
         img.onload = () => {
+          console.log(`[Screenshot] Image loaded successfully for ${hostname}`);
           const placeholder = previewDiv.querySelector('.domain-card-preview-placeholder');
           if (placeholder) {
             placeholder.remove();
@@ -1309,12 +1313,14 @@
         };
 
         // If image fails to load, keep placeholder
-        img.onerror = () => {
-          console.log(`Failed to load screenshot for ${hostname}`);
+        img.onerror = (e) => {
+          console.error(`[Screenshot] Failed to load image for ${hostname}:`, img.src, e);
         };
+      } else {
+        console.warn(`[Screenshot] Invalid response for ${hostname}:`, res);
       }
     } catch (error) {
-      console.log(`Failed to fetch screenshot for ${hostname}:`, error);
+      console.error(`[Screenshot] Error fetching screenshot for ${hostname}:`, error);
     }
   }
 

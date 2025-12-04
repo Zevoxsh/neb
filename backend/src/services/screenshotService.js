@@ -11,16 +11,19 @@ const http = require('http');
 
 class ScreenshotService {
   constructor() {
-    this.screenshotsDir = path.join(__dirname, '../../public/screenshots');
+    // Store screenshots in frontend/public/screenshots so they're accessible via /public
+    this.screenshotsDir = path.join(__dirname, '../../../frontend/public/screenshots');
     this.isInitialized = true; // Always available with external API
     this.screenshotAPI = 'https://image.thum.io/get/width/1280/crop/800/noanimate/';
 
     // Create screenshots directory if it doesn't exist
     if (!fs.existsSync(this.screenshotsDir)) {
       fs.mkdirSync(this.screenshotsDir, { recursive: true });
+      console.log('[ScreenshotService] Created screenshots directory:', this.screenshotsDir);
     }
 
     console.log('[ScreenshotService] Service initialized (using external API)');
+    console.log('[ScreenshotService] Screenshots directory:', this.screenshotsDir);
   }
 
   async initialize() {
