@@ -8,7 +8,12 @@
       "Bash(dir:*)",
       "Bash(cat:*)",
       "Bash(find:*)",
-      "Bash(move:*)"
+      "Bash(move:*)",
+      "Bash(for file in proxies.html backends.html proxy.html backend.html dashboard.html config.html reports.html requests.html analytics.html alerts.html ip-management.html)",
+      "Bash(do if [ -f \"$file\" ])",
+      "Bash(then sed -i '/<link rel=\"\"stylesheet\"\" href=\"\"\\/public\\/styles.css\"\">/a\\    <link rel=\"\"stylesheet\"\" href=\"\"/public/nebula-pro.css\"\">' \"$file\")",
+      "Bash(fi)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []
