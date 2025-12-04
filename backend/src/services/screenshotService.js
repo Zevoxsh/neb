@@ -22,6 +22,43 @@ class ScreenshotService {
       console.log('[ScreenshotService] Created screenshots directory:', this.screenshotsDir);
     }
 
+    // Optional mapping file: { "<domainId>": "<hostname>", ... }
+    this.mappingFile = path.join(this.screenshotsDir, 'screenshots-map.json');
+    if (!fs.existsSync(this.mappingFile)) {
+      fs.writeFileSync(this.mappingFile, JSON.stringify({}, null, 2), 'utf8');
+      console.log('[ScreenshotService] Created mapping file:', this.mappingFile);
+    }
+
+    // Schedule periodic refresh every 5 minutes
+    const intervalMs = 5 * 60 * 1000; // 5 minutes
+    this._screenshotInterval = setInterval(async () => {
+      try {
+      const raw = fs.readFileSync(this.mappingFile, 'utf8') || '{}';
+      const map = JSON.parse(raw);
+      const entries = Object.entries(map);
+      if (entries.length === 0) {
+        // nothing to do
+        return;
+      }
+
+      console.log('[ScreenshotService] Running scheduled screenshot refresh for', entries.length, 'domains');
+
+      // Refresh sequentially to avoid concurrent download storms
+      for (const [domainId, hostname] of entries) {
+        try {
+        console.log(`[ScreenshotService] Scheduled refresh for ${hostname} (id=${domainId})`);
+        await this.refreshScreenshot(hostname, domainId);
+        } catch (err) {
+        console.error(`[ScreenshotService] Scheduled refresh failed for ${hostname}:`, err.message);
+        }
+      }
+      } catch (err) {
+      console.error('[ScreenshotService] Error during scheduled screenshot refresh:', err.message);
+      }
+    }, intervalMs);
+
+    console.log('[ScreenshotService] Scheduled periodic screenshots every 5 minutes. Update', this.mappingFile, 'with {"<domainId>":"<hostname>"} to enable automatic captures.');
+
     console.log('[ScreenshotService] Service initialized (using external API)');
     console.log('[ScreenshotService] Screenshots directory:', this.screenshotsDir);
   }
