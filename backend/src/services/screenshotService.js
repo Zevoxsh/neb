@@ -29,8 +29,8 @@ class ScreenshotService {
       console.log('[ScreenshotService] Created mapping file:', this.mappingFile);
     }
 
-    // Schedule periodic refresh every 5 minutes
-    const intervalMs = 5 * 60 * 1000; // 5 minutes
+    // Schedule periodic refresh every 10 minutes
+    const intervalMs = 10 * 60 * 1000; // 10 minutes
     this._screenshotInterval = setInterval(async () => {
       try {
       const raw = fs.readFileSync(this.mappingFile, 'utf8') || '{}';
@@ -58,6 +58,38 @@ class ScreenshotService {
     }, intervalMs);
 
     console.log('[ScreenshotService] Scheduled periodic screenshots every 5 minutes. Update', this.mappingFile, 'with {"<domainId>":"<hostname>"} to enable automatic captures.');
+
+    // If mapping file is empty, try to populate it from domain mappings (if DB available)
+    try {
+      const raw = fs.readFileSync(this.mappingFile, 'utf8') || '{}';
+      const map = JSON.parse(raw);
+      const entries = Object.entries(map);
+      if (entries.length === 0) {
+        try {
+          const domainModel = require('../models/domainModel');
+          if (domainModel && typeof domainModel.listDomainMappings === 'function') {
+            domainModel.listDomainMappings().then((domains) => {
+              if (Array.isArray(domains) && domains.length > 0) {
+                const newMap = {};
+                domains.forEach(d => {
+                  if (d && d.id && d.hostname) newMap[String(d.id)] = d.hostname;
+                });
+                try {
+                  fs.writeFileSync(this.mappingFile, JSON.stringify(newMap, null, 2), 'utf8');
+                  console.log('[ScreenshotService] Populated mapping file from domainModel with', Object.keys(newMap).length, 'entries');
+                } catch (e) {
+                  console.error('[ScreenshotService] Failed to write mapping file:', e && e.message ? e.message : e);
+                }
+              }
+            }).catch(() => {});
+          }
+        } catch (e) {
+          // ignore if domainModel not available (startup before DB)
+        }
+      }
+    } catch (e) {
+      // ignore mapping read errors
+    }
 
     console.log('[ScreenshotService] Service initialized (using external API)');
     console.log('[ScreenshotService] Screenshots directory:', this.screenshotsDir);
