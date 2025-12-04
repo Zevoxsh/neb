@@ -1331,6 +1331,10 @@
         img.style.objectFit = 'cover';
         img.loading = 'lazy';
 
+        // Append the image element immediately so the DOM contains the <img>
+        // even if loading fails; this makes debugging and fallbacks clearer.
+        previewDiv.appendChild(img);
+
         // Replace placeholder with screenshot on load
         img.onload = () => {
           console.log(`[Screenshot] Image loaded successfully for ${hostname}`);
@@ -1338,7 +1342,6 @@
           if (placeholder) {
             placeholder.remove();
           }
-          previewDiv.appendChild(img);
         };
 
         // If image fails to load, retry with exponential backoff
