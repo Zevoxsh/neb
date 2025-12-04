@@ -187,7 +187,19 @@ const getScreenshot = asyncHandler(async (req, res) => {
   let screenshotPath = screenshotService.getScreenshotPath(id);
 
   if (!screenshotPath) {
-    // Screenshot doesn't exist, capture it
+    // Screenshot doesn't exist yet. If client asked for inline, try fetching inline
+    const inline = req.query && (req.query.inline === '1' || req.query.inline === 'true');
+    if (inline) {
+      try {
+        const dataUrl = await screenshotService.fetchScreenshotInline(domain.hostname, id);
+        if (dataUrl) return res.json({ path: null, inline: dataUrl });
+      } catch (err) {
+        // Log and fall back to capture/save behavior
+        logger.warn('Inline fetch failed, falling back to capture:', { host: domain.hostname, err: err.message });
+      }
+    }
+
+    // Screenshot doesn't exist, capture it (will be cached on disk)
     screenshotPath = await screenshotService.captureScreenshot(domain.hostname, id);
   }
 
@@ -196,11 +208,19 @@ const getScreenshot = asyncHandler(async (req, res) => {
     const inline = req.query && (req.query.inline === '1' || req.query.inline === 'true');
 
     if (inline) {
+      // Prefer reading cached file
       const dataUrl = screenshotService.getScreenshotData(id);
       if (dataUrl) {
         return res.json({ path: screenshotPath, inline: dataUrl });
       }
-      // If reading data failed, fall back to returning path
+
+      // If cached file can't be read, attempt an inline fetch as a fallback
+      try {
+        const fetched = await screenshotService.fetchScreenshotInline(domain.hostname, id);
+        if (fetched) return res.json({ path: screenshotPath, inline: fetched });
+      } catch (err) {
+        logger.warn('Fallback inline fetch failed:', { host: domain.hostname, err: err.message });
+      }
     }
 
     res.json({ path: screenshotPath });

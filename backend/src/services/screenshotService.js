@@ -169,6 +169,65 @@ class ScreenshotService {
     });
   }
 
+  /**
+   * Fetch screenshot bytes from external API and return a data URL (base64).
+   * Optionally save to disk (async) for caching.
+   */
+  fetchScreenshotInline(hostname, domainId) {
+    return new Promise((resolve, reject) => {
+      const screenshotUrl = `${this.screenshotAPI}https://${hostname}`;
+      const protocol = screenshotUrl.startsWith('https') ? https : http;
+
+      console.log(`[ScreenshotService] Fetching inline screenshot from: ${screenshotUrl}`);
+
+      const request = protocol.get(screenshotUrl, (response) => {
+        if (response.statusCode === 301 || response.statusCode === 302) {
+          return this.fetchScreenshotInline(response.headers.location, domainId)
+            .then(resolve)
+            .catch(reject);
+        }
+
+        if (response.statusCode !== 200) {
+          return reject(new Error(`Failed to fetch screenshot: ${response.statusCode}`));
+        }
+
+        const chunks = [];
+        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('end', async () => {
+          try {
+            const buffer = Buffer.concat(chunks);
+            const base64 = buffer.toString('base64');
+            const dataUrl = `data:image/png;base64,${base64}`;
+
+            // Save to disk asynchronously for caching
+            try {
+              const filename = `domain-${domainId}.png`;
+              const filepath = path.join(this.screenshotsDir, filename);
+              fs.writeFile(filepath, buffer, (err) => {
+                if (err) console.error('[ScreenshotService] Failed to cache screenshot:', err.message);
+                else console.log('[ScreenshotService] Cached screenshot to', filepath);
+              });
+            } catch (e) {
+              console.error('[ScreenshotService] Error scheduling cache write:', e.message);
+            }
+
+            resolve(dataUrl);
+          } catch (err) {
+            reject(err);
+          }
+        });
+
+        response.on('error', (err) => reject(err));
+      });
+
+      request.on('error', (err) => reject(err));
+      request.setTimeout(30000, () => {
+        request.destroy();
+        reject(new Error('Screenshot fetch timeout'));
+      });
+    });
+  }
+
   getScreenshotPath(domainId) {
     const filename = `domain-${domainId}.png`;
     const filepath = path.join(this.screenshotsDir, filename);
