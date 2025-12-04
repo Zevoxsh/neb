@@ -151,7 +151,37 @@ class ScreenshotService {
     try {
       console.log(`[ScreenshotService] Capturing screenshot for ${hostname}`);
 
-      // Use external API to get screenshot
+      // Try local capture first (wkhtmltoimage -> Chrome CLI -> Puppeteer)
+      // This ensures we capture the actual site content by connecting to localhost with Host header
+      // instead of going through the public proxy which may show bot protection or dashboard
+      const opts = { waitMs: 3000 };
+
+      try {
+        console.log(`[ScreenshotService] Attempting local capture with wkhtmltoimage...`);
+        const wk = await this.captureWithWkhtmltoimage(hostname, domainId, opts);
+        if (wk) return wk;
+      } catch (e) {
+        console.warn('[ScreenshotService] wkhtmltoimage failed, trying Chrome CLI:', e.message);
+      }
+
+      try {
+        console.log(`[ScreenshotService] Attempting local capture with Chrome CLI...`);
+        const cli = await this.captureWithChromeCli(hostname, domainId, opts);
+        if (cli) return cli;
+      } catch (e) {
+        console.warn('[ScreenshotService] Chrome CLI failed, trying Puppeteer:', e.message);
+      }
+
+      try {
+        console.log(`[ScreenshotService] Attempting local capture with Puppeteer...`);
+        const pup = await this.captureWithPuppeteer(hostname, domainId, opts);
+        if (pup) return pup;
+      } catch (e) {
+        console.warn('[ScreenshotService] Puppeteer failed, falling back to external API:', e.message);
+      }
+
+      // Fallback to external API if all local methods fail
+      console.log(`[ScreenshotService] All local capture methods failed, using external API as fallback`);
       const screenshotUrl = `${this.screenshotAPI}https://${hostname}`;
 
       await this.downloadScreenshot(screenshotUrl, filepath);
