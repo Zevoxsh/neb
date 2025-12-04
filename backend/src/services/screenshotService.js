@@ -393,11 +393,18 @@ class ScreenshotService {
 
     const possibleBins = [
       process.env.PUPPETEER_EXECUTABLE_PATH,
+      process.env.CHROME_BIN,
+      process.env.CHROME_PATH,
+      process.env.CHROMIUM_PATH,
+      // Common Linux locations
       '/usr/bin/google-chrome-stable',
       '/usr/bin/google-chrome',
       '/usr/bin/chrome',
       '/usr/bin/chromium',
-      '/usr/bin/chromium-browser'
+      '/usr/bin/chromium-browser',
+      // Common Windows locations
+      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
     ].filter(Boolean);
 
     // also check puppeteer cache location if present
@@ -421,6 +428,7 @@ class ScreenshotService {
     }
 
     if (!bin) {
+      console.error('[ScreenshotService] captureWithChromeCli: no chrome binary found in possible locations:', possibleBins);
       throw new Error('No Chrome/Chromium executable found for CLI capture');
     }
 
@@ -431,7 +439,8 @@ class ScreenshotService {
     try { if (fs.existsSync(filepath)) fs.unlinkSync(filepath); } catch (e) { }
 
     // Build args. Use host resolver to map hostname to 127.0.0.1
-    const targetUrl = `http://${hostname}:${process.env.PORT || 3000}/`;
+    const PORT = process.env.PORT || 3000;
+    const targetUrl = `http://${hostname}:${PORT}/`;
     const args = [];
     // New headless mode if supported
     args.push('--headless=new');
@@ -440,15 +449,23 @@ class ScreenshotService {
     args.push('--no-sandbox');
     args.push('--disable-setuid-sandbox');
     args.push('--disable-dev-shm-usage');
+    // Map the target hostname to 127.0.0.1 so Chrome connects locally but sends Host header = hostname
     args.push(`--host-resolver-rules=MAP ${hostname} 127.0.0.1`);
+    // Ensure DNS over HTTPS or other features don't interfere
+    args.push('--disable-features=NetworkService');
     args.push(targetUrl);
+
+    console.log('[ScreenshotService] captureWithChromeCli: using binary:', bin);
+    console.log('[ScreenshotService] captureWithChromeCli: args:', args.join(' '));
 
     return new Promise((resolve, reject) => {
       const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
       let stderr = '';
+      let stdout = '';
+      proc.stdout.on('data', d => { stdout += d.toString(); });
       proc.stderr.on('data', d => { stderr += d.toString(); });
       proc.on('error', (err) => reject(new Error('Failed to spawn chrome: ' + err.message)));
-      const timeoutMs = options.timeoutMs || 30000;
+      const timeoutMs = options.timeoutMs || 45000;
       const to = setTimeout(() => {
         try { proc.kill('SIGKILL'); } catch (e) { }
         reject(new Error('Chrome CLI capture timeout'));
@@ -456,13 +473,16 @@ class ScreenshotService {
 
       proc.on('close', (code) => {
         clearTimeout(to);
+        console.log(`[ScreenshotService] captureWithChromeCli: process exited with code ${code}`);
+        if (stdout && stdout.trim()) console.log('[ScreenshotService] captureWithChromeCli stdout:', stdout.trim());
+        if (stderr && stderr.trim()) console.warn('[ScreenshotService] captureWithChromeCli stderr:', stderr.trim());
         if (code !== 0) {
           return reject(new Error(`Chrome exited with code ${code}: ${stderr}`));
         }
         // Ensure file was created
         setTimeout(() => {
           if (fs.existsSync(filepath)) return resolve(`/public/screenshots/${filename}`);
-          return reject(new Error('Chrome CLI reported success but file missing'));
+          return reject(new Error('Chrome CLI reported success but file missing; stdout: ' + stdout + '; stderr: ' + stderr));
         }, 200);
       });
     });
