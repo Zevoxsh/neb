@@ -18,11 +18,36 @@ const list = asyncHandler(async (req, res) => {
 
     const results = mappings.map(m => {
         const s = acmeManager.getCertStatus(m.hostname);
-        const status = s && s.exists ? (s.expiresSoon ? 'pending' : 'valid') : 'missing';
+
+        // Calculate status with better logic
+        let status = 'missing';
+        let expiresInDays = null;
+
+        if (s && s.exists) {
+            if (s.validTo) {
+                const now = new Date();
+                expiresInDays = Math.floor((s.validTo - now) / (1000 * 60 * 60 * 24));
+
+                if (expiresInDays < 0) {
+                    status = 'expired';
+                } else if (expiresInDays < 7) {
+                    status = 'critical';
+                } else if (expiresInDays < 30) {
+                    status = 'warning';
+                } else {
+                    status = 'valid';
+                }
+            } else {
+                status = 'valid'; // Certificate exists but no expiry info
+            }
+        }
+
         return {
             hostname: m.hostname,
             status,
-            valid_until: s && s.validTo ? (s.validTo instanceof Date ? s.validTo.toISOString() : new Date(s.validTo).toISOString()) : null
+            valid_until: s && s.validTo ? (s.validTo instanceof Date ? s.validTo.toISOString() : new Date(s.validTo).toISOString()) : null,
+            expires_in_days: expiresInDays,
+            certificate_exists: s && s.exists || false
         };
     });
 
@@ -46,12 +71,32 @@ const generate = asyncHandler(async (req, res) => {
 
     logger.info('Certificate generated', { domain });
 
-    // Return new status
+    // Return new status with improved information
     const s = acmeManager.getCertStatus(domain);
+    let status = 'missing';
+    let expiresInDays = null;
+
+    if (s && s.exists && s.validTo) {
+        const now = new Date();
+        expiresInDays = Math.floor((s.validTo - now) / (1000 * 60 * 60 * 24));
+
+        if (expiresInDays < 0) {
+            status = 'expired';
+        } else if (expiresInDays < 7) {
+            status = 'critical';
+        } else if (expiresInDays < 30) {
+            status = 'warning';
+        } else {
+            status = 'valid';
+        }
+    }
+
     res.json({
         hostname: domain,
-        status: s && s.exists ? (s.expiresSoon ? 'pending' : 'valid') : 'missing',
-        valid_until: s && s.validTo ? (s.validTo instanceof Date ? s.validTo.toISOString() : new Date(s.validTo).toISOString()) : null
+        status,
+        valid_until: s && s.validTo ? (s.validTo instanceof Date ? s.validTo.toISOString() : new Date(s.validTo).toISOString()) : null,
+        expires_in_days: expiresInDays,
+        certificate_exists: s && s.exists || false
     });
 });
 
@@ -91,11 +136,32 @@ const uploadManual = asyncHandler(async (req, res) => {
 
     logger.info('Manual certificate uploaded', { domain });
 
+    // Return new status with improved information
     const s = acmeManager.getCertStatus(domain.trim());
+    let status = 'missing';
+    let expiresInDays = null;
+
+    if (s && s.exists && s.validTo) {
+        const now = new Date();
+        expiresInDays = Math.floor((s.validTo - now) / (1000 * 60 * 60 * 24));
+
+        if (expiresInDays < 0) {
+            status = 'expired';
+        } else if (expiresInDays < 7) {
+            status = 'critical';
+        } else if (expiresInDays < 30) {
+            status = 'warning';
+        } else {
+            status = 'valid';
+        }
+    }
+
     res.json({
         hostname: domain.trim(),
-        status: s && s.exists ? (s.expiresSoon ? 'pending' : 'valid') : 'missing',
-        valid_until: s && s.validTo ? (s.validTo instanceof Date ? s.validTo.toISOString() : new Date(s.validTo).toISOString()) : null
+        status,
+        valid_until: s && s.validTo ? (s.validTo instanceof Date ? s.validTo.toISOString() : new Date(s.validTo).toISOString()) : null,
+        expires_in_days: expiresInDays,
+        certificate_exists: s && s.exists || false
     });
 });
 

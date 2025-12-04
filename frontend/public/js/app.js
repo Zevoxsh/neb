@@ -1636,18 +1636,50 @@
       const certs = Array.isArray(res.body) ? res.body : [];
       const cert = certs.find(c => c.hostname === hostname);
       
-      if (cert) {
-        const status = (cert.status || '').toLowerCase();
+      if (cert && cert.certificate_exists) {
+        const status = (cert.status || 'unknown').toLowerCase();
         let badge = 'muted';
-        let statusText = cert.status || 'inconnu';
-        if (status.includes('valid')) badge = 'success';
-        else if (status.includes('pending')) badge = 'warning';
-        
-        const validUntil = cert.valid_until ? new Date(cert.valid_until).toLocaleString() : 'N/A';
-        
-        document.getElementById('domainCertStatus').innerHTML = 
+        let statusText = cert.status ? cert.status.toUpperCase() : 'UNKNOWN';
+
+        // Determine badge color based on status
+        if (status === 'valid') {
+          badge = 'success';
+        } else if (status === 'warning') {
+          badge = 'warning';
+        } else if (status === 'critical' || status === 'expired') {
+          badge = 'error';
+        } else if (status === 'missing') {
+          badge = 'muted';
+        }
+
+        // Format expiry info with days remaining
+        let expiryText = 'N/A';
+        if (cert.valid_until) {
+          const expiryDate = new Date(cert.valid_until);
+          expiryText = expiryDate.toLocaleString('fr-FR', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+
+          if (cert.expires_in_days !== null && cert.expires_in_days !== undefined) {
+            if (cert.expires_in_days < 0) {
+              expiryText += ` (expiré depuis ${Math.abs(cert.expires_in_days)} jours)`;
+            } else if (cert.expires_in_days === 0) {
+              expiryText += ` (expire aujourd'hui!)`;
+            } else if (cert.expires_in_days === 1) {
+              expiryText += ` (expire demain!)`;
+            } else {
+              expiryText += ` (${cert.expires_in_days} jours restants)`;
+            }
+          }
+        }
+
+        document.getElementById('domainCertStatus').innerHTML =
           `<span class="status-badge ${badge}"><span class="status-dot"></span>${escapeHtml(statusText)}</span>`;
-        document.getElementById('domainCertExpiry').textContent = validUntil;
+        document.getElementById('domainCertExpiry').textContent = expiryText;
         
         // Charger le contenu du certificat
         try {
