@@ -539,18 +539,31 @@
       const logsRes = await window.api.requestJson('/api/request-logs/recent?limit=1000&minutes=5');
       if (logsRes && logsRes.status === 200 && logsRes.body && logsRes.body.logs) {
         const now = Date.now();
-        
-        console.log('[Live Activity] Processing', logsRes.body.logs.length, 'recent logs');
-        
+
+        // Filter out local loopback requests (don't count 127.0.0.1 / ::1 and IPv4-mapped variants)
+        const rawLogs = Array.isArray(logsRes.body.logs) ? logsRes.body.logs : [];
+        const filteredLogs = rawLogs.filter((log) => {
+          const ip = (log.client_ip || log.remote_addr || '').toString().trim();
+          if (!ip) return true; // keep logs without ip
+          // Normalize common loopback representations
+          if (ip === '127.0.0.1' || ip === '::1' || ip === 'localhost') return false;
+          if (ip === '::ffff:127.0.0.1') return false;
+          // Some proxies may include IPv4-mapped in longer strings, check endsWith
+          if (ip.endsWith(':127.0.0.1')) return false;
+          return true;
+        });
+
+        console.log('[Live Activity] Processing', rawLogs.length, 'recent logs, filtered to', filteredLogs.length, 'logs (loopback removed)');
+
         // Group by IP address
         const ipStats = {};
-        
-        logsRes.body.logs.forEach(log => {
+
+        filteredLogs.forEach(log => {
           const timestamp = log.timestamp ? new Date(log.timestamp).getTime() : 0;
-          
+
           if (!timestamp || isNaN(timestamp)) return;
-          
-          const ip = log.client_ip || 'unknown';
+
+          const ip = log.client_ip || log.remote_addr || 'unknown';
           if (!ipStats[ip]) {
             ipStats[ip] = {
               ip: ip,
@@ -594,13 +607,13 @@
           }
         }
 
-        // Group by domain
+        // Group by domain (use filteredLogs so domains called only by loopback are excluded)
         const domainStats = {};
-        logsRes.body.logs.forEach(log => {
+        filteredLogs.forEach(log => {
           const timestamp = log.timestamp ? new Date(log.timestamp).getTime() : 0;
-          
+
           if (!timestamp || isNaN(timestamp)) return;
-          
+
           const domain = log.hostname || log.host || 'unknown';
           if (!domainStats[domain]) {
             domainStats[domain] = {
