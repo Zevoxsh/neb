@@ -69,12 +69,12 @@
             <div class="form-grid">
               <div class="form-field">
                 <label for="editDomainMaintenanceEnabled">Maintenance enabled</label>
-                <div style="display:flex;align-items:center;gap:12px;">
+                <div class="toggle-group">
                   <label class="switch">
                     <input type="checkbox" id="editDomainMaintenanceEnabled">
                     <span class="slider"></span>
                   </label>
-                  <span id="editDomainMaintenanceStatusText">Disabled</span>
+                  <span id="editDomainMaintenanceStatusText" class="status-text">Disabled</span>
                 </div>
                 <p class="form-hint">When enabled, visitors will see the maintenance page configured for this domain.</p>
               </div>
@@ -88,7 +88,7 @@
               <div class="form-field">
                 <label for="editDomainMaintenancePageContent">Custom Maintenance HTML</label>
                 <textarea id="editDomainMaintenancePageContent" rows="8" placeholder="Paste custom HTML here to upload a maintenance page for this domain..."></textarea>
-                <div style="margin-top:8px;display:flex;gap:8px;">
+                <div class="button-group">
                   <button class="btn ghost small" type="button" id="btnLoadMaintenancePage">Load Current Page</button>
                   <button class="btn ghost small" type="button" id="btnClearMaintenancePage">Clear</button>
                   <button class="btn primary small" type="button" id="btnUploadMaintenancePage">Upload Page</button>
@@ -140,12 +140,122 @@
     </div>
   </div>
   <style>
-    /* Toggle Switch (duplicate for domain page) */
+    /* ========== Domain Detail Page Styles ========== */
+
+    /* Page Layout */
+    body[data-page="domain-detail"] .page-content {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Card Enhancements */
+    body[data-page="domain-detail"] .card {
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body[data-page="domain-detail"] .card:hover {
+      border-color: var(--border-hover);
+    }
+
+    /* Card Headers */
+    body[data-page="domain-detail"] .card > header {
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    body[data-page="domain-detail"] .card > header .eyebrow {
+      font-size: 0.7rem;
+      margin-bottom: 6px;
+      opacity: 0.8;
+    }
+
+    body[data-page="domain-detail"] .card > header h2 {
+      font-size: 1.5rem;
+      margin: 0;
+      font-weight: 600;
+      background: linear-gradient(to right, #fff, #b5b5b5);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Form Grid Improvements */
+    body[data-page="domain-detail"] .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    /* Form Fields */
+    body[data-page="domain-detail"] .form-field {
+      display: flex;
+      flex-direction: column;
+    }
+
+    body[data-page="domain-detail"] .form-field label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-main);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    body[data-page="domain-detail"] input,
+    body[data-page="domain-detail"] select,
+    body[data-page="domain-detail"] textarea {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    body[data-page="domain-detail"] input:hover,
+    body[data-page="domain-detail"] select:hover,
+    body[data-page="domain-detail"] textarea:hover {
+      border-color: var(--border-hover);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    body[data-page="domain-detail"] input:focus,
+    body[data-page="domain-detail"] select:focus,
+    body[data-page="domain-detail"] textarea:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+    }
+
+    body[data-page="domain-detail"] textarea {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.6;
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    /* Form Hints */
+    body[data-page="domain-detail"] .form-hint {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    /* Toggle Switch */
     .switch {
       position: relative;
       display: inline-block;
-      width: 50px;
-      height: 24px;
+      width: 52px;
+      height: 28px;
     }
 
     .switch input {
@@ -161,29 +271,340 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background-color: #ccc;
-      transition: .3s;
-      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 28px;
     }
 
     .slider:before {
       position: absolute;
       content: "";
-      height: 18px;
-      width: 18px;
+      height: 20px;
+      width: 20px;
       left: 3px;
       bottom: 3px;
-      background-color: white;
-      transition: .3s;
+      background: linear-gradient(135deg, #fff, #e0e0e0);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .slider:hover {
+      background: rgba(255, 255, 255, 0.15);
     }
 
     input:checked + .slider {
-      background-color: #4CAF50;
+      background: linear-gradient(135deg, #4CAF50, #45a049);
+      border-color: #4CAF50;
     }
 
     input:checked + .slider:before {
-      transform: translateX(26px);
+      transform: translateX(24px);
+      box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
+    }
+
+    input:focus + .slider {
+      box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+    }
+
+    /* Toggle Group */
+    body[data-page="domain-detail"] .toggle-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Maintenance Status Text */
+    body[data-page="domain-detail"] .status-text,
+    body[data-page="domain-detail"] #editDomainMaintenanceStatusText,
+    body[data-page="domain-detail"] #maintenanceStatusText {
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      transition: all 0.2s ease;
+    }
+
+    /* Button Group */
+    body[data-page="domain-detail"] .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    /* Form Actions */
+    body[data-page="domain-detail"] .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    body[data-page="domain-detail"] .btn {
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+
+    body[data-page="domain-detail"] .btn.small {
+      padding: 8px 16px;
+      font-size: 0.85rem;
+    }
+
+    body[data-page="domain-detail"] .btn.ghost {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--border);
+      color: var(--text-main);
+    }
+
+    body[data-page="domain-detail"] .btn.ghost:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
+    }
+
+    body[data-page="domain-detail"] .btn.primary {
+      background: linear-gradient(135deg, #fff, #e0e0e0);
+      color: #000;
+      box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+    }
+
+    body[data-page="domain-detail"] .btn.primary:hover {
+      background: linear-gradient(135deg, #e0e0e0, #c0c0c0);
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    body[data-page="domain-detail"] .btn.primary:active {
+      transform: translateY(0);
+    }
+
+    /* Button Groups */
+    body[data-page="domain-detail"] .form-field > div[style*="flex"] {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Inline Panel */
+    body[data-page="domain-detail"] .inline-panel {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 16px;
+    }
+
+    /* Empty State */
+    body[data-page="domain-detail"] .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.01);
+      border-radius: 12px;
+      border: 1px dashed var(--border);
+    }
+
+    body[data-page="domain-detail"] .empty-state p {
+      margin: 0 0 16px 0;
+      font-size: 0.95rem;
+    }
+
+    /* Certificate Section */
+    body[data-page="domain-detail"] #domainCertInfo .form-grid {
+      margin-bottom: 16px;
+    }
+
+    body[data-page="domain-detail"] #domainCertStatus {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(76, 175, 80, 0.1);
+      color: #4CAF50;
+      border: 1px solid rgba(76, 175, 80, 0.2);
+    }
+
+    body[data-page="domain-detail"] #domainCertExpiry {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: var(--text-main);
+    }
+
+    /* Mono Text */
+    body[data-page="domain-detail"] .mono {
+      font-family: var(--font-mono);
+    }
+
+    /* Topbar Improvements */
+    body[data-page="domain-detail"] .topbar {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+      border: 1px solid var(--border);
+    }
+
+    body[data-page="domain-detail"] .page-heading .eyebrow {
+      font-size: 0.75rem;
+      margin-bottom: 8px;
+    }
+
+    body[data-page="domain-detail"] .page-heading h1 {
+      font-size: 2.2rem;
+      margin: 0 0 8px 0;
+    }
+
+    body[data-page="domain-detail"] .page-heading .muted {
+      font-size: 0.95rem;
+      margin: 0;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      body[data-page="domain-detail"] .form-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      body[data-page="domain-detail"] .form-actions {
+        flex-direction: column-reverse;
+      }
+
+      body[data-page="domain-detail"] .btn {
+        width: 100%;
+      }
+
+      body[data-page="domain-detail"] .topbar {
+        padding: 16px;
+      }
+
+      body[data-page="domain-detail"] .card {
+        padding: 20px;
+      }
+
+      body[data-page="domain-detail"] .page-heading h1 {
+        font-size: 1.8rem;
+      }
+    }
+
+    /* Animation for card sections */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    body[data-page="domain-detail"] .card {
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    body[data-page="domain-detail"] .card:nth-child(2) {
+      animation-delay: 0.1s;
+    }
+
+    body[data-page="domain-detail"] .card:nth-child(3) {
+      animation-delay: 0.2s;
+    }
+
+    /* Selection Styling */
+    body[data-page="domain-detail"] ::selection {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    /* Section Improvements */
+    body[data-page="domain-detail"] article.card section {
+      position: relative;
+    }
+
+    body[data-page="domain-detail"] article.card section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -32px;
+      width: 3px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      border-radius: 3px;
+    }
+
+    /* Responsive Button Group */
+    @media (max-width: 480px) {
+      body[data-page="domain-detail"] .button-group {
+        flex-direction: column;
+      }
+
+      body[data-page="domain-detail"] .button-group .btn {
+        width: 100%;
+      }
+    }
+
+    /* Improved input placeholder */
+    body[data-page="domain-detail"] input::placeholder,
+    body[data-page="domain-detail"] textarea::placeholder {
+      color: var(--text-dim);
+      opacity: 0.6;
+    }
+
+    /* Focus visible for accessibility */
+    body[data-page="domain-detail"] *:focus-visible {
+      outline: 2px solid rgba(255, 255, 255, 0.3);
+      outline-offset: 2px;
+    }
+
+    /* Card section spacing */
+    body[data-page="domain-detail"] .card > section {
+      padding: 0;
+    }
+
+    /* Loading state for buttons */
+    body[data-page="domain-detail"] .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Hover effects for certificate section */
+    body[data-page="domain-detail"] #domainCertSection {
+      transition: all 0.3s ease;
+    }
+
+    /* Better scrollbar for textareas */
+    body[data-page="domain-detail"] textarea::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    body[data-page="domain-detail"] textarea::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 4px;
+    }
+
+    body[data-page="domain-detail"] textarea::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    body[data-page="domain-detail"] textarea::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
   </style>
 </body>
