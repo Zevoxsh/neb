@@ -60,7 +60,12 @@ const domainModel = require('../src/models/domainModel');
 
     console.log('Refreshing screenshot for', hostname, 'id=', id || '(unknown)');
 
-    const result = await screenshotService.refreshScreenshot(hostname, id || String(hostname), { method: 'local' });
+    // accept optional port override as second CLI arg
+    const portArg = process.argv[3];
+    const opts = { method: 'local' };
+    if (portArg && !isNaN(Number(portArg))) opts.targetPort = Number(portArg);
+
+    const result = await screenshotService.refreshScreenshot(hostname, id || String(hostname), opts);
 
     if (result) {
       console.log('Screenshot refreshed:', result);

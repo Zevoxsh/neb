@@ -549,6 +549,11 @@ class ScreenshotService {
       // ignore and fallback to default
     }
 
+    // Allow caller to override the target port (options.targetPort)
+    if (options && options.targetPort) {
+      try { targetPort = Number(options.targetPort); } catch (e) { }
+    }
+
     // Fallback to app PORT if nothing found
     const defaultAppPort = process.env.PORT || 3000;
     if (!targetPort) targetPort = defaultAppPort;
