@@ -1,59 +1,34 @@
 /**
  * Screenshot Service
- * Takes screenshots of domains for preview cards using Puppeteer
+ * Takes screenshots of domains for preview cards
+ * Uses https.get to download screenshots from external API
  */
 
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
+const http = require('http');
 
 class ScreenshotService {
   constructor() {
     this.screenshotsDir = path.join(__dirname, '../../public/screenshots');
-    this.browser = null;
-    this.isInitialized = false;
-    this.puppeteer = null;
+    this.isInitialized = true; // Always available with external API
+    this.screenshotAPI = 'https://image.thum.io/get/width/1280/crop/800/noanimate/';
 
     // Create screenshots directory if it doesn't exist
     if (!fs.existsSync(this.screenshotsDir)) {
       fs.mkdirSync(this.screenshotsDir, { recursive: true });
     }
+
+    console.log('[ScreenshotService] Service initialized (using external API)');
   }
 
   async initialize() {
-    if (this.isInitialized) return;
-
-    try {
-      // Try to load puppeteer
-      this.puppeteer = require('puppeteer');
-
-      // Launch browser with optimized settings
-      this.browser = await this.puppeteer.launch({
-        headless: 'new',
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--disable-gpu',
-          '--window-size=1920,1080'
-        ]
-      });
-
-      this.isInitialized = true;
-      console.log('[ScreenshotService] Puppeteer initialized successfully');
-    } catch (error) {
-      console.warn('[ScreenshotService] Puppeteer not available:', error.message);
-      console.warn('[ScreenshotService] Screenshots will not be available. Install with: npm install puppeteer');
-      this.isInitialized = false;
-    }
+    // No initialization needed for external API
+    return Promise.resolve();
   }
 
   async captureScreenshot(hostname, domainId) {
-    if (!this.isInitialized || !this.browser) {
-      console.log(`[ScreenshotService] Service not initialized for ${hostname}`);
-      return null;
-    }
-
     const filename = `domain-${domainId}.png`;
     const filepath = path.join(this.screenshotsDir, filename);
 
@@ -69,59 +44,62 @@ class ScreenshotService {
       }
     }
 
-    let page = null;
     try {
       console.log(`[ScreenshotService] Capturing screenshot for ${hostname}`);
 
-      page = await this.browser.newPage();
+      // Use external API to get screenshot
+      const screenshotUrl = `${this.screenshotAPI}https://${hostname}`;
 
-      // Set viewport for consistent screenshots
-      await page.setViewport({
-        width: 1280,
-        height: 800,
-        deviceScaleFactor: 1
-      });
-
-      // Set timeout and navigate
-      await page.goto(`https://${hostname}`, {
-        waitUntil: 'networkidle2',
-        timeout: 15000
-      });
-
-      // Wait a bit for dynamic content
-      await page.waitForTimeout(1000);
-
-      // Take screenshot
-      await page.screenshot({
-        path: filepath,
-        type: 'png',
-        fullPage: false
-      });
+      await this.downloadScreenshot(screenshotUrl, filepath);
 
       console.log(`[ScreenshotService] Screenshot saved for ${hostname}`);
       return `/public/screenshots/${filename}`;
     } catch (error) {
       console.error(`[ScreenshotService] Error capturing ${hostname}:`, error.message);
-
-      // If screenshot failed, try to create a placeholder
-      if (page) {
-        try {
-          await page.close();
-        } catch (e) {
-          // Ignore close errors
-        }
-      }
-
       return null;
-    } finally {
-      if (page) {
-        try {
-          await page.close();
-        } catch (e) {
-          // Ignore close errors
-        }
-      }
     }
+  }
+
+  downloadScreenshot(url, filepath) {
+    return new Promise((resolve, reject) => {
+      const protocol = url.startsWith('https') ? https : http;
+
+      const request = protocol.get(url, (response) => {
+        // Handle redirects
+        if (response.statusCode === 301 || response.statusCode === 302) {
+          return this.downloadScreenshot(response.headers.location, filepath)
+            .then(resolve)
+            .catch(reject);
+        }
+
+        if (response.statusCode !== 200) {
+          reject(new Error(`Failed to download screenshot: ${response.statusCode}`));
+          return;
+        }
+
+        const fileStream = fs.createWriteStream(filepath);
+        response.pipe(fileStream);
+
+        fileStream.on('finish', () => {
+          fileStream.close();
+          resolve();
+        });
+
+        fileStream.on('error', (err) => {
+          fs.unlink(filepath, () => {}); // Delete partial file
+          reject(err);
+        });
+      });
+
+      request.on('error', (err) => {
+        reject(err);
+      });
+
+      request.setTimeout(30000, () => {
+        request.destroy();
+        reject(new Error('Screenshot download timeout'));
+      });
+    });
   }
 
   getScreenshotPath(domainId) {
@@ -157,14 +135,8 @@ class ScreenshotService {
   }
 
   async cleanup() {
-    if (this.browser) {
-      try {
-        await this.browser.close();
-        console.log('[ScreenshotService] Browser closed');
-      } catch (error) {
-        console.error('[ScreenshotService] Error closing browser:', error.message);
-      }
-    }
+    // No cleanup needed for external API
+    console.log('[ScreenshotService] Cleanup complete');
   }
 }
 
@@ -174,17 +146,6 @@ const screenshotService = new ScreenshotService();
 // Initialize on startup
 screenshotService.initialize().catch(err => {
   console.error('[ScreenshotService] Initialization error:', err);
-});
-
-// Cleanup on process exit
-process.on('SIGINT', async () => {
-  await screenshotService.cleanup();
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  await screenshotService.cleanup();
-  process.exit(0);
 });
 
 module.exports = screenshotService;
