@@ -207,15 +207,15 @@ class BotProtection {
         // Different limits based on domain protection and verification status
         let limit = this.perIpLimit;
         let limitType = 'standard';
-        
-        if (domain && this.protectedDomains.has(domain)) {
-            // Stricter limit for protected domains
-            limit = this.perIpLimitProtected;
-            limitType = 'protected_domain';
-        } else if (isVerified) {
-            // Higher limit for verified IPs on unprotected domains
+
+        // Verified IPs get higher limit regardless of domain protection status
+        if (isVerified) {
             limit = this.verifiedIpLimit;
             limitType = 'verified_ip';
+        } else if (domain && this.protectedDomains.has(domain)) {
+            // Stricter limit for unverified IPs on protected domains
+            limit = this.perIpLimitProtected;
+            limitType = 'protected_domain';
         }
         
         if (requestsInLastMinute > limit) {
@@ -337,15 +337,15 @@ class BotProtection {
         const expiration = this.verifiedIPs.get(ip);
         const isVerified = expiration && expiration > Date.now();
         
-        // Even verified IPs need to respect rate limits
+        // Check rate limits (verified IPs have higher limit: 12000 req/min)
         const isRateLimited = this.isRateLimited(ip, domain);
         if (isRateLimited) {
-            // If verified IP is rate limited, remove verification and challenge again
+            // If verified IP exceeds its high limit, remove verification
             if (isVerified) {
-                console.log(`[BotProtection] Verified IP ${ip} exceeded rate limit, removing verification`);
+                console.log(`[BotProtection] Verified IP ${ip} exceeded rate limit (12000 req/min), removing verification`);
                 this.verifiedIPs.delete(ip);
-                
-                // Create alert for suspicious behavior from verified IP
+
+                // Create alert for suspicious behavior
                 const alertService = require('./alertService');
                 alertService.createSecurityAlert({
                     type: 'SUSPICIOUS_ACTIVITY',
@@ -353,14 +353,14 @@ class BotProtection {
                     ipAddress: ip,
                     hostname: domain,
                     message: `Verified IP ${ip} exceeded rate limit and lost verification status`,
-                    details: { 
+                    details: {
                         previouslyVerified: true,
                         requestsPerMinute: this.getRequestsPerMinute(ip),
                         domain
                     }
                 });
             }
-            return true;
+            return true; // Challenge
         }
 
         // If verified and not rate limited, allow

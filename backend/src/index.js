@@ -474,11 +474,11 @@ async function initDbAndStart() {
       
       botProtection.setEnabled(loadConfigValue('botProtection.enabled', false, 'boolean'));
       botProtection.setThreshold(loadConfigValue('botProtection.threshold', 100, 'number'));
-      botProtection.setPerIpLimit(loadConfigValue('botProtection.perIpLimit', 60, 'number'));
-      botProtection.perIpLimitProtected = loadConfigValue('botProtection.perIpLimitProtected', 30, 'number');
-      botProtection.verifiedIpLimit = loadConfigValue('botProtection.verifiedIpLimit', 600, 'number');
-      botProtection.burstLimit = loadConfigValue('botProtection.burstLimit', 10, 'number');
-      botProtection.maxConnectionsPerIP = loadConfigValue('botProtection.maxConnectionsPerIP', 100, 'number');
+      botProtection.setPerIpLimit(loadConfigValue('botProtection.perIpLimit', 1000, 'number'));
+      botProtection.perIpLimitProtected = loadConfigValue('botProtection.perIpLimitProtected', 600, 'number');
+      botProtection.verifiedIpLimit = loadConfigValue('botProtection.verifiedIpLimit', 12000, 'number');
+      botProtection.burstLimit = loadConfigValue('botProtection.burstLimit', 200, 'number');
+      botProtection.maxConnectionsPerIP = loadConfigValue('botProtection.maxConnectionsPerIP', 1000, 'number');
       botProtection.maxAttempts = loadConfigValue('botProtection.maxAttempts', 3, 'number');
       botProtection.setChallengeFirstVisit(loadConfigValue('botProtection.challengeFirstVisit', false, 'boolean'));
       
