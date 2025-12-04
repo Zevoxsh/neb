@@ -1850,13 +1850,19 @@
       if (maintenanceEnabledField) maintenanceEnabledField.checked = !!domain.maintenance_enabled;
       if (maintenancePathField) maintenancePathField.value = domain.maintenance_page_path || '';
 
+      // Update page header title with domain name
+      const headerTitle = document.getElementById('domainHeaderTitle');
+      if (headerTitle && domain.hostname) {
+        headerTitle.textContent = domain.hostname;
+      }
+
       // Update status text
       const maintenanceStatusText = document.getElementById('editDomainMaintenanceStatusText');
-      if (maintenanceStatusText) maintenanceStatusText.textContent = maintenanceEnabledField && maintenanceEnabledField.checked ? 'Enabled' : 'Disabled';
+      if (maintenanceStatusText) maintenanceStatusText.textContent = maintenanceEnabledField && maintenanceEnabledField.checked ? 'Activé' : 'Désactivé';
 
       if (maintenanceEnabledField) {
         maintenanceEnabledField.addEventListener('change', () => {
-          if (maintenanceStatusText) maintenanceStatusText.textContent = maintenanceEnabledField.checked ? 'Enabled' : 'Disabled';
+          if (maintenanceStatusText) maintenanceStatusText.textContent = maintenanceEnabledField.checked ? 'Activé' : 'Désactivé';
         });
       }
 
