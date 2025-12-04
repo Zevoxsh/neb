@@ -209,17 +209,12 @@ class ScreenshotService {
 
   downloadScreenshot(url, filepath) {
     return new Promise((resolve, reject) => {
-      console.log(`[ScreenshotService] Downloading from: ${url}`);
-      console.log(`[ScreenshotService] Saving to: ${filepath}`);
-
+      // Silent download - no logs
       const protocol = url.startsWith('https') ? https : http;
 
       const request = protocol.get(url, (response) => {
-        console.log(`[ScreenshotService] Response status: ${response.statusCode}`);
-
         // Handle redirects
         if (response.statusCode === 301 || response.statusCode === 302) {
-          console.log(`[ScreenshotService] Redirecting to: ${response.headers.location}`);
           return this.downloadScreenshot(response.headers.location, filepath)
             .then(resolve)
             .catch(reject);
@@ -241,24 +236,23 @@ class ScreenshotService {
 
         fileStream.on('finish', () => {
           fileStream.close();
-          console.log(`[ScreenshotService] Download complete: ${downloadedBytes} bytes`);
+          // Silent - no log
           resolve();
         });
 
         fileStream.on('error', (err) => {
-          console.error(`[ScreenshotService] File stream error:`, err);
+          // Only log errors, not normal operation
           fs.unlink(filepath, () => {}); // Delete partial file
           reject(err);
         });
       });
 
       request.on('error', (err) => {
-        console.error(`[ScreenshotService] Request error:`, err);
+        // Only log errors, not normal operation
         reject(err);
       });
 
       request.setTimeout(30000, () => {
-        console.error(`[ScreenshotService] Request timeout after 30s`);
         request.destroy();
         reject(new Error('Screenshot download timeout'));
       });
