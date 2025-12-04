@@ -57,7 +57,7 @@ class ScreenshotService {
       }
     }, intervalMs);
 
-    console.log('[ScreenshotService] Scheduled periodic screenshots every 5 minutes. Update', this.mappingFile, 'with {"<domainId>":"<hostname>"} to enable automatic captures.');
+    console.log('[ScreenshotService] Scheduled periodic screenshots every 10 minutes. Update', this.mappingFile, 'with {"<domainId>":"<hostname>"} to enable automatic captures.');
 
     // If mapping file is empty, try to populate it from domain mappings (if DB available)
     try {
@@ -315,6 +315,8 @@ class ScreenshotService {
 
     // If method is 'local', try wkhtmltoimage first (no Chromium dependency), then CLI Chrome, then Puppeteer fallback
     if (opts.method === 'local') {
+      // default wait before capture to allow client-side JS to render (5s)
+      if (typeof opts.waitMs === 'undefined' || opts.waitMs === null) opts.waitMs = 5000;
       try {
         const wk = await this.captureWithWkhtmltoimage(hostname, domainId, opts);
         if (wk) return wk;
@@ -479,6 +481,11 @@ class ScreenshotService {
    * Returns public path on success.
    */
   async captureWithChromeCli(hostname, domainId, options = {}) {
+    // If caller requested a wait before starting the capture, honor it (allow client JS to render)
+    if (options && options.waitMs && Number(options.waitMs) > 0) {
+      console.log('[ScreenshotService] captureWithChromeCli: waiting', options.waitMs, 'ms before spawning chrome');
+      await new Promise(r => setTimeout(r, Number(options.waitMs)));
+    }
     const { spawn } = require('child_process');
 
     const possibleBins = [
