@@ -737,7 +737,8 @@ animation:spin 1s linear infinite;margin:30px auto}
             }
 
             // Force challenge for new IPs on HTTPS proxy, pass domain for filtering
-            const challengeStatus = botProtection.shouldChallenge(clientIp, true, domain);
+            const userAgent = req.headers['user-agent'] || '';
+            const challengeStatus = botProtection.shouldChallenge(clientIp, true, domain, userAgent);
 
             if (challengeStatus === 'banned' || challengeStatus === 'banned_for_domain') {
               const message = challengeStatus === 'banned_for_domain'

@@ -1280,22 +1280,27 @@
     }
   }
 
-  async function loadDomainPreview(hostname, card) {
+  async function loadDomainPreview(hostname, card, retryCount = 0) {
     const previewDiv = card.querySelector('.domain-card-preview');
     const domainId = card.dataset.domainId;
     if (!previewDiv || !hostname || !domainId) return;
 
+    const maxRetries = 3;
+    const retryDelay = 2000 * (retryCount + 1); // 2s, 4s, 6s
+
     try {
       // Request screenshot from API
       const res = await window.api.requestJson(`/api/domains/${domainId}/screenshot`);
-      console.log(`[Screenshot] API response for ${hostname}:`, res);
+      console.log(`[Screenshot] API response for ${hostname} (attempt ${retryCount + 1}):`, res);
 
       if (res && res.status === 200 && res.body && res.body.path) {
         console.log(`[Screenshot] Loading image for ${hostname} from:`, res.body.path);
 
         // Create image element for screenshot
         const img = document.createElement('img');
-        img.src = res.body.path;
+        // Add cache buster for retries to force reload
+        const cacheBuster = retryCount > 0 ? `?t=${Date.now()}` : '';
+        img.src = res.body.path + cacheBuster;
         img.alt = `Preview of ${hostname}`;
         img.style.width = '100%';
         img.style.height = '100%';
@@ -1312,15 +1317,38 @@
           previewDiv.appendChild(img);
         };
 
-        // If image fails to load, keep placeholder
+        // If image fails to load, retry with exponential backoff
         img.onerror = (e) => {
-          console.error(`[Screenshot] Failed to load image for ${hostname}:`, img.src, e);
+          console.error(`[Screenshot] Failed to load image for ${hostname} (attempt ${retryCount + 1}):`, img.src);
+
+          if (retryCount < maxRetries) {
+            console.log(`[Screenshot] Retrying in ${retryDelay}ms...`);
+            setTimeout(() => {
+              loadDomainPreview(hostname, card, retryCount + 1);
+            }, retryDelay);
+          } else {
+            console.error(`[Screenshot] Max retries reached for ${hostname}`);
+          }
         };
+      } else if (res && res.status === 503) {
+        // Service unavailable, screenshot still being generated
+        console.log(`[Screenshot] Screenshot still being generated for ${hostname}, retrying...`);
+        if (retryCount < maxRetries) {
+          setTimeout(() => {
+            loadDomainPreview(hostname, card, retryCount + 1);
+          }, retryDelay);
+        }
       } else {
         console.warn(`[Screenshot] Invalid response for ${hostname}:`, res);
       }
     } catch (error) {
       console.error(`[Screenshot] Error fetching screenshot for ${hostname}:`, error);
+      // Retry on error
+      if (retryCount < maxRetries) {
+        setTimeout(() => {
+          loadDomainPreview(hostname, card, retryCount + 1);
+        }, retryDelay);
+      }
     }
   }
 

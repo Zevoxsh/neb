@@ -161,10 +161,30 @@ class BotProtection {
     getRequestsInLastSeconds(ip, seconds) {
         const history = this.ipRequestHistory.get(ip);
         if (!history) return 0;
-        
+
         const now = Date.now();
         const cutoff = now - (seconds * 1000);
         return history.filter(ts => ts > cutoff).length;
+    }
+
+    isScreenshotService(userAgent) {
+        if (!userAgent) return false;
+
+        const ua = userAgent.toLowerCase();
+        const screenshotServices = [
+            'thum.io',
+            'screenshotapi',
+            'screenshotone',
+            'shot.screenshotapi',
+            'urlbox',
+            'browserless',
+            'pagepeeker',
+            'api2screenshot',
+            'screenshotmachine',
+            'thumbnail.ws'
+        ];
+
+        return screenshotServices.some(service => ua.includes(service));
     }
 
     isRateLimited(ip, domain = null) {
@@ -292,11 +312,17 @@ class BotProtection {
         return this.enabled || this.requestsPerSecond > this.threshold;
     }
 
-    shouldChallenge(ip, forceNewVisitor = false, domain = null) {
+    shouldChallenge(ip, forceNewVisitor = false, domain = null, userAgent = null) {
         // CRITICAL: Check if IP is trusted FIRST - trusted IPs bypass all protection
         const proxyManager = require('./proxyManager');
         if (proxyManager.isTrustedIp(ip)) {
             return false; // Trusted IPs never get challenged
+        }
+
+        // Whitelist screenshot services by user-agent
+        if (userAgent && this.isScreenshotService(userAgent)) {
+            console.log(`[BotProtection] Bypassing challenge for screenshot service: ${userAgent.substring(0, 50)}`);
+            return false;
         }
 
         // Check if domain is unprotected - Pas de challenge, uniquement ban par domaine si VRAIMENT excessif
