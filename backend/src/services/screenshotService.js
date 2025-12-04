@@ -313,8 +313,15 @@ class ScreenshotService {
     // Delete existing screenshot to force refresh
     await this.deleteScreenshot(domainId);
 
-    // If method is 'local', try CLI Chrome first (no Puppeteer), then Puppeteer as fallback
+    // If method is 'local', try wkhtmltoimage first (no Chromium dependency), then CLI Chrome, then Puppeteer fallback
     if (opts.method === 'local') {
+      try {
+        const wk = await this.captureWithWkhtmltoimage(hostname, domainId, opts);
+        if (wk) return wk;
+      } catch (e) {
+        console.warn('[ScreenshotService] captureWithWkhtmltoimage failed, trying Chrome CLI fallback:', e && e.message ? e.message : e);
+      }
+
       try {
         const cli = await this.captureWithChromeCli(hostname, domainId, opts);
         if (cli) return cli;
@@ -385,6 +392,89 @@ class ScreenshotService {
   }
 
   /**
+   * Capture using wkhtmltoimage (no Chromium required). This relies on an external
+   * `wkhtmltoimage` binary being installed on the system. It targets the local
+   * server (127.0.0.1:port) and sets a Host header so the proxy serves the
+   * correct domain while treating the request as local (trusted).
+   */
+  async captureWithWkhtmltoimage(hostname, domainId, options = {}) {
+    const { spawn } = require('child_process');
+    const possibleBins = [
+      process.env.WKHTMLTOIMAGE_BIN,
+      '/usr/bin/wkhtmltoimage',
+      '/usr/local/bin/wkhtmltoimage',
+      'C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltoimage.exe',
+      'C:\\Program Files (x86)\\wkhtmltopdf\\bin\\wkhtmltoimage.exe'
+    ].filter(Boolean);
+
+    const fs = require('fs');
+    let bin = null;
+    for (const p of possibleBins) {
+      try { if (fs.existsSync(p)) { bin = p; break; } } catch (e) { }
+    }
+
+    if (!bin) {
+      throw new Error('wkhtmltoimage binary not found. Install wkhtmltoimage to use this capture method.');
+    }
+
+    const filename = `domain-${domainId}.png`;
+    const filepath = path.join(this.screenshotsDir, filename);
+    try { if (fs.existsSync(filepath)) fs.unlinkSync(filepath); } catch (e) { }
+
+    // Determine local port to target (try to detect proxy listener for domain)
+    let targetPort = process.env.PORT || 3000;
+    try {
+      const domainModel = require('../models/domainModel');
+      const proxyModel = require('../models/proxyModel');
+      const mappings = await domainModel.listDomainMappings();
+      const mapping = mappings.find(m => String(m.id) === String(domainId) || m.hostname === hostname);
+      if (mapping && mapping.proxy_id) {
+        const proxy = await proxyModel.getProxyById(mapping.proxy_id);
+        if (proxy && proxy.listen_port) targetPort = Number(proxy.listen_port);
+      }
+    } catch (e) { }
+
+    const targetUrl = `http://127.0.0.1:${targetPort}/`;
+
+    const args = [
+      '--enable-javascript',
+      '--javascript-delay', String(options.waitMs || 1000),
+      '--width', '1280',
+      '--height', '800',
+      '--quality', '90',
+      '--disable-smart-width',
+      '--custom-header', 'Host', hostname,
+      targetUrl,
+      filepath
+    ];
+
+    return new Promise((resolve, reject) => {
+      const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+      let stderr = '';
+      let stdout = '';
+      proc.stdout.on('data', d => { stdout += d.toString(); });
+      proc.stderr.on('data', d => { stderr += d.toString(); });
+
+      const timeoutMs = options.timeoutMs || 30000;
+      const to = setTimeout(() => {
+        try { proc.kill('SIGKILL'); } catch (e) { }
+        reject(new Error('wkhtmltoimage capture timeout'));
+      }, timeoutMs + 2000);
+
+      proc.on('close', (code) => {
+        clearTimeout(to);
+        if (stdout && stdout.trim()) console.log('[ScreenshotService] captureWithWkhtmltoimage stdout:', stdout.trim());
+        if (stderr && stderr.trim()) console.warn('[ScreenshotService] captureWithWkhtmltoimage stderr:', stderr.trim());
+        if (code !== 0) return reject(new Error(`wkhtmltoimage exited with code ${code}: ${stderr}`));
+        setTimeout(() => {
+          if (fs.existsSync(filepath)) return resolve(`/public/screenshots/${filename}`);
+          return reject(new Error('wkhtmltoimage reported success but file missing; stderr: ' + stderr));
+        }, 200);
+      });
+    });
+  }
+
+  /**
    * Capture using system Chrome/Chromium CLI. Does not depend on Puppeteer.
    * Returns public path on success.
    */
@@ -439,8 +529,32 @@ class ScreenshotService {
     try { if (fs.existsSync(filepath)) fs.unlinkSync(filepath); } catch (e) { }
 
     // Build args. Use host resolver to map hostname to 127.0.0.1
-    const PORT = process.env.PORT || 3000;
-    const targetUrl = `http://${hostname}:${PORT}/`;
+    // Attempt to detect which proxy listener handles this domain so we target the proxy (usually port 80/443)
+    let targetPort = null;
+    let targetProtocol = 'http';
+    try {
+      const domainModel = require('../models/domainModel');
+      const proxyModel = require('../models/proxyModel');
+      const mappings = await domainModel.listDomainMappings();
+      const mapping = mappings.find(m => String(m.id) === String(domainId) || m.hostname === hostname);
+      if (mapping && mapping.proxy_id) {
+        const proxy = await proxyModel.getProxyById(mapping.proxy_id);
+        if (proxy && proxy.listen_port) {
+          targetPort = Number(proxy.listen_port);
+          // listen_protocol may be 'http' or 'tcp' or 'https'
+          targetProtocol = (proxy.listen_protocol || proxy.protocol || '').toLowerCase() || targetProtocol;
+        }
+      }
+    } catch (e) {
+      // ignore and fallback to default
+    }
+
+    // Fallback to app PORT if nothing found
+    const defaultAppPort = process.env.PORT || 3000;
+    if (!targetPort) targetPort = defaultAppPort;
+    const portSuffix = targetPort && (String(targetPort) !== '80' && String(targetPort) !== '443') ? (`:${targetPort}`) : '';
+    const scheme = (String(targetProtocol).startsWith('https') || String(targetPort) === '443') ? 'https' : 'http';
+    const targetUrl = `${scheme}://${hostname}${portSuffix}/`;
     const args = [];
     // New headless mode if supported
     args.push('--headless=new');
