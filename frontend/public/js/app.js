@@ -3621,7 +3621,7 @@
       }
 
       showToast('Maintenance settings saved successfully', 'success');
-      hidePanel('maintenancePanel');
+      togglePanel('maintenancePanel', false);
 
       // Reload domains to reflect changes
       if (document.body.dataset.page === 'domains') {
