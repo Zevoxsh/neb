@@ -56,6 +56,17 @@ class ScreenshotService {
       await this.downloadScreenshot(screenshotUrl, filepath);
 
       console.log(`[ScreenshotService] Screenshot saved for ${hostname}`);
+      console.log(`[ScreenshotService] File saved to: ${filepath}`);
+      console.log(`[ScreenshotService] Accessible at: /public/screenshots/${filename}`);
+
+      // Verify file was actually created
+      if (fs.existsSync(filepath)) {
+        const stats = fs.statSync(filepath);
+        console.log(`[ScreenshotService] File size: ${stats.size} bytes`);
+      } else {
+        console.error(`[ScreenshotService] WARNING: File does not exist after download!`);
+      }
+
       return `/public/screenshots/${filename}`;
     } catch (error) {
       console.error(`[ScreenshotService] Error capturing ${hostname}:`, error.message);
@@ -65,11 +76,17 @@ class ScreenshotService {
 
   downloadScreenshot(url, filepath) {
     return new Promise((resolve, reject) => {
+      console.log(`[ScreenshotService] Downloading from: ${url}`);
+      console.log(`[ScreenshotService] Saving to: ${filepath}`);
+
       const protocol = url.startsWith('https') ? https : http;
 
       const request = protocol.get(url, (response) => {
+        console.log(`[ScreenshotService] Response status: ${response.statusCode}`);
+
         // Handle redirects
         if (response.statusCode === 301 || response.statusCode === 302) {
+          console.log(`[ScreenshotService] Redirecting to: ${response.headers.location}`);
           return this.downloadScreenshot(response.headers.location, filepath)
             .then(resolve)
             .catch(reject);
@@ -81,24 +98,34 @@ class ScreenshotService {
         }
 
         const fileStream = fs.createWriteStream(filepath);
+        let downloadedBytes = 0;
+
+        response.on('data', (chunk) => {
+          downloadedBytes += chunk.length;
+        });
+
         response.pipe(fileStream);
 
         fileStream.on('finish', () => {
           fileStream.close();
+          console.log(`[ScreenshotService] Download complete: ${downloadedBytes} bytes`);
           resolve();
         });
 
         fileStream.on('error', (err) => {
+          console.error(`[ScreenshotService] File stream error:`, err);
           fs.unlink(filepath, () => {}); // Delete partial file
           reject(err);
         });
       });
 
       request.on('error', (err) => {
+        console.error(`[ScreenshotService] Request error:`, err);
         reject(err);
       });
 
       request.setTimeout(30000, () => {
+        console.error(`[ScreenshotService] Request timeout after 30s`);
         request.destroy();
         reject(new Error('Screenshot download timeout'));
       });
