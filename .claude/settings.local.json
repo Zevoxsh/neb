@@ -7,7 +7,8 @@
       "Bash(dir /B)",
       "Bash(dir:*)",
       "Bash(cat:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(move:*)"
     ],
     "deny": [],
     "ask": []
