@@ -209,7 +209,7 @@ const getScreenshot = asyncHandler(async (req, res) => {
 
     if (inline) {
       // Prefer reading cached file
-      const dataUrl = screenshotService.getScreenshotData(id);
+      const dataUrl = screenshotService.getScreenshotData(id, domain.hostname);
       if (dataUrl) {
         return res.json({ path: screenshotPath, inline: dataUrl });
       }

@@ -344,7 +344,26 @@ class ScreenshotService {
    * and avoid performing an additional HTTP request that may trigger
    * bot protection on intermediate proxies.
    */
-  getScreenshotData(domainId) {
+  // Read screenshot bytes and return a data URL (base64).
+  // If `hostname` is provided, prefer the hostname-based file `domain-<hostname>.png`
+  // so that inline responses match the path the frontend may receive.
+  getScreenshotData(domainId, hostname) {
+    // Try hostname-based file first
+    if (hostname) {
+      const hostFilename = `domain-${hostname}.png`;
+      const hostFilepath = path.join(this.screenshotsDir, hostFilename);
+      if (fs.existsSync(hostFilepath)) {
+        try {
+          const buffer = fs.readFileSync(hostFilepath);
+          const base64 = buffer.toString('base64');
+          return `data:image/png;base64,${base64}`;
+        } catch (err) {
+          console.error(`[ScreenshotService] Error reading hostname screenshot for ${hostname}:`, err && err.message ? err.message : err);
+          // fall through to try id-based file
+        }
+      }
+    }
+
     const filename = `domain-${domainId}.png`;
     const filepath = path.join(this.screenshotsDir, filename);
 
@@ -355,7 +374,7 @@ class ScreenshotService {
       const base64 = buffer.toString('base64');
       return `data:image/png;base64,${base64}`;
     } catch (err) {
-      console.error(`[ScreenshotService] Error reading screenshot for ${domainId}:`, err.message);
+      console.error(`[ScreenshotService] Error reading screenshot for ${domainId}:`, err && err.message ? err.message : err);
       return null;
     }
   }
