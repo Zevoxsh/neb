@@ -6,7 +6,8 @@
       "Bash(findstr:*)",
       "Bash(dir /B)",
       "Bash(dir:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
