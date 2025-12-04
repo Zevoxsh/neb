@@ -12,14 +12,15 @@ const logger = createLogger('BotChallenge');
 // Serve challenge page with code injection
 router.get('/challenge.html', asyncHandler(async (req, res) => {
     const ip = getClientIp(req);
-    
-    // Get or generate challenge for this IP
-    let challengeData = botProtection.getActiveChallenge(ip);
+    const domain = req.hostname || req.get('host');
+
+    // Get or generate challenge for this IP+domain
+    let challengeData = botProtection.getActiveChallenge(ip, domain);
     if (!challengeData) {
-        challengeData = botProtection.generateChallenge(ip);
-        logger.info('New challenge generated', { ip, code: challengeData.code });
+        challengeData = botProtection.generateChallenge(ip, domain);
+        logger.info('New challenge generated', { ip, domain, code: challengeData.code && challengeData.code.substring(0,2) + '****' });
     } else {
-        logger.info('Reusing existing challenge', { ip, code: challengeData.code });
+        logger.info('Reusing existing challenge', { ip, domain, code: challengeData.code && challengeData.code.substring(0,2) + '****' });
     }
     
     // Read and inject challenge code into HTML
@@ -54,6 +55,7 @@ setInterval(() => {
 router.post('/verify-challenge', asyncHandler(async (req, res) => {
     const { solution, userInput } = req.body;
     const ip = getClientIp(req);
+    const domain = req.hostname || req.get('host');
     const now = Date.now();
     
     // Rate limiting: max 5 tentatives par minute
@@ -81,7 +83,7 @@ router.post('/verify-challenge', asyncHandler(async (req, res) => {
     });
 
     // Verify the CAPTCHA answer
-    const result = botProtection.verifyChallengeAnswer(ip, userInput || solution);
+    const result = botProtection.verifyChallengeAnswer(ip, userInput || solution, domain);
 
     if (!result.success) {
         if (result.banned) {
@@ -109,7 +111,7 @@ router.post('/verify-challenge', asyncHandler(async (req, res) => {
         return res.status(400).json({ error: 'Vérification échouée' });
     }
 
-    logger.info('IP verified successfully', { ip });
+    logger.info('IP verified successfully', { ip, domain });
     res.json({ success: true });
 }));
 

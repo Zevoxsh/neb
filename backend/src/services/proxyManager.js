@@ -638,10 +638,10 @@ animation:spin 1s linear infinite;margin:30px auto}
             const fs = require('fs');
             const path = require('path');
             
-            // Get or generate challenge for this IP
-            let challengeData = botProtection.getActiveChallenge(clientIp);
+            // Get or generate challenge for this IP+domain
+            let challengeData = botProtection.getActiveChallenge(clientIp, hostname);
             if (!challengeData) {
-              challengeData = botProtection.generateChallenge(clientIp);
+              challengeData = botProtection.generateChallenge(clientIp, hostname);
             }
             
             const challengePath = path.join(__dirname, '..', '..', 'public', 'challenge.html');
@@ -694,7 +694,7 @@ animation:spin 1s linear infinite;margin:30px auto}
                   userInput = params.get('userInput') || params.get('solution');
                 }
                 
-                const result = botProtection.verifyChallengeAnswer(clientIp, userInput);
+                const result = botProtection.verifyChallengeAnswer(clientIp, userInput, hostname);
                 
                 if (!result.success) {
                   if (result.banned) {
@@ -759,10 +759,11 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
             }
             
             if (challengeStatus) {
-              // Generate challenge only if one doesn't already exist for this IP
-              let challengeData = botProtection.getActiveChallenge(clientIp);
+              // Generate challenge only if one doesn't already exist for this IP+domain
+              const domain = req.headers.host ? req.headers.host.split(':')[0] : null;
+              let challengeData = botProtection.getActiveChallenge(clientIp, domain);
               if (!challengeData) {
-                challengeData = botProtection.generateChallenge(clientIp);
+                challengeData = botProtection.generateChallenge(clientIp, domain);
               }
               
               // Serve challenge page directly

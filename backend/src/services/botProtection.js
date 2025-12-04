@@ -27,7 +27,8 @@ class BotProtection {
         this.burstLimitUnprotected = 2000; // Burst limit for unprotected domains (augmenté)
         
         this.challengeFirstVisit = false; // DISABLED by default - only on proxy HTTPS
-        this.activeChallenges = new Map(); // IP => { code, timestamp, attempts }
+        this.activeChallenges = new Map(); // IP:domain => { code, token, timestamp, attempts }
+        this.verifiedIpDomains = new Map(); // key: "ip:domain" => expiration timestamp
         this.maxAttempts = 3; // Max failed attempts before temporary ban
         this.bannedIPs = new Map(); // IP => ban expiration timestamp
         this.secret = process.env.BOT_SECRET || crypto.randomBytes(32).toString('hex');
@@ -64,10 +65,14 @@ class BotProtection {
                 }
             }
             // Clean expired challenges
-            for (const [ip, challenge] of this.activeChallenges.entries()) {
-                if (now - challenge.timestamp > 300000) { // 5 minutes
-                    this.activeChallenges.delete(ip);
+            for (const [key, challenge] of this.activeChallenges.entries()) {
+                if (now - challenge.timestamp > 120000) { // 2 minutes expiry for challenges
+                    this.activeChallenges.delete(key);
                 }
+            }
+            // Clean verified per-domain entries
+            for (const [k, expiration] of this.verifiedIpDomains.entries()) {
+                if (expiration < now) this.verifiedIpDomains.delete(k);
             }
             // Clean old domain request histories
             const oneMinuteAgo = now - 60000;
@@ -196,7 +201,7 @@ class BotProtection {
 
         const requestsInLastMinute = this.getRequestsPerMinute(ip);
         const requestsInLast10Sec = this.getRequestsInLastSeconds(ip, 10);
-        const isVerified = this.verifiedIPs.has(ip) && this.verifiedIPs.get(ip) > Date.now();
+        const isVerified = this.isVerified(ip, domain);
         
         // Check burst protection (200 requests in 10 seconds)
         if (requestsInLast10Sec > this.burstLimit) {
@@ -359,17 +364,21 @@ class BotProtection {
             return 'banned';
         }
 
-        // Check if IP already verified
-        const expiration = this.verifiedIPs.get(ip);
-        const isVerified = expiration && expiration > Date.now();
+        // Check if IP already verified (global or domain-specific)
+        const isVerified = this.isVerified(ip, domain);
         
         // Check rate limits (verified IPs have higher limit: 12000 req/min)
         const isRateLimited = this.isRateLimited(ip, domain);
         if (isRateLimited) {
             // If verified IP exceeds its high limit, remove verification
-            if (isVerified) {
-                console.log(`[BotProtection] Verified IP ${ip} exceeded rate limit (12000 req/min), removing verification`);
-                this.verifiedIPs.delete(ip);
+            // If a verified IP exceeded rate limits, revoke domain/global verification as needed
+            if (this.isVerified(ip, domain)) {
+                console.log(`[BotProtection] Verified IP ${ip} exceeded rate limit (limit), removing verification`);
+                // remove global verification
+                if (this.verifiedIPs.has(ip)) this.verifiedIPs.delete(ip);
+                // remove domain-specific verification
+                const dk = domain ? `${ip}:${domain}` : null;
+                if (dk && this.verifiedIpDomains.has(dk)) this.verifiedIpDomains.delete(dk);
 
                 // Create alert for suspicious behavior
                 const alertService = require('./alertService');
@@ -390,7 +399,7 @@ class BotProtection {
         }
 
         // If verified and not rate limited, allow
-        if (isVerified) {
+        if (this.isVerified(ip, domain)) {
             return false;
         }
 
@@ -402,7 +411,7 @@ class BotProtection {
         // 2. Under attack mode is enabled
         // 3. First visit and (challengeFirstVisit is enabled OR forceNewVisitor is true)
         const isUnderAttack = this.isUnderAttack();
-        const isNewVisitor = (this.challengeFirstVisit || forceNewVisitor) && !this.verifiedIPs.has(ip);
+        const isNewVisitor = (this.challengeFirstVisit || forceNewVisitor) && !this.isVerified(ip, domain);
         
         const shouldBlock = isDomainProtected || isUnderAttack || isNewVisitor;
         
@@ -423,65 +432,88 @@ class BotProtection {
         // Silent log - IP verified for 6h
     }
 
+    isVerified(ip, domain = null) {
+        const now = Date.now();
+        const global = this.verifiedIPs.has(ip) && this.verifiedIPs.get(ip) > now;
+        if (global) return true;
+        if (domain) {
+            const key = `${ip}:${domain}`;
+            return this.verifiedIpDomains.has(key) && this.verifiedIpDomains.get(key) > now;
+        }
+        return false;
+    }
+
     generateChallenge(ip) {
         const timestamp = Date.now();
-        
-        // Generate a random 6-character code
-        // Use only safe characters (no < > & \" ')
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        let code = '';
-        for (let i = 0; i < 6; i++) {
-            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        const domain = arguments[1] || '';
+        const key = `${ip}:${domain}`;
+
+        // Throttle challenge generation per IP+domain to avoid rapid regeneration
+        const existing = this.activeChallenges.get(key);
+        if (existing && (timestamp - existing.timestamp) < 30000) { // 30s cooldown
+            return {
+                token: existing.token,
+                timestamp: existing.timestamp,
+                code: existing.code
+            };
         }
-        
-        // Store challenge
-        this.activeChallenges.set(ip, {
+
+        // Generate a secure random 6-character code using crypto
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        const len = 6;
+        let code = '';
+        const rnd = crypto.randomBytes(len);
+        for (let i = 0; i < len; i++) {
+            code += chars[rnd[i] % chars.length];
+        }
+
+        // Generate cryptographic token (nonce)
+        const token = crypto.randomBytes(16).toString('hex');
+
+        // Store challenge keyed by ip:domain
+        this.activeChallenges.set(key, {
             code,
+            token,
             timestamp,
             attempts: 0
         });
-        
-        // Generate cryptographic token
-        const token = crypto
-            .createHmac('sha256', this.secret)
-            .update(ip + code + timestamp)
-            .digest('hex');
 
         return { token, timestamp, code };
     }
 
     getActiveChallenge(ip) {
-        const challenge = this.activeChallenges.get(ip);
+        const domain = arguments[1] || '';
+        const key = `${ip}:${domain}`;
+        const challenge = this.activeChallenges.get(key);
         if (!challenge) return null;
-        
-        // Check if expired (5 minutes)
+
+        // Check if expired (2 minutes)
         const now = Date.now();
-        if (now - challenge.timestamp > 300000) {
-            this.activeChallenges.delete(ip);
+        if (now - challenge.timestamp > 120000) {
+            this.activeChallenges.delete(key);
             return null;
         }
-        
+
         return {
             code: challenge.code,
             timestamp: challenge.timestamp,
-            token: crypto
-                .createHmac('sha256', this.secret)
-                .update(ip + challenge.code + challenge.timestamp)
-                .digest('hex')
+            token: challenge.token
         };
     }
 
     verifyChallengeAnswer(ip, userInput) {
-        const challenge = this.activeChallenges.get(ip);
-        
+        const domain = arguments[2] || '';
+        const key = `${ip}:${domain}`;
+        const challenge = this.activeChallenges.get(key);
+
         if (!challenge) {
             return { success: false, reason: 'no_challenge' };
         }
 
-        // Check if challenge is expired (5 minutes)
+        // Check if challenge is expired (2 minutes)
         const now = Date.now();
-        if (now - challenge.timestamp > 300000) {
-            this.activeChallenges.delete(ip);
+        if (now - challenge.timestamp > 120000) {
+            this.activeChallenges.delete(key);
             return { success: false, reason: 'expired' };
         }
 
@@ -490,14 +522,14 @@ class BotProtection {
 
         // Check if too many attempts
         if (challenge.attempts > this.maxAttempts) {
-            this.activeChallenges.delete(ip);
+            this.activeChallenges.delete(key);
             this.banIP(ip, 600000); // Ban for 10 minutes
             return { success: false, reason: 'too_many_attempts', banned: true };
         }
 
-        // Verify answer
-        if (userInput.toUpperCase() !== challenge.code) {
-            console.warn(`[BotProtection] IP ${ip} failed challenge (attempt ${challenge.attempts}/${this.maxAttempts})`);
+        // Verify answer (case-insensitive)
+        if (String(userInput).toUpperCase() !== String(challenge.code).toUpperCase()) {
+            console.warn(`[BotProtection] IP ${ip} failed challenge for domain=${domain} (attempt ${challenge.attempts}/${this.maxAttempts})`);
             return { 
                 success: false, 
                 reason: 'wrong_answer',
@@ -505,10 +537,11 @@ class BotProtection {
             };
         }
 
-        // Success!
-        this.activeChallenges.delete(ip);
-        this.verifyIP(ip);
-        console.log(`[BotProtection] ✓ IP ${ip} verified (challenge passed)`);
+        // Success! mark domain-specific verification
+        this.activeChallenges.delete(key);
+        const expireAt = Date.now() + this.verificationDuration;
+        this.verifiedIpDomains.set(key, expireAt);
+        console.log(`[BotProtection] ✓ IP ${ip} verified for domain=${domain} until ${new Date(expireAt).toISOString()}`);
         return { success: true };
     }
 
@@ -588,6 +621,7 @@ class BotProtection {
             verificationDuration: this.verificationDuration / (60 * 60 * 1000), // Convert to hours
             requestsPerSecond: this.requestsPerSecond,
             verifiedIPs: this.verifiedIPs.size,
+            verifiedIpDomains: this.verifiedIpDomains.size,
             bannedIPs: this.bannedIPs.size,
             bannedIpDomains: this.bannedIpDomains.size,
             activeChallenges: this.activeChallenges.size,

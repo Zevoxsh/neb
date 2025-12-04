@@ -58,14 +58,14 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
         }
         
         if (challengeStatus) {
-            // Get or generate challenge for this IP
-            let challengeData = botProtection.getActiveChallenge(ip);
+            // Get or generate challenge for this IP+domain
+            let challengeData = botProtection.getActiveChallenge(ip, domain);
             if (!challengeData) {
-                challengeData = botProtection.generateChallenge(ip);
+                challengeData = botProtection.generateChallenge(ip, domain);
                 // Only log partial code for security (prevent code leakage in logs)
-                console.log(`[BotChallenge-Middleware] New challenge generated for IP ${ip}, code: ${challengeData.code.substring(0,2)}****`);
+                console.log(`[BotChallenge-Middleware] New challenge generated for IP ${ip}, domain=${domain}, code: ${challengeData.code.substring(0,2)}****`);
             } else {
-                console.log(`[BotChallenge-Middleware] Reusing existing challenge for IP ${ip}`);
+                console.log(`[BotChallenge-Middleware] Reusing existing challenge for IP ${ip}, domain=${domain}`);
             }
 
             // Read and inject challenge code into HTML
