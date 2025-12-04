@@ -256,6 +256,12 @@ async function initDbAndStart() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_security_alerts_type ON security_alerts(alert_type);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_security_alerts_severity ON security_alerts(severity);`);
 
+    // Add dismissed_at columns for tracking dismissed items
+    await pool.query(`ALTER TABLE security_alerts ADD COLUMN IF NOT EXISTS dismissed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;`);
+    await pool.query(`ALTER TABLE request_logs ADD COLUMN IF NOT EXISTS dismissed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_security_alerts_dismissed ON security_alerts(dismissed_at);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_request_logs_dismissed ON request_logs(dismissed_at);`);
+
     // Certificates table for SSL/TLS certificates
     await pool.query(`CREATE TABLE IF NOT EXISTS certificates(
       id SERIAL PRIMARY KEY,
@@ -270,6 +276,46 @@ async function initDbAndStart() {
     
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_certificates_domain ON certificates(domain);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_certificates_expires_at ON certificates(expires_at);`);
+
+    // Monthly reports tables
+    await pool.query(`CREATE TABLE IF NOT EXISTS monthly_reports (
+      id SERIAL PRIMARY KEY,
+      report_month DATE NOT NULL UNIQUE,
+      generated_at TIMESTAMP DEFAULT NOW(),
+      domains_total INTEGER DEFAULT 0,
+      domains_added INTEGER DEFAULT 0,
+      domains_deleted INTEGER DEFAULT 0,
+      proxies_total INTEGER DEFAULT 0,
+      proxies_added INTEGER DEFAULT 0,
+      proxies_deleted INTEGER DEFAULT 0,
+      backends_total INTEGER DEFAULT 0,
+      backends_added INTEGER DEFAULT 0,
+      backends_deleted INTEGER DEFAULT 0,
+      total_requests BIGINT DEFAULT 0,
+      unique_ips INTEGER DEFAULT 0,
+      unique_domains INTEGER DEFAULT 0,
+      total_alerts INTEGER DEFAULT 0,
+      blocked_ips INTEGER DEFAULT 0,
+      trusted_ips INTEGER DEFAULT 0,
+      active_certificates INTEGER DEFAULT 0,
+      certificates_issued INTEGER DEFAULT 0,
+      certificates_renewed INTEGER DEFAULT 0,
+      total_users INTEGER DEFAULT 0,
+      active_users INTEGER DEFAULT 0,
+      additional_data JSONB DEFAULT '{}'::jsonb
+    );`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_monthly_reports_month ON monthly_reports(report_month DESC);`);
+
+    await pool.query(`CREATE TABLE IF NOT EXISTS monthly_snapshots (
+      id SERIAL PRIMARY KEY,
+      snapshot_date DATE NOT NULL UNIQUE,
+      domains_count INTEGER DEFAULT 0,
+      proxies_count INTEGER DEFAULT 0,
+      backends_count INTEGER DEFAULT 0,
+      certificates_count INTEGER DEFAULT 0,
+      users_count INTEGER DEFAULT 0
+    );`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_monthly_snapshots_date ON monthly_snapshots(snapshot_date DESC);`);
 
     // Clean up whitespace in domain_mappings hostnames
     try {

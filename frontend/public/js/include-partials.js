@@ -37,6 +37,7 @@
   await inject('/public/partials/footer.html', '#footer-placeholder');
 
   highlightActiveNav();
+  initNavGroups();
   enforceAuthGuard();
   
   // Dispatch event to signal that partials are loaded
@@ -71,6 +72,53 @@
       if (view && (view === current || matchDetail)) link.classList.add('active');
       else link.classList.remove('active');
     });
+  }
+
+  function initNavGroups() {
+    const navGroups = document.querySelectorAll('.nav-group');
+    if (!navGroups.length) return;
+
+    // Load saved expanded state from localStorage
+    const savedState = JSON.parse(localStorage.getItem('navGroupsState') || '{}');
+
+    // Find which group contains the active page
+    const currentPage = document.body.dataset.page || '';
+    let activeGroupName = null;
+
+    navGroups.forEach(group => {
+      const header = group.querySelector('.nav-group-header');
+      const groupName = header?.dataset.group;
+      if (!groupName) return;
+
+      // Check if this group contains the active page
+      const activeLink = group.querySelector('.nav-sublink.active');
+      if (activeLink) {
+        activeGroupName = groupName;
+      }
+
+      // Expand group if it was previously expanded or contains active page
+      if (savedState[groupName] || activeLink) {
+        group.classList.add('expanded');
+      }
+
+      // Add click handler
+      header.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleNavGroup(group, groupName);
+      });
+    });
+  }
+
+  function toggleNavGroup(group, groupName) {
+    const isExpanded = group.classList.contains('expanded');
+
+    // Toggle the group
+    group.classList.toggle('expanded');
+
+    // Save state to localStorage
+    const savedState = JSON.parse(localStorage.getItem('navGroupsState') || '{}');
+    savedState[groupName] = !isExpanded;
+    localStorage.setItem('navGroupsState', JSON.stringify(savedState));
   }
 
   function enforceAuthGuard() {

@@ -110,6 +110,7 @@ a:hover {
   gap: 16px;
   margin-bottom: 40px;
   padding: 0 8px;
+  flex-shrink: 0;
 }
 
 .sidebar-logo {
@@ -149,6 +150,29 @@ a:hover {
   flex-direction: column;
   gap: 8px;
   flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  padding-right: 4px;
+  margin-right: -4px;
+}
+
+/* Scrollbar styles for sidebar nav */
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .nav-link {
@@ -187,6 +211,98 @@ a:hover {
   filter: drop-shadow(0 0 5px var(--primary));
 }
 
+/* Navigation Groups */
+.nav-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-group-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.nav-group-header svg:first-child {
+  width: 20px;
+  height: 20px;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+.nav-group-header:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-main);
+}
+
+.nav-group-header:hover svg:first-child {
+  opacity: 1;
+}
+
+.nav-group-arrow {
+  width: 16px !important;
+  height: 16px !important;
+  margin-left: auto;
+  opacity: 0.5 !important;
+  transition: transform 0.3s ease, opacity 0.2s ease;
+}
+
+.nav-group.expanded .nav-group-arrow {
+  transform: rotate(90deg);
+  opacity: 0.8 !important;
+}
+
+.nav-group-content {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 12px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.nav-group.expanded .nav-group-content {
+  display: flex;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nav-sublink {
+  font-size: 0.9rem;
+  padding: 10px 16px;
+  margin-left: 8px;
+  border-left: 2px solid transparent;
+}
+
+.nav-sublink:hover {
+  border-left-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-sublink.active {
+  border-left-color: var(--primary);
+}
+
 .sidebar-footer {
   margin-top: auto;
   padding-top: 20px;
@@ -194,6 +310,7 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .sidebar-avatar {
