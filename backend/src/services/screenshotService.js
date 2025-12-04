@@ -715,8 +715,34 @@ class ScreenshotService {
       proc.on('close', (code) => {
         clearTimeout(to);
         console.log(`[ScreenshotService] captureWithChromeCli: process exited with code ${code}`);
+        // Filter noisy Chromium stderr lines (DBus / GPU / UPower warnings)
+        const noisyPatterns = [
+          /dbus/i,
+          /org\.freedesktop/i,
+          /upower/i,
+          /Failed to connect to the bus/i,
+          /ERROR:dbus/i,
+          /ERROR:gpu/i,
+          /XDG_RUNTIME_DIR/i,
+          /No such file or directory/i,
+          /Cannot access the X display/i,
+          /GLIBCXX/i
+        ];
+
+        const filterStderrLines = (text) => {
+          if (!text) return '';
+          return text.split(/\r?\n/).filter(line => {
+            if (!line || !line.trim()) return false;
+            for (const p of noisyPatterns) {
+              try { if (p.test(line)) return false; } catch (e) { }
+            }
+            return true;
+          }).join('\n');
+        };
+
+        const cleanedStderr = filterStderrLines(stderr);
         if (stdout && stdout.trim()) console.log('[ScreenshotService] captureWithChromeCli stdout:', stdout.trim());
-        if (stderr && stderr.trim()) console.warn('[ScreenshotService] captureWithChromeCli stderr:', stderr.trim());
+        if (cleanedStderr && cleanedStderr.trim()) console.warn('[ScreenshotService] captureWithChromeCli stderr:', cleanedStderr.trim());
         if (code !== 0) {
           return reject(new Error(`Chrome exited with code ${code}: ${stderr}`));
         }
