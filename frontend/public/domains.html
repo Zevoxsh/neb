@@ -69,6 +69,22 @@
                   </select>
                   <p class="form-hint">Controls if this domain requires human verification.</p>
                 </div>
+                <div class="form-field">
+                  <label for="domainMaintenanceEnabled">Maintenance enabled</label>
+                  <div style="display:flex;align-items:center;gap:12px;">
+                    <label class="switch">
+                      <input type="checkbox" id="domainMaintenanceEnabled" name="maintenanceEnabled">
+                      <span class="slider"></span>
+                    </label>
+                    <span id="domainMaintenanceStatusText">Disabled</span>
+                  </div>
+                  <p class="form-hint">Enable maintenance mode on creation (optional).</p>
+                </div>
+                <div class="form-field">
+                  <label for="domainMaintenancePagePath">Maintenance page path</label>
+                  <input id="domainMaintenancePagePath" name="maintenancePagePath" placeholder="optional-file.html">
+                  <p class="form-hint">Optional custom maintenance page filename to use after upload.</p>
+                </div>
               </div>
               <div class="form-actions">
                 <button class="btn ghost" type="button" data-panel-close="domainFormPanel">Cancel</button>

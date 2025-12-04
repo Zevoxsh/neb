@@ -723,6 +723,15 @@
     const createForm = document.getElementById('createDomainForm');
     if (createForm) createForm.addEventListener('submit', createDomainFromForm);
 
+    // Wire maintenance toggle UI in the create panel
+    const createMaintenanceToggle = document.getElementById('domainMaintenanceEnabled');
+    const createMaintenanceText = document.getElementById('domainMaintenanceStatusText');
+    if (createMaintenanceToggle) {
+      createMaintenanceToggle.addEventListener('change', () => {
+        if (createMaintenanceText) createMaintenanceText.textContent = createMaintenanceToggle.checked ? 'Enabled' : 'Disabled';
+      });
+    }
+
     document.addEventListener('click', async (ev) => {
       if ((document.body.dataset.page || '') !== 'domains') return;
 
@@ -1471,11 +1480,15 @@
     
     // Handle Bot Protection setting
     const botProtection = payload.botProtection || 'unprotected';
+    const maintenanceEnabled = !!payload.maintenanceEnabled;
+    const maintenancePagePath = payload.maintenancePagePath || null;
     const hostname = payload.hostname;
     delete payload.botProtection;
+    delete payload.maintenanceEnabled;
+    delete payload.maintenancePagePath;
     
     try {
-      const res = await window.api.requestJson('/api/domains', { method: 'POST', body: payload });
+      const res = await window.api.requestJson('/api/domains', { method: 'POST', body: { ...payload, maintenanceEnabled, maintenancePagePath } });
       if (res && (res.status === 200 || res.status === 201)) {
         console.log(`[Domains] Created domain: ${hostname}, protection: ${botProtection}`);
         
@@ -1773,6 +1786,13 @@
       const proxyField = document.getElementById('editDomainProxySelect');
       const backendField = document.getElementById('editDomainBackendSelect');
       const protectionField = document.getElementById('editDomainBotProtection');
+      const maintenanceEnabledField = document.getElementById('editDomainMaintenanceEnabled');
+      const maintenancePathField = document.getElementById('editDomainMaintenancePagePath');
+      const maintenanceContentField = document.getElementById('editDomainMaintenancePageContent');
+      const loadMaintenanceBtn = document.getElementById('btnLoadMaintenancePage');
+      const clearMaintenanceBtn = document.getElementById('btnClearMaintenancePage');
+      const uploadMaintenanceBtn = document.getElementById('btnUploadMaintenancePage');
+      const deleteMaintenanceBtn = document.getElementById('btnDeleteMaintenancePage');
 
       if (!idField || !hostnameField || !proxyField || !backendField || !protectionField) {
         console.error('[Domain Detail] Required form fields not found', {
@@ -1795,6 +1815,82 @@
       proxyField.value = domain.proxy_id;
       backendField.value = domain.backend_id;
       protectionField.value = domain.bot_protection || 'unprotected';
+      if (maintenanceEnabledField) maintenanceEnabledField.checked = !!domain.maintenance_enabled;
+      if (maintenancePathField) maintenancePathField.value = domain.maintenance_page_path || '';
+
+      // Update status text
+      const maintenanceStatusText = document.getElementById('editDomainMaintenanceStatusText');
+      if (maintenanceStatusText) maintenanceStatusText.textContent = maintenanceEnabledField && maintenanceEnabledField.checked ? 'Enabled' : 'Disabled';
+
+      if (maintenanceEnabledField) {
+        maintenanceEnabledField.addEventListener('change', () => {
+          if (maintenanceStatusText) maintenanceStatusText.textContent = maintenanceEnabledField.checked ? 'Enabled' : 'Disabled';
+        });
+      }
+
+      // Wire maintenance buttons
+      if (loadMaintenanceBtn) {
+        loadMaintenanceBtn.addEventListener('click', async () => {
+          try {
+            const resp = await window.api.get(`/api/maintenance/page/${domain.id}`);
+            if (resp && resp.content !== undefined) {
+              if (maintenanceContentField) maintenanceContentField.value = resp.content || '';
+              if (maintenancePathField && resp.path) maintenancePathField.value = resp.path;
+              showToast('Maintenance page loaded');
+            } else {
+              showToast('No maintenance page found', 'error');
+            }
+          } catch (e) {
+            console.error('Load maintenance page error', e);
+            showToast('Impossible de charger la page', 'error');
+          }
+        });
+      }
+
+      if (clearMaintenanceBtn) {
+        clearMaintenanceBtn.addEventListener('click', () => {
+          if (maintenanceContentField) maintenanceContentField.value = '';
+          showToast('Content cleared');
+        });
+      }
+
+      if (uploadMaintenanceBtn) {
+        uploadMaintenanceBtn.addEventListener('click', async () => {
+          if (!maintenanceContentField) return showToast('Nothing to upload', 'error');
+          const htmlContent = maintenanceContentField.value || '';
+          try {
+            const res = await window.api.post(`/api/maintenance/page/${domain.id}`, { htmlContent });
+            if (res && res.path) {
+              if (maintenancePathField) maintenancePathField.value = res.path;
+              showToast('Maintenance page uploaded');
+            } else {
+              showToast('Upload failed', 'error');
+            }
+          } catch (e) {
+            console.error('Upload maintenance page error', e);
+            showToast('Upload failed', 'error');
+          }
+        });
+      }
+
+      if (deleteMaintenanceBtn) {
+        deleteMaintenanceBtn.addEventListener('click', async () => {
+          if (!confirm('Delete custom maintenance page for this domain?')) return;
+          try {
+            const res = await window.api.requestJson(`/api/maintenance/page/${domain.id}`, { method: 'DELETE' });
+            if (res && res.status >= 200 && res.status < 300) {
+              if (maintenancePathField) maintenancePathField.value = '';
+              if (maintenanceContentField) maintenanceContentField.value = '';
+              showToast('Maintenance page deleted');
+            } else {
+              showToast('Delete failed', 'error');
+            }
+          } catch (e) {
+            console.error('Delete maintenance page error', e);
+            showToast('Delete failed', 'error');
+          }
+        });
+      }
     } catch (e) {
       console.error('[Domain Detail] Failed to load:', e);
       showToast('Error lors du Loading', 'error');
@@ -1813,14 +1909,18 @@
     }
     
     const botProtection = payload.botProtection || 'unprotected';
+    const maintenanceEnabled = !!payload.maintenanceEnabled || !!document.getElementById('editDomainMaintenanceEnabled')?.checked;
+    const maintenancePagePath = payload.maintenancePagePath || document.getElementById('editDomainMaintenancePagePath')?.value || null;
     const hostname = payload.hostname;
     delete payload.id;
     delete payload.botProtection;
+    delete payload.maintenanceEnabled;
+    delete payload.maintenancePagePath;
     
     try {
       const res = await window.api.requestJson(`/api/domains/${domainId}`, { 
         method: 'PUT', 
-        body: { ...payload, botProtection }
+        body: { ...payload, botProtection, maintenanceEnabled, maintenancePagePath }
       });
       
       if (res && (res.status === 200 || res.status === 201)) {

@@ -60,6 +60,45 @@
             </div>
           </form>
         </article>
+        <article class="card">
+          <header>
+            <p class="eyebrow">Maintenance</p>
+            <h2>Maintenance Mode</h2>
+          </header>
+          <section id="domainMaintenanceSection">
+            <div class="form-grid">
+              <div class="form-field">
+                <label for="editDomainMaintenanceEnabled">Maintenance enabled</label>
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <label class="switch">
+                    <input type="checkbox" id="editDomainMaintenanceEnabled">
+                    <span class="slider"></span>
+                  </label>
+                  <span id="editDomainMaintenanceStatusText">Disabled</span>
+                </div>
+                <p class="form-hint">When enabled, visitors will see the maintenance page configured for this domain.</p>
+              </div>
+
+              <div class="form-field">
+                <label for="editDomainMaintenancePagePath">Maintenance page path</label>
+                <input id="editDomainMaintenancePagePath" name="maintenancePagePath" placeholder="e.g. domain-host.example.com.html">
+                <p class="form-hint">Optional: name of the custom maintenance page file. Leave empty to use default.</p>
+              </div>
+
+              <div class="form-field">
+                <label for="editDomainMaintenancePageContent">Custom Maintenance HTML</label>
+                <textarea id="editDomainMaintenancePageContent" rows="8" placeholder="Paste custom HTML here to upload a maintenance page for this domain..."></textarea>
+                <div style="margin-top:8px;display:flex;gap:8px;">
+                  <button class="btn ghost small" type="button" id="btnLoadMaintenancePage">Load Current Page</button>
+                  <button class="btn ghost small" type="button" id="btnClearMaintenancePage">Clear</button>
+                  <button class="btn primary small" type="button" id="btnUploadMaintenancePage">Upload Page</button>
+                  <button class="btn ghost small" type="button" id="btnDeleteMaintenancePage">Delete Custom Page</button>
+                </div>
+                <p class="form-hint">Use Upload to persist the HTML and update the domain's maintenance page path.</p>
+              </div>
+            </div>
+          </section>
+        </article>
 
         <article class="card">
           <header>
@@ -100,6 +139,53 @@
       <div id="footer-placeholder"></div>
     </div>
   </div>
+  <style>
+    /* Toggle Switch (duplicate for domain page) */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #4CAF50;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+  </style>
 </body>
 
 </html>
