@@ -3543,7 +3543,7 @@
     if (textarea) textarea.value = '';
 
     // Show panel
-    showPanel('maintenancePanel');
+    togglePanel('maintenancePanel', true);
   }
 
   // Load current maintenance page
