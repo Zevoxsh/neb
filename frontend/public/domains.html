@@ -71,6 +71,17 @@
                   <p class="form-hint">Controls if this domain requires human verification.</p>
                 </div>
                 <div class="form-field">
+                  <label for="domainGenerateCert">Generate certificate</label>
+                  <div style="display:flex;align-items:center;gap:12px;">
+                    <label class="switch">
+                      <input type="checkbox" id="domainGenerateCert" name="generateCert" checked>
+                      <span class="slider"></span>
+                    </label>
+                    <span id="domainGenerateCertText">Auto-generate a certificate (Let's Encrypt)</span>
+                  </div>
+                  <p class="form-hint">When checked, Nebula will attempt to obtain a certificate for this hostname (skipped for local/IP names).</p>
+                </div>
+                <div class="form-field">
                   <label for="domainMaintenanceEnabled">Maintenance enabled</label>
                   <div style="display:flex;align-items:center;gap:12px;">
                     <label class="switch">

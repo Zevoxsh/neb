@@ -6,6 +6,7 @@ const domainModel = require('../models/domainModel');
 const proxyModel = require('../models/proxyModel');
 const backendModel = require('../models/backendModel');
 const proxyManager = require('../services/proxyManager');
+const acmeManager = require('../services/acmeManager');
 const { asyncHandler, AppError } = require('../middleware/errorHandler');
 const { createLogger } = require('../utils/logger');
 
@@ -83,6 +84,20 @@ const create = asyncHandler(async (req, res) => {
       logger.error('Failed to reload proxies', { error: err.message });
     });
   });
+
+  // Optionally request a certificate for this hostname (async; acmeManager will skip local/IPs)
+  const generateCert = req.body && (req.body.generateCert === true || req.body.generateCert === 'true' || req.body.generateCert === 'on');
+  if (generateCert) {
+    setImmediate(() => {
+      try {
+        acmeManager.ensureCert(hostname).catch(err => {
+          logger.warn('Certificate generation requested but failed', { hostname, error: err && err.message ? err.message : String(err) });
+        });
+      } catch (e) {
+        logger.warn('Failed scheduling certificate generation', { hostname, error: e && e.message ? e.message : String(e) });
+      }
+    });
+  }
 
   res.status(201).json(mapping);
 });

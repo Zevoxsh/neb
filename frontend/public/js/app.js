@@ -1460,6 +1460,9 @@
     ev.preventDefault();
     const form = ev.target;
     const payload = formDataToObject(new FormData(form));
+    // Normalize checkbox value for certificate generation
+    const generateCert = payload.generateCert === 'on' || payload.generateCert === 'true' || payload.generateCert === true;
+    delete payload.generateCert;
     const backendSelect = document.getElementById('proxyBackendSelect');
     if (!backendSelect || !backendSelect.value) {
       showToast('Choisissez un backend', 'error');
@@ -1508,7 +1511,7 @@
     delete payload.maintenancePagePath;
     
     try {
-      const res = await window.api.requestJson('/api/domains', { method: 'POST', body: { ...payload, maintenanceEnabled, maintenancePagePath } });
+      const res = await window.api.requestJson('/api/domains', { method: 'POST', body: { ...payload, maintenanceEnabled, maintenancePagePath, generateCert } });
       if (res && (res.status === 200 || res.status === 201)) {
         console.log(`[Domains] Created domain: ${hostname}, protection: ${botProtection}`);
         
