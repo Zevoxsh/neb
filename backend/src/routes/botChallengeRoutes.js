@@ -249,3 +249,17 @@ router.post('/api/bot-protection/domains/clear', asyncHandler(async (req, res) =
 }));
 
 module.exports = router;
+
+// Dev-only debug endpoint to inspect active challenge for your IP
+router.get('/debug/bot-challenge', asyncHandler(async (req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+        return res.status(404).send('Not found');
+    }
+
+    const ip = getClientIp(req);
+    const domain = req.hostname || req.get('host');
+    const challenge = botProtection.getActiveChallenge(ip, domain);
+    const attempts = verifyAttempts.get(ip) || { count: 0, resetAt: null };
+
+    res.json({ ip, domain, challenge, verifyAttempts: attempts });
+}));
