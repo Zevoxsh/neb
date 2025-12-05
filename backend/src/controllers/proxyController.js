@@ -18,7 +18,18 @@ const list = asyncHandler(async (req, res) => {
 
 // Create new proxy with automatic start
 const create = asyncHandler(async (req, res) => {
-  const { name, protocol, listen_protocol, target_protocol, listen_host, listen_port, target_host, target_port, enabled, vhosts } = req.body || {};
+  const b = req.body || {};
+  // Normalize various client-side naming variants (listen_port, listen_Port, listenPort)
+  const name = b.name || b.proxyName || b.proxy_name;
+  const protocol = b.protocol || b.proto;
+  const listen_protocol = b.listen_protocol || b.listenProtocol || b.listen_protocol;
+  const target_protocol = b.target_protocol || b.targetProtocol || b.target_protocol;
+  const listen_host = b.listen_host || b.listenHost || b.listen_host;
+  const listen_port = (b.listen_port !== undefined && b.listen_port !== null) ? b.listen_port : (b.listen_Port !== undefined ? b.listen_Port : b.listenPort);
+  const target_host = b.target_host || b.targetHost || b.target_host;
+  const target_port = (b.target_port !== undefined && b.target_port !== null) ? b.target_port : (b.target_Port !== undefined ? b.target_Port : b.targetPort);
+  const enabled = b.enabled === true || b.enabled === 'true' || b.enabled === 1 || b.enabled === 'on';
+  const vhosts = b.vhosts || b.vhosts_json || null;
 
   logger.debug('Creating proxy', { name, listen_port, target_port });
 
@@ -42,7 +53,7 @@ const create = asyncHandler(async (req, res) => {
     target_host,
     target_port: parseInt(target_port, 10),
     vhosts: vhosts || null,
-    enabled: enabled === true
+    enabled: enabled === true || enabled === 'true' || enabled === 1
   });
 
   const id = result.id;
@@ -99,10 +110,19 @@ const update = asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) throw new AppError('Invalid ID', 400);
 
-  const { name, protocol, listen_protocol, target_protocol, listen_host, listen_port, target_host, target_port, enabled, vhosts } = req.body || {};
+  const b = req.body || {};
+  const name = b.name || b.proxyName || b.proxy_name;
+  const protocol = b.protocol || b.proto;
+  const listen_protocol = b.listen_protocol || b.listenProtocol || b.listen_protocol;
+  const target_protocol = b.target_protocol || b.targetProtocol || b.target_protocol;
+  const listen_host = b.listen_host || b.listenHost || b.listen_host;
+  const listen_port = (b.listen_port !== undefined && b.listen_port !== null) ? b.listen_port : (b.listen_Port !== undefined ? b.listen_Port : b.listenPort);
+  const target_host = b.target_host || b.targetHost || b.target_host;
+  const target_port = (b.target_port !== undefined && b.target_port !== null) ? b.target_port : (b.target_Port !== undefined ? b.target_Port : b.targetPort);
+  const enabled = b.enabled === true || b.enabled === 'true' || b.enabled === 1 || b.enabled === 'on';
+  const vhosts = b.vhosts || b.vhosts_json || null;
 
   logger.debug('Updating proxy', { id });
-
   // Get existing proxy
   const existing = await proxyModel.getProxyById(id);
   if (!existing) throw new AppError('Proxy not found', 404);
