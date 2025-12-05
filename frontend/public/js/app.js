@@ -1496,6 +1496,9 @@
     ev.preventDefault();
     const form = ev.target;
     const payload = formDataToObject(new FormData(form));
+    // Normalize checkbox value for certificate generation (create domain form)
+    const generateCert = payload.generateCert === 'on' || payload.generateCert === 'true' || payload.generateCert === true;
+    delete payload.generateCert;
     if (!payload.backendId) {
       showToast('Choisissez un backend', 'error');
       return;
