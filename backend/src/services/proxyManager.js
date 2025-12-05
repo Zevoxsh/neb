@@ -1024,6 +1024,41 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
         }
       }, forwardRequest);
       server.on('error', (err) => console.error('HTTPS termination proxy server error', err));
+      // Handle websocket upgrade requests and proxy them to the appropriate backend
+      try {
+        const websocketProxy = require('./websocketProxy');
+        server.on('upgrade', (req, socket, head) => {
+          (async () => {
+            try {
+              const incomingHostHeader = req.headers && req.headers.host ? req.headers.host.split(':')[0] : null;
+              let useTargetHost = entry.meta.targetHost;
+              let useTargetPort = entry.meta.targetPort;
+              let useTargetProto = entry.meta.targetProtocol;
+
+              try {
+                if (incomingHostHeader && entry.meta.vhostMap && entry.meta.vhostMap[incomingHostHeader]) {
+                  const m = entry.meta.vhostMap[incomingHostHeader];
+                  useTargetHost = m.targetHost || useTargetHost;
+                  useTargetPort = m.targetPort || useTargetPort;
+                  useTargetProto = (m.targetProtocol || useTargetProto).toLowerCase();
+                }
+              } catch (e) { }
+
+              const backend = {
+                target_host: useTargetHost,
+                target_port: useTargetPort,
+                target_protocol: useTargetProto || 'tcp'
+              };
+
+              await websocketProxy.handleUpgrade(req, socket, head, backend);
+            } catch (err) {
+              try { socket.destroy(); } catch (e) { }
+            }
+          })();
+        });
+      } catch (e) {
+        console.error('[ProxyManager] Failed to attach websocket upgrade handler:', e && e.message ? e.message : e);
+      }
       server.listen(entry.meta.listenPort, entry.meta.listenHost, () => {
         console.log(`HTTPS Termination Proxy ${id} listening ${entry.meta.listenHost}:${entry.meta.listenPort}`);
       });
