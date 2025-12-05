@@ -19,16 +19,22 @@ function isApiRequest(req) {
 function authenticateToken(req, res, next) {
   const token = req.cookies && req.cookies.token;
   if (!token) {
-    // Only log non-static resources
-    if (!req.originalUrl.match(/\.(css|js|png|jpg|ico|svg|woff|woff2|ttf)$/)) {
-      console.log(`[Auth] 🔐 Missing token: ${req.method} ${req.originalUrl}`);
+    // Only log missing-token messages when explicitly enabled to avoid noisy logs on busy servers.
+    // Set environment variable `AUTH_LOG_MISSING_TOKEN=1` to enable these logs for debugging.
+    const enabled = process.env.AUTH_LOG_MISSING_TOKEN === '1';
+    if (enabled) {
+      // Only log non-static resources
+      if (!req.originalUrl.match(/\.(css|js|png|jpg|ico|svg|woff|woff2|ttf)$/)) {
+        console.log(`[Auth] 🔐 Missing token: ${req.method} ${req.originalUrl}`);
+      }
     }
     if (isApiRequest(req)) return res.status(401).json({ error: 'Not authenticated' });
     return res.redirect('/login');
   }
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      console.log(`[Auth] ⚠️ Invalid token: ${req.method} ${req.originalUrl} - ${err.message}`);
+      // Invalid tokens are more actionable: keep a warning in logs.
+      console.warn(`[Auth] ⚠️ Invalid token: ${req.method} ${req.originalUrl} - ${err.message}`);
       if (isApiRequest(req)) return res.status(401).json({ error: 'Invalid token' });
       return res.redirect('/login');
     }

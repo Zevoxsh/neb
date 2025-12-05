@@ -414,8 +414,13 @@
       ? 'last=65&interval=1'
       : 'last=86400&interval=3600';
     try {
-      const res = await window.api.requestJson(`/api/metrics/combined?${params}`);
-      if (!res || res.status !== 200 || !res.body) throw new Error('metrics');
+      const res = await window.api.requestJson(`/api/metrics/combined?${params}`, { skipAuthRedirect: true });
+      if (!res) throw new Error('metrics');
+      if (res.status === 401) {
+        // Not authenticated — skip metrics refresh silently
+        return;
+      }
+      if (res.status !== 200 || !res.body) throw new Error('metrics');
       const payload = res.body;
       const rows = Array.isArray(payload.metrics) ? payload.metrics
         : Array.isArray(payload) ? payload : [];
@@ -536,7 +541,9 @@
   async function loadLiveActivityStats() {
     try {
       // Load live request logs (last 5 minutes - individual requests, not grouped)
-      const logsRes = await window.api.requestJson('/api/request-logs/recent?limit=1000&minutes=5');
+      const logsRes = await window.api.requestJson('/api/request-logs/recent?limit=1000&minutes=5', { skipAuthRedirect: true });
+      if (!logsRes) throw new Error('no-logs');
+      if (logsRes.status === 401) return; // not authenticated, skip
       if (logsRes && logsRes.status === 200 && logsRes.body && logsRes.body.logs) {
         const now = Date.now();
 
@@ -2263,8 +2270,10 @@
     if (!usable.length) return;
     if (!usable.length) return;
     try {
-      const res = await window.api.requestJson('/api/metrics/domains?last=86400&interval=3600');
-      if (!res || res.status !== 200) throw new Error('domain-stats');
+      const res = await window.api.requestJson('/api/metrics/domains?last=86400&interval=3600', { skipAuthRedirect: true });
+      if (!res) throw new Error('domain-stats');
+      if (res.status === 401) return; // not authenticated, skip
+      if (res.status !== 200) throw new Error('domain-stats');
       const rows = res.body && Array.isArray(res.body.metrics) ? res.body.metrics : [];
       const aggregated = aggregateDomainStats(rows);
       usable.forEach((target) => renderDomainStatsTable(target.tableId, target.emptyId, aggregated, target));
