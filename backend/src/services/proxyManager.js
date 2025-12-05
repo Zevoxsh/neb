@@ -477,10 +477,11 @@ class ProxyManager {
             
             if (!fs.existsSync(privkey)) {
               try {
-                const exists = await domainModel.domainExists(hostHeader);
-                if (exists) {
+                // Only trigger ACME issuance automatically if the domain mapping explicitly allows it
+                const mapping = await domainModel.getMaintenanceStatusByHostname(hostHeader);
+                if (mapping && mapping.acme_enabled) {
                   console.log(`[HTTP->HTTPS] Certificate not found for ${hostHeader}, generating before redirect...`);
-                  
+
                   if (!pm.pendingAcme.has(hostHeader)) {
                     pm.pendingAcme.add(hostHeader);
                     try {
@@ -497,6 +498,8 @@ class ProxyManager {
                     // Wait a bit for the pending generation
                     await new Promise(resolve => setTimeout(resolve, 2000));
                   }
+                } else {
+                  console.log(`[HTTP->HTTPS] Certificate not auto-enabled for ${hostHeader}, skipping generation.`);
                 }
               } catch (e) {
                 console.error(`[HTTP->HTTPS] Error during certificate check/generation:`, e.message);
@@ -542,16 +545,24 @@ class ProxyManager {
           const privkey = path.join(certDir, 'privkey.pem');
           
           if (!fs.existsSync(privkey)) {
-            // Certificate doesn't exist, show waiting page and trigger generation
+            // Certificate doesn't exist, show waiting page and trigger generation if enabled
             console.log(`[HTTPS] Certificate not found for ${hostname}, showing waiting page...`);
             
-            // Trigger certificate generation asynchronously
-            if (!pm.pendingAcme.has(hostname)) {
-              pm.pendingAcme.add(hostname);
-              const acmeManager = require('./acmeManager');
-              acmeManager.ensureCert(hostname).finally(() => {
-                pm.pendingAcme.delete(hostname);
-              });
+            try {
+              const mapping = await domainModel.getMaintenanceStatusByHostname(hostname);
+              if (mapping && mapping.acme_enabled) {
+                if (!pm.pendingAcme.has(hostname)) {
+                  pm.pendingAcme.add(hostname);
+                  const acmeManager = require('./acmeManager');
+                  acmeManager.ensureCert(hostname).finally(() => {
+                    pm.pendingAcme.delete(hostname);
+                  });
+                }
+              } else {
+                console.log(`[HTTPS] ACME not enabled for ${hostname}; skipping automatic issuance.`);
+              }
+            } catch (e) {
+              console.error(`[HTTPS] Error checking domain acme flag for ${hostname}:`, e && e.message ? e.message : String(e));
             }
             
             // Show waiting page that auto-refreshes

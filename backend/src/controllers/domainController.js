@@ -68,12 +68,15 @@ const create = asyncHandler(async (req, res) => {
     finalBackendId = parseInt(backendId, 10);
   }
 
+  const acmeEnabled = req.body && (req.body.generateCert === true || req.body.generateCert === 'true' || req.body.generateCert === 'on' || req.body.acmeEnabled === true);
+
   const mapping = await domainModel.createDomainMapping({
     hostname,
     proxyId: parseInt(proxyId, 10),
     backendId: finalBackendId,
     maintenanceEnabled: !!maintenanceEnabled,
-    maintenancePagePath: maintenancePagePath || null
+    maintenancePagePath: maintenancePagePath || null,
+    acmeEnabled: !!acmeEnabled
   });
 
   logger.info('Domain mapping created', { id: mapping.id, hostname });
@@ -85,19 +88,8 @@ const create = asyncHandler(async (req, res) => {
     });
   });
 
-  // Optionally request a certificate for this hostname (async; acmeManager will skip local/IPs)
-  const generateCert = req.body && (req.body.generateCert === true || req.body.generateCert === 'true' || req.body.generateCert === 'on');
-  if (generateCert) {
-    setImmediate(() => {
-      try {
-        acmeManager.ensureCert(hostname).catch(err => {
-          logger.warn('Certificate generation requested but failed', { hostname, error: err && err.message ? err.message : String(err) });
-        });
-      } catch (e) {
-        logger.warn('Failed scheduling certificate generation', { hostname, error: e && e.message ? e.message : String(e) });
-      }
-    });
-  }
+  // Note: certificate generation is controlled by the domain's acme_enabled flag.
+  // ProxyManager will trigger ACME issuance only for domains with acme_enabled = true.
 
   res.status(201).json(mapping);
 });
@@ -141,13 +133,16 @@ const update = asyncHandler(async (req, res) => {
     finalBackendId = parseInt(backendId, 10);
   }
 
+  const acmeEnabled = req.body && (req.body.generateCert === true || req.body.generateCert === 'true' || req.body.generateCert === 'on' || req.body.acmeEnabled === true);
+
   const mapping = await domainModel.updateDomainMapping(id, {
     hostname,
     proxyId: parseInt(proxyId, 10),
     backendId: finalBackendId,
     botProtection,
     maintenanceEnabled: !!maintenanceEnabled,
-    maintenancePagePath: maintenancePagePath || null
+    maintenancePagePath: maintenancePagePath || null,
+    acmeEnabled: !!acmeEnabled
   });
 
   if (!mapping) throw new AppError('Domain mapping not found', 404);

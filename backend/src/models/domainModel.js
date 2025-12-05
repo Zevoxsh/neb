@@ -8,11 +8,12 @@ async function createDomainMapping(data) {
   const botProtection = data.botProtection || 'default';
   const hostname = data.hostname ? data.hostname.trim() : data.hostname;
   const maintenanceEnabled = !!data.maintenanceEnabled;
+  const acmeEnabled = !!data.acmeEnabled;
   const maintenancePagePath = data.maintenancePagePath || null;
 
   const res = await pool.query(
-    'INSERT INTO domain_mappings (hostname, proxy_id, backend_id, bot_protection, maintenance_enabled, maintenance_page_path) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, hostname, proxy_id, backend_id, bot_protection, maintenance_enabled, maintenance_page_path',
-    [hostname, data.proxyId, data.backendId, botProtection, maintenanceEnabled, maintenancePagePath]
+    'INSERT INTO domain_mappings (hostname, proxy_id, backend_id, bot_protection, maintenance_enabled, maintenance_page_path, acme_enabled) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, hostname, proxy_id, backend_id, bot_protection, maintenance_enabled, maintenance_page_path, acme_enabled',
+    [hostname, data.proxyId, data.backendId, botProtection, maintenanceEnabled, maintenancePagePath, acmeEnabled]
   );
   return res.rows[0];
 }
@@ -22,7 +23,7 @@ async function listDomainMappings() {
     return [];
   }
   try {
-    const res = await pool.query(`SELECT dm.id, dm.hostname, dm.proxy_id, dm.backend_id, dm.bot_protection, dm.maintenance_enabled, dm.maintenance_page_path, b.target_host, b.target_port, b.target_protocol
+    const res = await pool.query(`SELECT dm.id, dm.hostname, dm.proxy_id, dm.backend_id, dm.bot_protection, dm.maintenance_enabled, dm.maintenance_page_path, dm.acme_enabled, b.target_host, b.target_port, b.target_protocol
       FROM domain_mappings dm JOIN backends b ON dm.backend_id = b.id ORDER BY dm.id`);
     return res.rows.map(r => ({
       id: r.id,
@@ -32,6 +33,7 @@ async function listDomainMappings() {
       bot_protection: r.bot_protection || 'default',
       maintenance_enabled: r.maintenance_enabled || false,
       maintenance_page_path: r.maintenance_page_path || null,
+      acme_enabled: r.acme_enabled || false,
       target_host: r.target_host,
       target_port: r.target_port,
       target_protocol: r.target_protocol
@@ -60,11 +62,12 @@ async function updateDomainMapping(id, data) {
   const botProtection = data.botProtection || 'default';
   const hostname = data.hostname ? data.hostname.trim() : data.hostname;
   const maintenanceEnabled = !!data.maintenanceEnabled;
+  const acmeEnabled = !!data.acmeEnabled;
   const maintenancePagePath = data.maintenancePagePath || null;
 
   const res = await pool.query(
-    'UPDATE domain_mappings SET hostname = $1, proxy_id = $2, backend_id = $3, bot_protection = $4, maintenance_enabled = $5, maintenance_page_path = $6 WHERE id = $7 RETURNING id, hostname, proxy_id, backend_id, bot_protection, maintenance_enabled, maintenance_page_path',
-    [hostname, data.proxyId, data.backendId, botProtection, maintenanceEnabled, maintenancePagePath, id]
+    'UPDATE domain_mappings SET hostname = $1, proxy_id = $2, backend_id = $3, bot_protection = $4, maintenance_enabled = $5, maintenance_page_path = $6, acme_enabled = $7 WHERE id = $8 RETURNING id, hostname, proxy_id, backend_id, bot_protection, maintenance_enabled, maintenance_page_path, acme_enabled',
+    [hostname, data.proxyId, data.backendId, botProtection, maintenanceEnabled, maintenancePagePath, acmeEnabled, id]
   );
   return res.rows[0];
 }
@@ -96,7 +99,7 @@ async function getMaintenanceStatus(id) {
     throw dbState.getUnavailableError();
   }
   const res = await pool.query(
-    'SELECT id, hostname, maintenance_enabled, maintenance_page_path FROM domain_mappings WHERE id = $1',
+    'SELECT id, hostname, maintenance_enabled, maintenance_page_path, acme_enabled FROM domain_mappings WHERE id = $1',
     [id]
   );
   return res.rows[0];
@@ -108,7 +111,7 @@ async function getMaintenanceStatusByHostname(hostname) {
   }
   const cleanHostname = hostname.trim();
   const res = await pool.query(
-    'SELECT id, hostname, maintenance_enabled, maintenance_page_path FROM domain_mappings WHERE hostname = $1',
+    'SELECT id, hostname, maintenance_enabled, maintenance_page_path, acme_enabled FROM domain_mappings WHERE hostname = $1',
     [cleanHostname]
   );
   return res.rows[0] || null;
