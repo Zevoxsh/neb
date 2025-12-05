@@ -499,7 +499,27 @@ class ProxyManager {
                     await new Promise(resolve => setTimeout(resolve, 2000));
                   }
                 } else {
-                  console.log(`[HTTP->HTTPS] Certificate not auto-enabled for ${hostHeader}, skipping generation.`);
+                  console.log(`[HTTP->HTTPS] Certificate not auto-enabled for ${hostHeader}, attempting self-signed certificate generation.`);
+                  try {
+                    const selfsigned = require('selfsigned');
+                    const attrs = [{ name: 'commonName', value: hostHeader }];
+                    const opts = {
+                      days: 365,
+                      keySize: 2048,
+                      extensions: [
+                        { name: 'basicConstraints', cA: false },
+                        { name: 'keyUsage', digitalSignature: true, keyEncipherment: true },
+                        { name: 'extKeyUsage', serverAuth: true },
+                        { name: 'subjectAltName', altNames: [{ type: 2, value: hostHeader }] }
+                      ]
+                    };
+                    const pems = selfsigned.generate(attrs, opts);
+                    const acme = require('./acmeManager');
+                    await acme.saveManualCert(hostHeader, pems.cert, pems.private);
+                    console.log(`[HTTP->HTTPS] Self-signed certificate created for ${hostHeader}`);
+                  } catch (e) {
+                    console.error(`[HTTP->HTTPS] Failed to create self-signed cert for ${hostHeader}:`, e && e.message ? e.message : String(e));
+                  }
                 }
               } catch (e) {
                 console.error(`[HTTP->HTTPS] Error during certificate check/generation:`, e.message);
@@ -559,7 +579,27 @@ class ProxyManager {
                   });
                 }
               } else {
-                console.log(`[HTTPS] ACME not enabled for ${hostname}; skipping automatic issuance.`);
+                console.log(`[HTTPS] ACME not enabled for ${hostname}; generating self-signed certificate instead.`);
+                try {
+                  const selfsigned = require('selfsigned');
+                  const attrs = [{ name: 'commonName', value: hostname }];
+                  const opts = {
+                    days: 365,
+                    keySize: 2048,
+                    extensions: [
+                      { name: 'basicConstraints', cA: false },
+                      { name: 'keyUsage', digitalSignature: true, keyEncipherment: true },
+                      { name: 'extKeyUsage', serverAuth: true },
+                      { name: 'subjectAltName', altNames: [{ type: 2, value: hostname }] }
+                    ]
+                  };
+                  const pems = selfsigned.generate(attrs, opts);
+                  const acme = require('./acmeManager');
+                  await acme.saveManualCert(hostname, pems.cert, pems.private);
+                  console.log(`[HTTPS] Self-signed certificate created for ${hostname}`);
+                } catch (err) {
+                  console.error(`[HTTPS] Failed to create self-signed cert for ${hostname}:`, err && err.message ? err.message : String(err));
+                }
               }
             } catch (e) {
               console.error(`[HTTPS] Error checking domain acme flag for ${hostname}:`, e && e.message ? e.message : String(e));
