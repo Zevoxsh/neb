@@ -29,6 +29,7 @@ const create = asyncHandler(async (req, res) => {
   const target_host = b.target_host || b.targetHost || b.target_host;
   const target_port = (b.target_port !== undefined && b.target_port !== null) ? b.target_port : (b.target_Port !== undefined ? b.target_Port : b.targetPort);
   const enabled = b.enabled === true || b.enabled === 'true' || b.enabled === 1 || b.enabled === 'on';
+  const passthrough_tls = b.passthrough_tls === true || b.passthrough_tls === 'true' || b.tls_passthrough === 'true' || b.tlsPassthrough === true || b.passthroughTls === true;
   const vhosts = b.vhosts || b.vhosts_json || null;
 
   logger.debug('Creating proxy', { name, listen_port, target_port });
@@ -53,7 +54,8 @@ const create = asyncHandler(async (req, res) => {
     target_host,
     target_port: parseInt(target_port, 10),
     vhosts: vhosts || null,
-    enabled: enabled === true || enabled === 'true' || enabled === 1
+    enabled: enabled === true || enabled === 'true' || enabled === 1,
+    passthrough_tls: passthrough_tls === true
   });
 
   const id = result.id;
@@ -71,6 +73,7 @@ const create = asyncHandler(async (req, res) => {
         target_host,
         parseInt(target_port, 10),
         vhosts || null,
+        passthrough_tls === true,
         null
       );
       logger.info('Proxy started', { id });
@@ -120,6 +123,7 @@ const update = asyncHandler(async (req, res) => {
   const target_host = b.target_host || b.targetHost || b.target_host;
   const target_port = (b.target_port !== undefined && b.target_port !== null) ? b.target_port : (b.target_Port !== undefined ? b.target_Port : b.targetPort);
   const enabled = b.enabled === true || b.enabled === 'true' || b.enabled === 1 || b.enabled === 'on';
+  const passthrough_tls = b.passthrough_tls === true || b.passthrough_tls === 'true' || b.tls_passthrough === 'true' || b.tlsPassthrough === true || b.passthroughTls === true;
   const vhosts = b.vhosts || b.vhosts_json || null;
 
   logger.debug('Updating proxy', { id });
@@ -161,7 +165,8 @@ const update = asyncHandler(async (req, res) => {
     target_host: resolvedTargetHost,
     target_port: resolvedTargetPort,
     vhosts: vhosts || existing.vhosts || null,
-    enabled: enabled === true
+    enabled: enabled === true,
+    passthrough_tls: passthrough_tls === true
   });
 
   logger.info('Proxy updated', { id, enabled: updated.enabled });
@@ -177,8 +182,9 @@ const update = asyncHandler(async (req, res) => {
         updated.target_protocol || updated.protocol || 'tcp',
         updated.target_host,
         updated.target_port,
-        updated.vhosts || null,
-        updated.error_page_html || null
+          updated.vhosts || null,
+          updated.passthrough_tls === true,
+          updated.error_page_html || null
       );
       logger.info('Proxy restarted', { id });
     } catch (e) {

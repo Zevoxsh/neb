@@ -142,6 +142,7 @@ async function initDbAndStart() {
       target_host VARCHAR(255) NOT NULL,
       target_port INT NOT NULL,
       vhosts JSONB,
+      passthrough_tls BOOLEAN DEFAULT FALSE,
       enabled BOOLEAN DEFAULT TRUE,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
     ); `);
@@ -217,6 +218,7 @@ async function initDbAndStart() {
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS listen_protocol VARCHAR(10) NOT NULL DEFAULT 'tcp';");
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS target_protocol VARCHAR(10) NOT NULL DEFAULT 'tcp';");
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS vhosts JSONB;");
+    await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS passthrough_tls BOOLEAN DEFAULT FALSE;");
     await pool.query("ALTER TABLE proxies ADD COLUMN IF NOT EXISTS error_page_html TEXT;");
     await pool.query("ALTER TABLE domain_mappings ADD COLUMN IF NOT EXISTS bot_protection VARCHAR(20) DEFAULT 'unprotected';");
 
@@ -439,6 +441,7 @@ async function initDbAndStart() {
           p.target_host,
           p.target_port,
           Object.keys(finalVhosts).length ? finalVhosts : null,
+          p.passthrough_tls === true,
           p.error_page_html || null
         );
       } catch (e) { console.error('Start proxy failed', e.message); }

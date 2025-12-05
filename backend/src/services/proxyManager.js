@@ -242,7 +242,7 @@ class ProxyManager {
     }
   }
 
-  startProxy(id, listenProtocol, listenHost, listenPort, targetProtocol, targetHost, targetPort, vhosts, errorPageHtml = null) {
+  startProxy(id, listenProtocol, listenHost, listenPort, targetProtocol, targetHost, targetPort, vhosts, passthroughTls = false, errorPageHtml = null) {
     if (this.servers.has(id)) throw new Error('Proxy already running');
     const pm = this;
     listenProtocol = (listenProtocol || 'tcp').toLowerCase();
@@ -260,7 +260,8 @@ class ProxyManager {
     const entry = {
       id, type: listenProtocol, server: null, meta: {
         listenProtocol, listenHost, listenPort, targetProtocol, targetHost, targetPort, vhostMap: parsedVhosts || null,
-        secureContextCache: new Map(), cert: null, key: null, errorPageHtml: errorPageHtml || null
+        secureContextCache: new Map(), cert: null, key: null, errorPageHtml: errorPageHtml || null,
+        tlsPassthrough: passthroughTls === true
       }
     };
     if (listenProtocol === 'tcp') {
@@ -549,7 +550,7 @@ class ProxyManager {
       this.servers.set(id, entry);
       return server;
 
-    } else if (listenProtocol === 'https') {
+    } else if (listenProtocol === 'https' && !entry.meta.tlsPassthrough) {
       // HTTPS Termination
       const http = require('http');
       const https = require('https');
@@ -1193,7 +1194,7 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
             try { await this.stopProxy(p.id); } catch (e) { }
           }
           if (startedBindings.has(bindKey)) continue;
-          this.startProxy(p.id, p.listen_protocol || p.protocol || 'tcp', p.listen_host, p.listen_port, p.target_protocol || p.protocol || 'tcp', p.target_host, p.target_port, Object.keys(finalVhosts).length ? finalVhosts : null, p.error_page_html || null);
+          this.startProxy(p.id, p.listen_protocol || p.protocol || 'tcp', p.listen_host, p.listen_port, p.target_protocol || p.protocol || 'tcp', p.target_host, p.target_port, Object.keys(finalVhosts).length ? finalVhosts : null, p.passthrough_tls === true, p.error_page_html || null);
           startedBindings.add(bindKey);
         } catch (e) { }
       }
