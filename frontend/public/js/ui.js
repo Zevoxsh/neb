@@ -43,7 +43,7 @@
     (backends || window.state && window.state.backends || []).forEach(b => {
       const opt = document.createElement('option');
       opt.value = b.id;
-      opt.textContent = `${b.name}(${b.target_host}: ${b.target_Port})`;
+      opt.textContent = `${b.name}(${b.target_host}: ${b.target_port})`;
       select.appendChild(opt);
     });
   }
@@ -54,7 +54,7 @@
     (proxies || window.state && window.state.proxies || []).forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.id;
-      opt.textContent = `${p.name}(${p.listen_host}: ${p.listen_Port})`;
+      opt.textContent = `${p.name}(${p.listen_host}: ${p.listen_port})`;
       select.appendChild(opt);
     });
   }

@@ -40,8 +40,9 @@ function cookieOptions(req) {
   return {
     httpOnly: true,
     maxAge: 60 * 60 * 1000, // 1 hour
-    // Only set secure if both: COOKIE_SECURE is true AND request is HTTPS
-    secure: cookieSecure && (isHttps || isProduction),
+    // Only set secure when explicitly requested AND the incoming request is HTTPS.
+    // Avoid forcing `secure` on local HTTP during development even if NODE_ENV=production.
+    secure: cookieSecure && Boolean(isHttps),
     sameSite: isProduction ? 'strict' : 'lax'
   };
 }
