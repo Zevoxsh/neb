@@ -252,7 +252,9 @@ module.exports = router;
 
 // Dev-only debug endpoint to inspect active challenge for your IP
 router.get('/debug/bot-challenge', asyncHandler(async (req, res) => {
-    if (process.env.NODE_ENV === 'production') {
+    // Allow this debug endpoint when not in production, or when explicitly enabled
+    const allowDebug = process.env.ALLOW_CHALLENGE_DEBUG === '1' || process.env.ALLOW_CHALLENGE_DEBUG === 'true';
+    if (process.env.NODE_ENV === 'production' && !allowDebug) {
         return res.status(404).send('Not found');
     }
 
