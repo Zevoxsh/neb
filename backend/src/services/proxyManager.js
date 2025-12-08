@@ -269,12 +269,12 @@ class ProxyManager {
       const server = net.createServer((clientSocket) => {
         // Protection contre slowloris
         clientSocket.setTimeout(30000); // 30 secondes timeout
-        
+
         clientSocket.on('timeout', () => {
           console.warn(`Proxy ${id} - socket timeout from ${normalizeIp(clientSocket.remoteAddress)}`);
           try { clientSocket.destroy(); } catch (e) { }
         });
-        
+
         clientSocket.on('error', (err) => console.error(`Proxy ${id} - client socket error (tcp)`, err));
         const remoteIp = normalizeIp(clientSocket.remoteAddress || '');
         if (pm.isIpBlocked(remoteIp)) {
@@ -286,16 +286,14 @@ class ProxyManager {
         // Record connection immediately
         try { pm.addMetrics(id, 0, 0, 1, 0, 0, null); } catch (e) { }
         pm.trackIpTraffic(remoteIp, 0, 1);
-        
-        // Data limit per connection (anti-slowloris)
-        let bytesReceived = 0;
-        const MAX_BYTES = 100 * 1024 * 1024; // 100 MB max
 
+        // Connect to backend
         const targetSocket = net.connect({ host: entry.meta.targetHost, port: entry.meta.targetPort }, () => {
+          // Simple passthrough like HAProxy - no data interception
           clientSocket.pipe(targetSocket);
           targetSocket.pipe(clientSocket);
         });
-        
+
         // Timeout sur backend aussi
         targetSocket.setTimeout(30000);
         targetSocket.on('timeout', () => {
@@ -303,26 +301,15 @@ class ProxyManager {
           try { clientSocket.destroy(); targetSocket.destroy(); } catch (e) { }
         });
 
-        clientSocket.on('data', (c) => {
-          const len = c ? c.length : 0;
-          bytesReceived += len;
-          
-          // Abuse detection
-          if (bytesReceived > MAX_BYTES) {
-            console.warn(`Proxy ${id} - max bytes exceeded from ${remoteIp}`);
-            try { clientSocket.destroy(); targetSocket.destroy(); } catch (e) { }
-            return;
-          }
-          
-          try { pm.addMetrics(id, len, 0, 0, 0, 0, null); } catch (e) { }
-          pm.trackIpTraffic(remoteIp, len, 0);
-        });
-        targetSocket.on('data', (c) => {
-          try { pm.addMetrics(id, 0, c ? c.length : 0, 0, 0, 0, null); } catch (e) { }
+        targetSocket.on('error', (err) => {
+          console.error(`Proxy ${id} - backend connection error`, err);
+          try { clientSocket.destroy(); } catch (e) { }
         });
 
-        targetSocket.on('error', () => { try { clientSocket.destroy(); } catch (e) { } });
-        clientSocket.on('error', () => { try { targetSocket.destroy(); } catch (e) { } });
+        clientSocket.on('error', (err) => {
+          console.error(`Proxy ${id} - client connection error`, err);
+          try { targetSocket.destroy(); } catch (e) { }
+        });
       });
       server.on('error', (err) => console.error('Proxy server error', err.message));
       server.listen(entry.meta.listenPort, entry.meta.listenHost, () => {

@@ -13,7 +13,14 @@
       "Bash(do if [ -f \"$file\" ])",
       "Bash(then sed -i '/<link rel=\"\"stylesheet\"\" href=\"\"\\/public\\/styles.css\"\">/a\\    <link rel=\"\"stylesheet\"\" href=\"\"/public/nebula-pro.css\"\">' \"$file\")",
       "Bash(fi)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(git -C \"C:\\Users\\wks-torres\\Documents\\neb\" log --oneline -20)",
+      "Bash(grep:*)",
+      "Bash(git -C \"C:\\Users\\wks-torres\\Documents\\neb\" show eed2af9 --stat)",
+      "Bash(git -C \"C:\\Users\\wks-torres\\Documents\\neb\" show 9fcfcfe --stat)",
+      "Bash(git -C \"C:\\Users\\wks-torres\\Documents\\neb\" show eed2af9)",
+      "Bash(git -C \"C:\\Users\\wks-torres\\Documents\\neb\" show 9fcfcfe)",
+      "Bash(node -e:*)"
     ],
     "deny": [],
     "ask": []
