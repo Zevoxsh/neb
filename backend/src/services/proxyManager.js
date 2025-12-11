@@ -269,13 +269,31 @@ class ProxyManager {
       const server = net.createServer((clientSocket) => {
         // Protection contre slowloris
         clientSocket.setTimeout(30000); // 30 secondes timeout
+        let isClosing = false;
+        let targetSocket = null;
+
+        const cleanup = () => {
+          if (isClosing) return;
+          isClosing = true;
+
+          try {
+            if (targetSocket) {
+              clientSocket.unpipe(targetSocket);
+              targetSocket.unpipe(clientSocket);
+            }
+          } catch (e) { }
+
+          try {
+            if (!clientSocket.destroyed) clientSocket.destroy();
+            if (targetSocket && !targetSocket.destroyed) targetSocket.destroy();
+          } catch (e) { }
+        };
 
         clientSocket.on('timeout', () => {
           console.warn(`Proxy ${id} - socket timeout from ${normalizeIp(clientSocket.remoteAddress)}`);
-          try { clientSocket.destroy(); } catch (e) { }
+          cleanup();
         });
 
-        clientSocket.on('error', (err) => console.error(`Proxy ${id} - client socket error (tcp)`, err));
         const remoteIp = normalizeIp(clientSocket.remoteAddress || '');
         if (pm.isIpBlocked(remoteIp)) {
           console.warn(`Proxy ${id} - blocked TCP connection from ${remoteIp}`);
@@ -288,7 +306,9 @@ class ProxyManager {
         pm.trackIpTraffic(remoteIp, 0, 1);
 
         // Connect to backend
-        const targetSocket = net.connect({ host: entry.meta.targetHost, port: entry.meta.targetPort }, () => {
+        targetSocket = net.connect({ host: entry.meta.targetHost, port: entry.meta.targetPort });
+
+        targetSocket.on('connect', () => {
           // Simple passthrough like HAProxy - no data interception
           clientSocket.pipe(targetSocket);
           targetSocket.pipe(clientSocket);
@@ -298,18 +318,40 @@ class ProxyManager {
         targetSocket.setTimeout(30000);
         targetSocket.on('timeout', () => {
           console.warn(`Proxy ${id} - backend timeout`);
-          try { clientSocket.destroy(); targetSocket.destroy(); } catch (e) { }
+          cleanup();
         });
 
+        // Handle errors without throwing
         targetSocket.on('error', (err) => {
-          console.error(`Proxy ${id} - backend connection error`, err);
-          try { clientSocket.destroy(); } catch (e) { }
+          if (!isClosing && err.code !== 'EPIPE' && err.code !== 'ECONNRESET' && err.code !== 'ETIMEDOUT') {
+            console.error(`Proxy ${id} - backend connection error:`, err.message);
+          }
+          cleanup();
         });
 
         clientSocket.on('error', (err) => {
-          console.error(`Proxy ${id} - client connection error`, err);
-          try { targetSocket.destroy(); } catch (e) { }
+          if (!isClosing && err.code !== 'EPIPE' && err.code !== 'ECONNRESET' && err.code !== 'ETIMEDOUT') {
+            console.error(`Proxy ${id} - client connection error:`, err.message);
+          }
+          cleanup();
         });
+
+        // Handle clean disconnections
+        clientSocket.on('end', () => {
+          if (!isClosing && targetSocket) {
+            try { targetSocket.end(); } catch (e) { }
+          }
+        });
+
+        targetSocket.on('end', () => {
+          if (!isClosing) {
+            try { clientSocket.end(); } catch (e) { }
+          }
+        });
+
+        // Final cleanup on close
+        clientSocket.on('close', () => cleanup());
+        targetSocket.on('close', () => cleanup());
       });
       server.on('error', (err) => console.error('Proxy server error', err.message));
       server.listen(entry.meta.listenPort, entry.meta.listenHost, () => {
