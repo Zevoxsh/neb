@@ -23,8 +23,8 @@
           <p class="muted">Real-time request monitoring and analysis</p>
         </div>
         <div class="topbar-actions">
-          <button class="btn ghost" id="btnClearLogs">Clear Logs</button>
-          <button class="btn-icon" id="btnRefreshLogs" title="Refresh">
+          <button class="btn ghost" id="clearRequestsBtn">Clear Logs</button>
+          <button class="btn-icon" id="refreshBtn" title="Refresh">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>
             </svg>
@@ -63,19 +63,24 @@
 
         <article class="card table-card">
           <header>
-            <p class="eyebrow">Live</p>
-            <h2>HTTP Requests</h2>
+            <div>
+              <p class="eyebrow">Live</p>
+              <h2>HTTP Requests</h2>
+            </div>
+            <div class="card-header-actions">
+              <div id="totalCount" class="card-meta"></div>
+            </div>
           </header>
           <section>
-            <table id="requestsTable" class="data-table">
+            <table id="requestLogsTable" class="data-table">
               <thead>
                 <tr>
-                  <th>Timestamp</th>
-                  <th>Method</th>
-                  <th>Path</th>
-                  <th>Status</th>
-                  <th>IP</th>
-                  <th>Duration</th>
+                  <th>IP Address</th>
+                  <th>Hostname</th>
+                  <th>Request Count</th>
+                  <th>First Seen</th>
+                  <th>Last Seen</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -84,9 +89,9 @@
           </section>
 
           <div id="requestsPagination" class="table-pagination">
-            <button id="btnPrevPage" class="btn ghost small" disabled>← Previous</button>
+            <button id="prevBtn" class="btn ghost small" disabled>← Previous</button>
             <span id="pageInfo" class="pagination-info">Page 1</span>
-            <button id="btnNextPage" class="btn ghost small">Next →</button>
+            <button id="nextBtn" class="btn ghost small">Next →</button>
           </div>
         </article>
       </section>

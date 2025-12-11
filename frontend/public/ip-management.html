@@ -23,8 +23,11 @@
           <p class="muted">Blacklist and whitelist IP addresses</p>
         </div>
         <div class="topbar-actions">
-          <button class="btn primary" data-panel-target="addIpPanel" data-panel-focus="#ipAddress">
-            Add IP Rule
+          <button class="btn ghost" id="addTrustedBtn">
+            Add to Whitelist
+          </button>
+          <button class="btn primary" id="addBlockedBtn">
+            Block IP
           </button>
         </div>
       </header>
@@ -37,7 +40,7 @@
               <h2>Blocked IPs</h2>
             </header>
             <section>
-              <table id="blacklistTable" class="data-table">
+              <table id="blockedIpsTable" class="data-table">
                 <thead>
                   <tr>
                     <th>IP Address</th>
@@ -58,7 +61,7 @@
               <h2>Allowed IPs</h2>
             </header>
             <section>
-              <table id="whitelistTable" class="data-table">
+              <table id="trustedIpsTable" class="data-table">
                 <thead>
                   <tr>
                     <th>IP Address</th>
@@ -77,48 +80,73 @@
 
       <div id="footer-placeholder"></div>
 
-      <!-- Add IP Panel -->
-      <div class="panel-overlay" id="addIpPanel" hidden>
+      <!-- Add Trusted IP Modal -->
+      <div class="panel-overlay" id="addTrustedModal" style="display: none;">
         <div class="panel-card">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Security</p>
-              <h2>Add IP Rule</h2>
+              <p class="eyebrow">Whitelist</p>
+              <h2>Add Trusted IP</h2>
             </div>
-            <button class="btn ghost small" type="button" data-panel-close="addIpPanel">
+            <button class="btn ghost small" type="button" onclick="document.getElementById('addTrustedModal').style.display='none'">
               Close
             </button>
           </div>
 
-          <form id="addIpForm">
-            <div class="form-grid">
-              <div class="form-field">
-                <label for="ipAddress">IP Address</label>
-                <input id="ipAddress" name="ipAddress" placeholder="192.168.1.100" required>
-                <p class="form-hint">IPv4 or IPv6 address</p>
-              </div>
-
-              <div class="form-field">
-                <label for="ipType">Rule Type</label>
-                <select id="ipType" name="type" required>
-                  <option value="blacklist">Blacklist (Block)</option>
-                  <option value="whitelist">Whitelist (Allow)</option>
-                </select>
-              </div>
-
-              <div class="form-field">
-                <label for="ipReason">Reason / Description</label>
-                <textarea id="ipReason" name="reason" placeholder="Optional description"></textarea>
-              </div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="trustedIpInput">IP Address</label>
+              <input id="trustedIpInput" placeholder="192.168.1.100" required>
+              <p class="form-hint">IPv4 or IPv6 address</p>
             </div>
 
-            <div class="form-actions">
-              <button class="btn ghost" type="button" data-panel-close="addIpPanel">
-                Cancel
-              </button>
-              <button class="btn primary" type="submit">Add Rule</button>
+            <div class="form-field">
+              <label for="trustedLabelInput">Description</label>
+              <input id="trustedLabelInput" placeholder="Optional description">
             </div>
-          </form>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn ghost" type="button" onclick="document.getElementById('addTrustedModal').style.display='none'">
+              Cancel
+            </button>
+            <button class="btn primary" type="button" id="confirmAddTrusted">Add to Whitelist</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Blocked IP Modal -->
+      <div class="panel-overlay" id="addBlockedModal" style="display: none;">
+        <div class="panel-card">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Blacklist</p>
+              <h2>Block IP Address</h2>
+            </div>
+            <button class="btn ghost small" type="button" onclick="document.getElementById('addBlockedModal').style.display='none'">
+              Close
+            </button>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="blockedIpInput">IP Address</label>
+              <input id="blockedIpInput" placeholder="192.168.1.100" required>
+              <p class="form-hint">IPv4 or IPv6 address</p>
+            </div>
+
+            <div class="form-field">
+              <label for="blockedReasonInput">Reason</label>
+              <textarea id="blockedReasonInput" placeholder="Optional reason for blocking"></textarea>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn ghost" type="button" onclick="document.getElementById('addBlockedModal').style.display='none'">
+              Cancel
+            </button>
+            <button class="btn primary" type="button" id="confirmAddBlocked">Block IP</button>
+          </div>
         </div>
       </div>
     </div>
