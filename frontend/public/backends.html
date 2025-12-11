@@ -1,95 +1,111 @@
-﻿<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewPort" content="width=device-width,initial-scale=1">
-    <title>Nebula Console - Backends</title>
-    <link rel="stylesheet" href="/public/styles.css">
-    <link rel="stylesheet" href="/public/nebula-pro.css">
-    <script src="/public/js/theme.js?v=12" defer></script>
-    <script src="/public/js/api.js?v=12" defer></script>
-    <script src="/public/js/include-partials.js?v=12" defer></script>
-    <script src="/public/js/app.js?v=12" defer></script>
-  </head>
-  <body data-page="backends">
-    <div class="app-shell">
-      <div id="sidebar-placeholder"></div>
-      <div class="app-main">
-        <header class="topbar">
-          <div class="page-heading">
-            <p class="eyebrow">Origines</p>
-            <h1>Backends</h1>
-            <p class="muted">Declare internal services to expose via your proxies.</p>
-          </div>
-          <div class="topbar-actions">
-            <button class="btn primary" data-panel-target="backendFormPanel" data-panel-focus="#backendName">Add backend</button>
-          </div>
-        </header>
-        <section class="page-content">
-          <article class="card table-card">
-            <header>
-              <p class="eyebrow">Inventaire</p>
-              <h2>Registered Backends</h2>
-            </header>
-            <section>
-              <table id="backendsTable" class="data-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Target</th>
-                    <th>Protocol</th>
-                    <th aria-label="actions"></th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-              <div id="backendsEmpty" class="empty-state" hidden>No backends.</div>
-            </section>
-          </article>
-        </section>
-        <div id="footer-placeholder"></div>
-        <div class="panel-overlay" id="backendFormPanel" hidden>
-          <div class="panel-card">
-            <div class="panel-head">
-              <div>
-                <p class="eyebrow">Provisioning</p>
-                <h2 id="backendFormTitle">Add backend</h2>
-              </div>
-              <button class="btn ghost small" type="button" data-panel-close="backendFormPanel">Close</button>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Backends - Nebula Console</title>
+  <link rel="stylesheet" href="/public/nebula-v2.css">
+  <script src="/public/js/theme.js" defer></script>
+  <script src="/public/js/api.js" defer></script>
+  <script src="/public/js/include-partials.js" defer></script>
+  <script src="/public/js/app.js" defer></script>
+</head>
+
+<body data-page="backends">
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+
+    <div class="app-main">
+      <header class="topbar">
+        <div class="page-heading">
+          <p class="eyebrow">Origins</p>
+          <h1>Backends</h1>
+          <p class="muted">Declare internal services to expose via your proxies</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn primary" data-panel-target="backendFormPanel" data-panel-focus="#backendName">
+            Add Backend
+          </button>
+        </div>
+      </header>
+
+      <section class="page-content">
+        <article class="card table-card">
+          <header>
+            <p class="eyebrow">Inventory</p>
+            <h2>Registered Backends</h2>
+          </header>
+          <section>
+            <table id="backendsTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Target</th>
+                  <th>Protocol</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <div id="backendsEmpty" class="empty-state" hidden>No backends configured</div>
+          </section>
+        </article>
+      </section>
+
+      <div id="footer-placeholder"></div>
+
+      <!-- Backend Form Panel -->
+      <div class="panel-overlay" id="backendFormPanel" hidden>
+        <div class="panel-card">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Configuration</p>
+              <h2 id="backendFormTitle">Add Backend</h2>
             </div>
-            <form id="createBackendForm">
-              <input type="hidden" name="id" id="backendId">
-              <div class="form-grid">
-                <div class="form-field">
-                  <label for="backendName">Name</label>
-                  <input id="backendName" name="name" placeholder="api-cluster" required>
-                </div>
-                <div class="form-field">
-                  <label for="backendHost">Target Host</label>
-                  <input id="backendHost" name="targetHost" placeholder="10.2.0.5" required>
-                </div>
-                <div class="form-field">
-                  <label for="backendPort">Target Port</label>
-                  <input id="backendPort" type="number" name="targetPort" value="8080" required>
-                </div>
-                <div class="form-field">
-                  <label for="backendProtocol">Protocol</label>
-                  <select id="backendProtocol" name="targetProtocol">
-                    <option value="http">HTTP</option>
-                    <option value="https">HTTPS</option>
-                    <option value="tcp">TCP</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-actions">
-                <button class="btn ghost" type="button" data-panel-close="backendFormPanel">Cancel</button>
-                <button class="btn primary" type="submit">Create backend</button>
-              </div>
-            </form>
+            <button class="btn ghost small" type="button" data-panel-close="backendFormPanel">
+              Close
+            </button>
           </div>
+
+          <form id="createBackendForm">
+            <input type="hidden" name="id" id="backendId">
+
+            <div class="form-grid">
+              <div class="form-field">
+                <label for="backendName">Name</label>
+                <input id="backendName" name="name" placeholder="api-cluster" required>
+              </div>
+
+              <div class="form-field">
+                <label for="backendHost">Target Host</label>
+                <input id="backendHost" name="targetHost" placeholder="10.2.0.5" required>
+              </div>
+
+              <div class="form-field">
+                <label for="backendPort">Target Port</label>
+                <input id="backendPort" type="number" name="targetPort" value="8080" required>
+              </div>
+
+              <div class="form-field">
+                <label for="backendProtocol">Protocol</label>
+                <select id="backendProtocol" name="targetProtocol">
+                  <option value="http">HTTP</option>
+                  <option value="https">HTTPS</option>
+                  <option value="tcp">TCP</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn ghost" type="button" data-panel-close="backendFormPanel">
+                Cancel
+              </button>
+              <button class="btn primary" type="submit">Create Backend</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
-  </body>
+  </div>
+</body>
 </html>
-

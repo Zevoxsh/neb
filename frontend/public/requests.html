@@ -1,89 +1,97 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewPort" content="width=device-width, initial-scale=1">
-  <title>Requests - Nebula Proxy</title>
-  <link rel="stylesheet" href="/public/styles.css">
-    <link rel="stylesheet" href="/public/nebula-pro.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Requests Log - Nebula Console</title>
+  <link rel="stylesheet" href="/public/nebula-v2.css">
+  <script src="/public/js/theme.js" defer></script>
   <script src="/public/js/api.js" defer></script>
   <script src="/public/js/include-partials.js" defer></script>
-  <script src="/public/js/ui.js" defer></script>
   <script src="/public/js/app.js" defer></script>
 </head>
+
 <body data-page="requests">
   <div class="app-shell">
     <div id="sidebar-placeholder"></div>
+
     <div class="app-main">
       <header class="topbar">
         <div class="page-heading">
-          <div>
-            <div class="page-breadcrumb">TRACKING</div>
-            <h1>Requests Log</h1>
-            <p class="subtitle">Overview of requests by IP and domain</p>
-          </div>
+          <p class="eyebrow">Security</p>
+          <h1>Requests Log</h1>
+          <p class="muted">Real-time request monitoring and analysis</p>
         </div>
-      </header>
-
-      <main class="page-content">
-        <div class="filters-section" style="margin-bottom: 24px; display: flex; gap: 16px; align-items: center;">
-          <label style="display: flex; align-items: center; gap: 8px;">
-            <span style="color: rgba(255,255,255,0.7); font-size: 14px;">Period:</span>
-            <select id="periodFilter" style="background: #0a0a0a; color: #fff; border: 1px solid #333; border-radius: 6px; padding: 8px 12px; font-size: 14px;">
-              <option value="7">7 derniers jours</option>
-              <option value="30" selected>30 derniers jours</option>
-              <option value="90">90 derniers jours</option>
-            </select>
-          </label>
-          <button id="refreshBtn" class="btn-icon" title="Refresh">
+        <div class="topbar-actions">
+          <button class="btn ghost" id="btnClearLogs">Clear Logs</button>
+          <button class="btn-icon" id="btnRefreshLogs" title="Refresh">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>
             </svg>
           </button>
         </div>
+      </header>
 
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-eyebrow">INVENTAIRE</div>
-              <h2 class="card-title">Requests by IP</h2>
-            </div>
-            <div style="display: flex; align-items: center; gap: 16px;">
-              <div id="totalCount" class="card-meta"></div>
-              <button id="clearRequestsBtn" class="btn btn-secondary" title="Clear all request logs">🗑️ Clear All</button>
-            </div>
+      <section class="page-content">
+        <div class="filters-section">
+          <div class="filters-left">
+            <span class="refresh-indicator">Auto-refresh: 5s</span>
           </div>
-          <div class="card-body">
-            <div class="table-wrapper">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>IP CLIENTE</th>
-                    <th>DOMAINE</th>
-                    <th>REQUEST COUNT</th>
-                    <th>FIRST VISIT</th>
-                    <th>LAST VISIT</th>
-                  </tr>
-                </thead>
-                <tbody id="requestLogsTable">
-                  <tr>
-                    <td colspan="5" class="table-empty">
-                      <div class="spinner"></div>
-                      <p>Loading...</p>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            
-            <div id="pagination" class="table-pagination">
-              <button id="prevBtn" class="btn btn-secondary" disabled>← Previous</button>
-              <span id="pageInfo" class="pagination-info"></span>
-              <button id="nextBtn" class="btn btn-secondary">Suivant →</button>
-            </div>
+          <div class="filter-badges">
+            <button class="filter-badge active" data-filter="all">
+              <span class="badge-dot"></span>
+              All
+            </button>
+            <button class="filter-badge" data-filter="2xx">
+              <span class="badge-dot" style="background: #22c55e;"></span>
+              2xx Success
+            </button>
+            <button class="filter-badge" data-filter="3xx">
+              <span class="badge-dot" style="background: #06b6d4;"></span>
+              3xx Redirect
+            </button>
+            <button class="filter-badge" data-filter="4xx">
+              <span class="badge-dot" style="background: #f59e0b;"></span>
+              4xx Client Error
+            </button>
+            <button class="filter-badge" data-filter="5xx">
+              <span class="badge-dot" style="background: #ef4444;"></span>
+              5xx Server Error
+            </button>
           </div>
         </div>
-      </main>
+
+        <article class="card table-card">
+          <header>
+            <p class="eyebrow">Live</p>
+            <h2>HTTP Requests</h2>
+          </header>
+          <section>
+            <table id="requestsTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Method</th>
+                  <th>Path</th>
+                  <th>Status</th>
+                  <th>IP</th>
+                  <th>Duration</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <div id="requestsEmpty" class="empty-state" hidden>No requests logged</div>
+          </section>
+
+          <div id="requestsPagination" class="table-pagination">
+            <button id="btnPrevPage" class="btn ghost small" disabled>← Previous</button>
+            <span id="pageInfo" class="pagination-info">Page 1</span>
+            <button id="btnNextPage" class="btn ghost small">Next →</button>
+          </div>
+        </article>
+      </section>
+
+      <div id="footer-placeholder"></div>
     </div>
   </div>
 </body>

@@ -1,43 +1,62 @@
-﻿<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
-
 <head>
-  <meta charset="utf-8">
-  <meta name="viewPort" content="width=device-width,initial-scale=1">
-  <title>Nebula Console - Connexion</title>
-  <link rel="stylesheet" href="/public/styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Nebula Console</title>
+  <link rel="stylesheet" href="/public/nebula-v2.css">
   <script src="/public/js/api.js" defer></script>
 </head>
 
 <body class="login-shell">
   <div class="login-card">
-    <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px;">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+    <div class="login-brand">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.8L20 8v8l-8 4-8-4V8l8-3.2z" />
       </svg>
-      <span style="font-weight: 700; font-size: 1.2rem; letter-spacing: 2px;">NEBULA</span>
+      <h1>NEBULA</h1>
     </div>
-    <p class="login-description" style="margin-bottom: 40px; font-size: 0.85rem; color: #666;">Sign In to your control
-      plane</p>
+
+    <p class="login-description">Sign in to your control plane</p>
+
     <form id="loginForm">
       <div class="form-field">
         <label for="loginUser">Username</label>
-        <input id="loginUser" name="username" autocomplete="username" value="admin" required>
+        <input
+          id="loginUser"
+          name="username"
+          type="text"
+          autocomplete="username"
+          value="admin"
+          required
+          autofocus>
       </div>
+
       <div class="form-field">
         <label for="loginPass">Password</label>
-        <input id="loginPass" name="password" type="password" autocomplete="current-password" required>
+        <input
+          id="loginPass"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          required>
       </div>
+
       <div class="form-actions">
-        <button class="btn primary" id="btnLogin" type="submit" style="width: 100%; justify-content: center;">Sign
-          In</button>
+        <button class="btn primary" id="btnLogin" type="submit">
+          Sign In
+        </button>
       </div>
-      <div id="loginError" class="login-error" hidden>Identifiants invalides.</div>
+
+      <div id="loginError" class="login-error" hidden>
+        Invalid credentials. Please try again.
+      </div>
     </form>
-    <p class="login-footer">Besoin d'aide ? Verifiez les identifiants par defaut dans votre fichier <code>.env</code>.
+
+    <p class="login-footer">
+      Need help? Check default credentials in your <code>.env</code> file.
     </p>
   </div>
-  <div class="toast-stack" id="toastStack"></div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -51,18 +70,24 @@
         ev.preventDefault();
         errorBox.hidden = true;
         btn.disabled = true;
+        btn.textContent = 'Signing in...';
+
         const username = document.getElementById('loginUser').value.trim();
         const password = document.getElementById('loginPass').value;
+
         const res = await window.api.requestJson('/api/login', {
           method: 'POST',
           body: { username, password },
           skipAuthRedirect: true
         });
+
         btn.disabled = false;
+        btn.textContent = 'Sign In';
+
         if (res && res.status === 200) {
           window.location.href = nextUrl;
         } else {
-          errorBox.textContent = 'Impossible de se connecter, verifiez vos identifiants.';
+          errorBox.textContent = 'Unable to login. Please check your credentials.';
           errorBox.hidden = false;
         }
       }
@@ -81,5 +106,4 @@
     });
   </script>
 </body>
-
 </html>

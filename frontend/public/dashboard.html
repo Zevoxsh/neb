@@ -1,12 +1,10 @@
-﻿<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
-
 <head>
-  <meta charset="utf-8">
-  <meta name="viewPort" content="width=device-width,initial-scale=1">
-  <title>Nebula Console - Dashboard</title>
-  <link rel="stylesheet" href="/public/styles.css">
-    <link rel="stylesheet" href="/public/nebula-pro.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Nebula Console</title>
+  <link rel="stylesheet" href="/public/nebula-v2.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="/public/js/theme.js"></script>
   <script src="/public/js/api.js" defer></script>
@@ -17,69 +15,78 @@
 <body data-page="dashboard">
   <div class="app-shell">
     <div id="sidebar-placeholder"></div>
+
     <div class="app-main">
       <header class="topbar">
         <div class="page-heading">
           <p class="eyebrow">Monitoring</p>
           <h1>Dashboard</h1>
-          <p class="muted">Global overview of the gateway and real-time metrics.</p>
+          <p class="muted">Global overview of the gateway and real-time metrics</p>
         </div>
         <div class="topbar-actions">
-          <a class="btn ghost" href="/settings.html">Settings</a>
+          <button class="btn ghost" onclick="window.location.href='/config.html'">Settings</button>
         </div>
       </header>
+
       <section class="page-content">
+        <!-- Stats Grid -->
         <div class="stat-grid">
           <article class="stat-card">
-            <p class="stat-label">Requests</p>
+            <p class="stat-label">Total Requests</p>
             <p class="stat-value" id="stat-requests">0</p>
             <span class="stat-subtitle">Total observed</span>
           </article>
+
           <article class="stat-card">
-            <p class="stat-label">Req / sec</p>
+            <p class="stat-label">Requests / sec</p>
             <p class="stat-value" id="stat-rps">0</p>
             <span class="stat-subtitle">Last minute</span>
           </article>
+
           <article class="stat-card">
             <p class="stat-label">Incoming Traffic</p>
             <p class="stat-value" id="stat-traffic-in">0 B/s</p>
-            <span class="stat-subtitle">Aggregate</span>
+            <span class="stat-subtitle">Aggregate bandwidth</span>
           </article>
+
           <article class="stat-card">
             <p class="stat-label">Outgoing Traffic</p>
             <p class="stat-value" id="stat-traffic-out">0 B/s</p>
-            <span class="stat-subtitle">Aggregate</span>
+            <span class="stat-subtitle">Aggregate bandwidth</span>
           </article>
         </div>
 
+        <!-- Traffic Chart -->
         <article class="card">
           <div class="card-header">
             <div>
-              <p class="eyebrow">Traffic</p>
-              <h2>Global Load</h2>
+              <p class="card-eyebrow">Traffic</p>
+              <h2 class="card-title">Global Load</h2>
             </div>
-            <div class="chip-group" role="group" aria-label="Period toggles">
+            <div class="chip-group">
               <button id="btnViewRealtime" class="chip active" type="button">Real-time</button>
-              <button id="btnView24h" class="chip" type="button">24 h</button>
+              <button id="btnView24h" class="chip" type="button">24 hours</button>
             </div>
           </div>
-          <div id="live-metrics" style="display: flex; gap: 24px; padding: 16px 24px; border-bottom: 1px solid var(--border); font-size: 13px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="width: 12px; height: 12px; background: #3b82f6; border-radius: 50%;"></span>
-              <span style="color: var(--text-muted);">Incoming:</span>
-              <span id="live-traffic-in" style="color: var(--text-main); font-weight: 600; font-family: var(--font-mono);">0 B/s</span>
+
+          <div class="live-metrics">
+            <div class="metric-item">
+              <span class="metric-dot" style="background: #3b82f6;"></span>
+              <span class="metric-label">Incoming:</span>
+              <span class="metric-value" id="live-traffic-in">0 B/s</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="width: 12px; height: 12px; background: #a855f7; border-radius: 50%;"></span>
-              <span style="color: var(--text-muted);">Outgoing:</span>
-              <span id="live-traffic-out" style="color: var(--text-main); font-weight: 600; font-family: var(--font-mono);">0 B/s</span>
+            <div class="metric-item">
+              <span class="metric-dot" style="background: #a855f7;"></span>
+              <span class="metric-label">Outgoing:</span>
+              <span class="metric-value" id="live-traffic-out">0 B/s</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="width: 12px; height: 12px; background: #22c55e; border-radius: 50%;"></span>
-              <span style="color: var(--text-muted);">Requests:</span>
-              <span id="live-requests" style="color: var(--text-main); font-weight: 600; font-family: var(--font-mono);">0 req/s</span>
+            <div class="metric-item">
+              <span class="metric-dot" style="background: #22c55e;"></span>
+              <span class="metric-label">Requests:</span>
+              <span class="metric-value" id="live-requests">0 req/s</span>
             </div>
           </div>
+
           <div id="chartWrapper" class="chart-shell">
             <canvas id="trafficChart"></canvas>
             <div id="chartPlaceholder" class="chart-placeholder">
@@ -88,7 +95,8 @@
           </div>
         </article>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+        <!-- Real-time Stats -->
+        <div class="grid-2">
           <article class="card table-card">
             <header>
               <p class="eyebrow">Real-time</p>
@@ -132,6 +140,7 @@
           </article>
         </div>
 
+        <!-- Top Domains -->
         <article class="card table-card">
           <header>
             <p class="eyebrow">Monitoring</p>
@@ -153,9 +162,9 @@
           </section>
         </article>
       </section>
+
       <div id="footer-placeholder"></div>
     </div>
   </div>
 </body>
-
 </html>

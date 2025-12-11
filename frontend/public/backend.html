@@ -1,68 +1,82 @@
-﻿<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
-
 <head>
-  <meta charset="utf-8">
-  <meta name="viewPort" content="width=device-width,initial-scale=1">
-  <title>Nebula Console - Backend</title>
-  <link rel="stylesheet" href="/public/styles.css">
-    <link rel="stylesheet" href="/public/nebula-pro.css">
-  <script src="/public/js/theme.js?v=13"></script>
-  <script src="/public/js/api.js?v=13" defer></script>
-  <script src="/public/js/include-partials.js?v=13" defer></script>
-  <script src="/public/js/app.js?v=13" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Backend Details - Nebula Console</title>
+  <link rel="stylesheet" href="/public/nebula-v2.css">
+  <script src="/public/js/theme.js" defer></script>
+  <script src="/public/js/api.js" defer></script>
+  <script src="/public/js/include-partials.js" defer></script>
+  <script src="/public/js/app.js" defer></script>
 </head>
 
 <body data-page="backend-detail">
   <div class="app-shell">
     <div id="sidebar-placeholder"></div>
+
     <div class="app-main">
       <header class="topbar">
         <div class="page-heading">
           <p class="eyebrow">Backends</p>
           <h1>Backend Details</h1>
-          <p class="muted">Edit backend service settings.</p>
+          <p class="muted">Edit backend service settings</p>
         </div>
         <div class="topbar-actions">
-          <a class="btn ghost" href="/backends.html">Retour</a>
+          <a class="btn ghost" href="/backends.html">Back</a>
         </div>
       </header>
+
       <section class="page-content">
         <article class="card">
-          <form id="editBackendForm">
-            <input type="hidden" id="editBackendId" name="id">
-            <div class="form-grid">
-              <div class="form-field">
-                <label for="editBackendName">Nom</label>
-                <input id="editBackendName" name="name" placeholder="api-cluster" required>
-              </div>
-              <div class="form-field">
-                <label for="editBackendHost">Target Host</label>
-                <input id="editBackendHost" name="targetHost" placeholder="10.2.0.5" required>
-              </div>
-              <div class="form-field">
-                <label for="editBackendPort">Port cible</label>
-                <input id="editBackendPort" type="number" name="targetPort" value="8080" required>
-              </div>
-              <div class="form-field">
-                <label for="editBackendProtocol">Protocole</label>
-                <select id="editBackendProtocol" name="targetProtocol">
-                  <option value="http">HTTP</option>
-                  <option value="https">HTTPS</option>
-                  <option value="tcp">TCP</option>
-                </select>
-              </div>
+          <div class="card-header">
+            <div>
+              <p class="card-eyebrow">Configuration</p>
+              <h2 class="card-title">Backend Settings</h2>
             </div>
-            <div class="form-actions">
-              <button class="btn ghost" type="button" id="btnDeleteBackend">Delete</button>
-              <button class="btn primary" type="button" id="btnSaveBackend">Save</button>
-            </div>
-          </form>
+          </div>
+
+          <div class="card-body">
+            <form id="editBackendForm">
+              <input type="hidden" id="editBackendId" name="id">
+
+              <div class="form-grid">
+                <div class="form-field">
+                  <label for="editBackendName">Name</label>
+                  <input id="editBackendName" name="name" placeholder="api-cluster" required>
+                </div>
+
+                <div class="form-field">
+                  <label for="editBackendHost">Target Host</label>
+                  <input id="editBackendHost" name="targetHost" placeholder="10.2.0.5" required>
+                </div>
+
+                <div class="form-field">
+                  <label for="editBackendPort">Target Port</label>
+                  <input id="editBackendPort" type="number" name="targetPort" value="8080" required>
+                </div>
+
+                <div class="form-field">
+                  <label for="editBackendProtocol">Protocol</label>
+                  <select id="editBackendProtocol" name="targetProtocol">
+                    <option value="http">HTTP</option>
+                    <option value="https">HTTPS</option>
+                    <option value="tcp">TCP</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button class="btn danger" type="button" onclick="deleteBackend()">Delete</button>
+                <button class="btn primary" type="submit">Save Changes</button>
+              </div>
+            </form>
+          </div>
         </article>
       </section>
+
       <div id="footer-placeholder"></div>
     </div>
   </div>
 </body>
-
 </html>

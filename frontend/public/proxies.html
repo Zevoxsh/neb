@@ -1,143 +1,81 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Nebula - Proxies</title>
-  <link rel="stylesheet" href="/public/styles.css">
-  <link rel="stylesheet" href="/public/nebula-pro.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proxies - Nebula Console</title>
+  <link rel="stylesheet" href="/public/nebula-v2.css">
   <script src="/public/js/theme.js" defer></script>
   <script src="/public/js/api.js" defer></script>
   <script src="/public/js/include-partials.js" defer></script>
-  <style>
-    .protocol-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-    .protocol-tcp { background: #2196F3; color: white; }
-    .protocol-http { background: #4CAF50; color: white; }
-    .protocol-https { background: #9C27B0; color: white; }
-    .status-enabled { color: #4CAF50; }
-    .status-disabled { color: #f44336; }
-    .mode-selector {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-    .mode-card {
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: center;
-    }
-    .mode-card:hover {
-      border-color: var(--primary);
-      transform: translateY(-2px);
-    }
-    .mode-card.active {
-      border-color: var(--primary);
-      background: rgba(33, 150, 243, 0.1);
-    }
-    .mode-card h3 {
-      margin: 0 0 8px 0;
-      font-size: 18px;
-    }
-    .mode-card p {
-      margin: 0;
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-    .domains-list {
-      margin-top: 16px;
-      padding: 12px;
-      background: rgba(0,0,0,0.2);
-      border-radius: 8px;
-    }
-    .domain-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px;
-      background: rgba(255,255,255,0.05);
-      border-radius: 6px;
-      margin-bottom: 8px;
-    }
-    .domain-item:last-child {
-      margin-bottom: 0;
-    }
-  </style>
 </head>
+
 <body data-page="proxies">
   <div class="app-shell">
     <div id="sidebar-placeholder"></div>
+
     <div class="app-main">
       <header class="topbar">
         <div class="page-heading">
-          <p class="eyebrow">Reseau</p>
+          <p class="eyebrow">Network</p>
           <h1>Proxies</h1>
-          <p class="muted">TCP Passthrough, HTTP, HTTPS avec Reverse DNS</p>
+          <p class="muted">TCP Passthrough, HTTP, and HTTPS with Reverse DNS</p>
         </div>
         <div class="topbar-actions">
-          <button class="btn primary" onclick="openCreatePanel()">Nouveau Proxy</button>
+          <button class="btn primary" onclick="openCreatePanel()">New Proxy</button>
         </div>
       </header>
 
       <section class="page-content">
         <article class="card table-card">
           <header>
-            <h2>Liste des proxies</h2>
+            <h2>Proxy List</h2>
           </header>
           <section>
             <table id="proxiesTable" class="data-table">
               <thead>
                 <tr>
-                  <th>Nom</th>
+                  <th>Name</th>
                   <th>Type</th>
-                  <th>Ecoute</th>
-                  <th>Destination</th>
-                  <th>Statut</th>
+                  <th>Listen</th>
+                  <th>Target</th>
+                  <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="proxiesBody">
-                <tr><td colspan="6" style="text-align:center;padding:40px;">Chargement...</td></tr>
+                <tr>
+                  <td colspan="6" class="empty-state">Loading...</td>
+                </tr>
               </tbody>
             </table>
           </section>
         </article>
       </section>
 
-      <!-- Panel de création -->
+      <!-- Create Panel -->
       <div class="panel-overlay" id="createPanel" hidden>
         <div class="panel-card">
           <div class="panel-head">
             <div>
               <p class="eyebrow">Configuration</p>
-              <h2>Nouveau Proxy</h2>
+              <h2>New Proxy</h2>
             </div>
-            <button class="btn ghost small" onclick="closeCreatePanel()">Fermer</button>
+            <button class="btn ghost small" onclick="closeCreatePanel()">Close</button>
           </div>
 
-          <!-- Sélecteur de mode -->
           <div class="mode-selector">
             <div class="mode-card active" onclick="selectMode('tcp')">
-              <h3>🔵 TCP</h3>
-              <p>Passthrough brut pour n'importe quel port</p>
+              <h3>TCP</h3>
+              <p>Raw passthrough for any port</p>
             </div>
             <div class="mode-card" onclick="selectMode('http')">
-              <h3>🟢 HTTP</h3>
-              <p>Proxy HTTP simple</p>
+              <h3>HTTP</h3>
+              <p>Simple HTTP proxy</p>
             </div>
             <div class="mode-card" onclick="selectMode('https')">
-              <h3>🟣 HTTPS</h3>
-              <p>Reverse DNS avec SSL auto</p>
+              <h3>HTTPS</h3>
+              <p>Reverse DNS with auto SSL</p>
             </div>
           </div>
 
@@ -146,25 +84,24 @@
 
             <div class="form-grid">
               <div class="form-field">
-                <label for="name">Nom du proxy</label>
-                <input id="name" name="name" placeholder="mon-proxy" required>
+                <label for="name">Proxy name</label>
+                <input id="name" name="name" placeholder="my-proxy" required>
               </div>
 
-              <!-- Champs TCP/HTTP -->
               <div id="simpleFields">
                 <div class="form-field">
-                  <label for="listen_port">Port d'écoute</label>
+                  <label for="listen_port">Listen port</label>
                   <input id="listen_port" name="listen_port" type="number" min="1" max="65535" placeholder="8080" required>
                 </div>
 
                 <div class="form-field">
                   <label for="target_backend">Backend (IP:Port)</label>
                   <input id="target_backend" name="target_backend" placeholder="192.168.1.100:3000" required>
-                  <p class="form-hint">Format: adresse:port</p>
+                  <p class="form-hint">Format: address:port</p>
                 </div>
 
-                <div class="form-field" id="targetProtocolField" style="display:none;">
-                  <label for="target_protocol">Protocole backend</label>
+                <div class="form-field" id="targetProtocolField" hidden>
+                  <label for="target_protocol">Backend protocol</label>
                   <select id="target_protocol" name="target_protocol">
                     <option value="http">HTTP</option>
                     <option value="https">HTTPS</option>
@@ -172,28 +109,27 @@
                 </div>
               </div>
 
-              <!-- Champs HTTPS Reverse DNS -->
-              <div id="httpsFields" style="display:none;">
+              <div id="httpsFields" hidden>
                 <div class="form-field">
-                  <label>Port d'écoute</label>
-                  <input type="text" value="443 (automatique)" disabled>
-                  <p class="form-hint">Le port 443 est utilisé automatiquement pour HTTPS</p>
+                  <label>Listen port</label>
+                  <input type="text" value="443 (automatic)" disabled>
+                  <p class="form-hint">Port 443 is used automatically for HTTPS</p>
                 </div>
 
                 <div class="form-field">
-                  <label for="https_domains">Domaines (un par ligne)</label>
-                  <textarea id="https_domains" name="https_domains" rows="4" placeholder="exemple.com&#10;www.exemple.com&#10;api.exemple.com"></textarea>
-                  <p class="form-hint">Chaque domaine aura son certificat SSL automatique</p>
+                  <label for="https_domains">Domains (one per line)</label>
+                  <textarea id="https_domains" name="https_domains" rows="4" placeholder="example.com&#10;www.example.com&#10;api.example.com"></textarea>
+                  <p class="form-hint">Each domain will have automatic SSL certificate</p>
                 </div>
 
                 <div class="form-field">
-                  <label for="https_backend">Backend par défaut (IP:Port)</label>
+                  <label for="https_backend">Default backend (IP:Port)</label>
                   <input id="https_backend" name="https_backend" placeholder="192.168.1.100:3000">
-                  <p class="form-hint">Sera utilisé pour tous les domaines ci-dessus</p>
+                  <p class="form-hint">Will be used for all domains above</p>
                 </div>
 
                 <div class="form-field">
-                  <label for="https_target_protocol">Protocole backend</label>
+                  <label for="https_target_protocol">Backend protocol</label>
                   <select id="https_target_protocol" name="https_target_protocol">
                     <option value="http">HTTP</option>
                     <option value="https">HTTPS</option>
@@ -204,36 +140,37 @@
               <div class="form-field">
                 <label class="form-check">
                   <input type="checkbox" id="enabled" name="enabled" checked>
-                  Activer immédiatement
+                  Enable immediately
                 </label>
               </div>
             </div>
 
             <div class="form-actions">
-              <button class="btn ghost" type="button" onclick="closeCreatePanel()">Annuler</button>
-              <button class="btn primary" type="submit">Créer</button>
+              <button class="btn ghost" type="button" onclick="closeCreatePanel()">Cancel</button>
+              <button class="btn primary" type="submit">Create</button>
             </div>
           </form>
         </div>
       </div>
 
-      <!-- Panel d'édition -->
+      <!-- Edit Panel -->
       <div class="panel-overlay" id="editPanel" hidden>
         <div class="panel-card">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Edition</p>
-              <h2>Modifier le proxy</h2>
+              <p class="eyebrow">Edit</p>
+              <h2>Edit Proxy</h2>
             </div>
-            <button class="btn ghost small" onclick="closeEditPanel()">Fermer</button>
+            <button class="btn ghost small" onclick="closeEditPanel()">Close</button>
           </div>
+
           <form id="editForm" onsubmit="handleUpdate(event)">
             <input type="hidden" id="edit_id">
             <input type="hidden" id="edit_mode">
 
             <div class="form-grid">
               <div class="form-field">
-                <label for="edit_name">Nom du proxy</label>
+                <label for="edit_name">Proxy name</label>
                 <input id="edit_name" name="name" required>
               </div>
 
@@ -242,10 +179,9 @@
                 <input id="edit_type_display" type="text" disabled>
               </div>
 
-              <!-- Champs simples (TCP/HTTP) -->
               <div id="editSimpleFields">
                 <div class="form-field">
-                  <label for="edit_listen_port">Port d'écoute</label>
+                  <label for="edit_listen_port">Listen port</label>
                   <input id="edit_listen_port" name="listen_port" type="number" min="1" max="65535" required>
                 </div>
 
@@ -254,8 +190,8 @@
                   <input id="edit_target_backend" name="target_backend" placeholder="192.168.1.100:3000" required>
                 </div>
 
-                <div class="form-field" id="editTargetProtocolField" style="display:none;">
-                  <label for="edit_target_protocol">Protocole backend</label>
+                <div class="form-field" id="editTargetProtocolField" hidden>
+                  <label for="edit_target_protocol">Backend protocol</label>
                   <select id="edit_target_protocol" name="target_protocol">
                     <option value="http">HTTP</option>
                     <option value="https">HTTPS</option>
@@ -263,21 +199,20 @@
                 </div>
               </div>
 
-              <!-- Champs HTTPS -->
-              <div id="editHttpsFields" style="display:none;">
+              <div id="editHttpsFields" hidden>
                 <div class="form-field">
-                  <label>Domaines configurés</label>
+                  <label>Configured domains</label>
                   <div id="edit_domains_list" class="domains-list"></div>
-                  <button type="button" class="btn ghost small" style="margin-top:8px;" onclick="manageDomains()">Gérer les domaines</button>
+                  <button type="button" class="btn ghost small" onclick="manageDomains()">Manage domains</button>
                 </div>
 
                 <div class="form-field">
-                  <label for="edit_https_backend">Backend par défaut (IP:Port)</label>
+                  <label for="edit_https_backend">Default backend (IP:Port)</label>
                   <input id="edit_https_backend" name="https_backend" placeholder="192.168.1.100:3000">
                 </div>
 
                 <div class="form-field">
-                  <label for="edit_https_target_protocol">Protocole backend</label>
+                  <label for="edit_https_target_protocol">Backend protocol</label>
                   <select id="edit_https_target_protocol" name="https_target_protocol">
                     <option value="http">HTTP</option>
                     <option value="https">HTTPS</option>
@@ -288,14 +223,14 @@
               <div class="form-field">
                 <label class="form-check">
                   <input type="checkbox" id="edit_enabled" name="enabled">
-                  Proxy activé
+                  Proxy enabled
                 </label>
               </div>
             </div>
 
             <div class="form-actions">
-              <button class="btn ghost" type="button" onclick="handleDelete()">Supprimer</button>
-              <button class="btn primary" type="submit">Sauvegarder</button>
+              <button class="btn danger" type="button" onclick="handleDelete()">Delete</button>
+              <button class="btn primary" type="submit">Save</button>
             </div>
           </form>
         </div>
@@ -309,7 +244,6 @@
     let proxies = [];
     let domains = [];
 
-    // Chargement initial
     document.addEventListener('DOMContentLoaded', () => {
       loadProxies();
       loadDomains();
@@ -322,7 +256,7 @@
         renderProxies();
       } catch (e) {
         console.error('Error loading proxies:', e);
-        showToast('Erreur de chargement', 'error');
+        showToast('Loading error', 'error');
       }
     }
 
@@ -338,30 +272,30 @@
     function renderProxies() {
       const tbody = document.getElementById('proxiesBody');
       if (!proxies || proxies.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#888;">Aucun proxy configuré</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No proxy configured</td></tr>';
         return;
       }
 
       tbody.innerHTML = proxies.map(p => {
         const protocol = (p.listen_protocol || p.protocol || 'tcp').toLowerCase();
         const enabled = p.enabled ? 'enabled' : 'disabled';
-        const statusText = p.enabled ? '✓ Actif' : '✗ Inactif';
+        const statusText = p.enabled ? '✓ Active' : '✗ Inactive';
+        const statusClass = p.enabled ? 'success' : 'muted';
 
         let destination = `${p.target_host}:${p.target_port}`;
         if (protocol === 'https') {
-          // Pour HTTPS, afficher "Reverse DNS"
           destination = 'Reverse DNS';
         }
 
         return `
           <tr>
             <td><strong>${escapeHtml(p.name)}</strong></td>
-            <td><span class="protocol-badge protocol-${protocol}">${protocol}</span></td>
+            <td><span class="protocol-badge protocol-${protocol}">${protocol.toUpperCase()}</span></td>
             <td><code>${p.listen_host || '0.0.0.0'}:${p.listen_port}</code></td>
             <td><code>${destination}</code></td>
-            <td class="status-${enabled}">${statusText}</td>
+            <td><span class="status-${statusClass}">${statusText}</span></td>
             <td>
-              <button class="btn ghost small" onclick="openEditPanel(${p.id})">Modifier</button>
+              <button class="btn ghost small" onclick="openEditPanel(${p.id})">Edit</button>
             </td>
           </tr>
         `;
@@ -371,36 +305,34 @@
     function selectMode(mode) {
       document.getElementById('selectedMode').value = mode;
 
-      // Update mode cards
       document.querySelectorAll('.mode-card').forEach(card => {
         card.classList.remove('active');
       });
       event.target.closest('.mode-card').classList.add('active');
 
-      // Show/hide fields
       const simpleFields = document.getElementById('simpleFields');
       const httpsFields = document.getElementById('httpsFields');
       const targetProtocolField = document.getElementById('targetProtocolField');
 
       if (mode === 'https') {
-        simpleFields.style.display = 'none';
-        httpsFields.style.display = 'block';
+        simpleFields.hidden = true;
+        httpsFields.hidden = false;
       } else {
-        simpleFields.style.display = 'block';
-        httpsFields.style.display = 'none';
-        targetProtocolField.style.display = mode === 'http' ? 'block' : 'none';
+        simpleFields.hidden = false;
+        httpsFields.hidden = true;
+        targetProtocolField.hidden = mode !== 'http';
       }
     }
 
     function openCreatePanel() {
-      document.getElementById('createPanel').removeAttribute('hidden');
+      document.getElementById('createPanel').hidden = false;
       document.getElementById('createForm').reset();
       document.getElementById('selectedMode').value = 'tcp';
       selectMode('tcp');
     }
 
     function closeCreatePanel() {
-      document.getElementById('createPanel').setAttribute('hidden', '');
+      document.getElementById('createPanel').hidden = true;
     }
 
     function openEditPanel(id) {
@@ -419,11 +351,9 @@
       const httpsFields = document.getElementById('editHttpsFields');
 
       if (protocol === 'https') {
-        // Mode HTTPS
-        simpleFields.style.display = 'none';
-        httpsFields.style.display = 'block';
+        simpleFields.hidden = true;
+        httpsFields.hidden = false;
 
-        // Charger les domaines associés
         const proxyDomains = domains.filter(d => d.proxy_id === proxy.id);
         const domainsList = document.getElementById('edit_domains_list');
         if (proxyDomains.length > 0) {
@@ -434,29 +364,28 @@
             </div>
           `).join('');
         } else {
-          domainsList.innerHTML = '<p style="color:#888;margin:0;">Aucun domaine configuré</p>';
+          domainsList.innerHTML = '<p class="empty-state">No domains configured</p>';
         }
 
         document.getElementById('edit_https_backend').value = `${proxy.target_host}:${proxy.target_port}`;
         document.getElementById('edit_https_target_protocol').value = proxy.target_protocol || 'http';
       } else {
-        // Mode TCP/HTTP
-        simpleFields.style.display = 'block';
-        httpsFields.style.display = 'none';
+        simpleFields.hidden = false;
+        httpsFields.hidden = true;
 
         document.getElementById('edit_listen_port').value = proxy.listen_port;
         document.getElementById('edit_target_backend').value = `${proxy.target_host}:${proxy.target_port}`;
         document.getElementById('edit_target_protocol').value = proxy.target_protocol || 'http';
 
         const targetProtocolField = document.getElementById('editTargetProtocolField');
-        targetProtocolField.style.display = protocol === 'http' ? 'block' : 'none';
+        targetProtocolField.hidden = protocol !== 'http';
       }
 
-      document.getElementById('editPanel').removeAttribute('hidden');
+      document.getElementById('editPanel').hidden = false;
     }
 
     function closeEditPanel() {
-      document.getElementById('editPanel').setAttribute('hidden', '');
+      document.getElementById('editPanel').hidden = true;
     }
 
     async function handleCreate(e) {
@@ -467,12 +396,11 @@
       let data;
 
       if (mode === 'https') {
-        // Mode HTTPS Reverse DNS
         const domainsText = form.https_domains.value.trim();
         const backendRaw = form.https_backend.value.trim();
 
         if (!domainsText || !backendRaw) {
-          showToast('Veuillez remplir tous les champs', 'error');
+          showToast('Please fill all fields', 'error');
           return;
         }
 
@@ -480,7 +408,7 @@
         const [targetHost, targetPort] = backendRaw.split(':');
 
         if (!targetHost || !targetPort) {
-          showToast('Format backend invalide (utilisez IP:Port)', 'error');
+          showToast('Invalid backend format (use IP:Port)', 'error');
           return;
         }
 
@@ -497,12 +425,11 @@
           domains: domainsList
         };
       } else {
-        // Mode TCP/HTTP
         const backendRaw = form.target_backend.value.trim();
         const [targetHost, targetPort] = backendRaw.split(':');
 
         if (!targetHost || !targetPort) {
-          showToast('Format backend invalide (utilisez IP:Port)', 'error');
+          showToast('Invalid backend format (use IP:Port)', 'error');
           return;
         }
 
@@ -526,11 +453,10 @@
           body: JSON.stringify(data)
         });
 
-        if (!res.ok) throw new Error('Erreur serveur');
+        if (!res.ok) throw new Error('Server error');
 
         const result = await res.json();
 
-        // Si mode HTTPS, créer les domaines
         if (mode === 'https' && data.domains && result.id) {
           for (const hostname of data.domains) {
             try {
@@ -552,13 +478,13 @@
           }
         }
 
-        showToast('Proxy créé avec succès');
+        showToast('Proxy created successfully');
         closeCreatePanel();
         loadProxies();
         loadDomains();
       } catch (e) {
         console.error(e);
-        showToast('Erreur lors de la création', 'error');
+        showToast('Error creating proxy', 'error');
       }
     }
 
@@ -575,7 +501,7 @@
         const [targetHost, targetPort] = backendRaw.split(':');
 
         if (!targetHost || !targetPort) {
-          showToast('Format backend invalide (utilisez IP:Port)', 'error');
+          showToast('Invalid backend format (use IP:Port)', 'error');
           return;
         }
 
@@ -595,7 +521,7 @@
         const [targetHost, targetPort] = backendRaw.split(':');
 
         if (!targetHost || !targetPort) {
-          showToast('Format backend invalide (utilisez IP:Port)', 'error');
+          showToast('Invalid backend format (use IP:Port)', 'error');
           return;
         }
 
@@ -619,31 +545,31 @@
           body: JSON.stringify(data)
         });
 
-        if (!res.ok) throw new Error('Erreur serveur');
+        if (!res.ok) throw new Error('Server error');
 
-        showToast('Proxy mis à jour');
+        showToast('Proxy updated');
         closeEditPanel();
         loadProxies();
       } catch (e) {
         console.error(e);
-        showToast('Erreur lors de la mise à jour', 'error');
+        showToast('Error updating proxy', 'error');
       }
     }
 
     async function handleDelete() {
       const id = document.getElementById('edit_id').value;
-      if (!confirm('Supprimer ce proxy ?')) return;
+      if (!confirm('Delete this proxy?')) return;
 
       try {
         const res = await fetch(`/api/proxies/${id}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('Erreur serveur');
+        if (!res.ok) throw new Error('Server error');
 
-        showToast('Proxy supprimé');
+        showToast('Proxy deleted');
         closeEditPanel();
         loadProxies();
       } catch (e) {
         console.error(e);
-        showToast('Erreur lors de la suppression', 'error');
+        showToast('Error deleting proxy', 'error');
       }
     }
 
@@ -654,17 +580,18 @@
 
     function showToast(message, type = 'success') {
       const toast = document.createElement('div');
+      toast.className = 'toast';
       toast.style.cssText = `
         position: fixed;
         bottom: 20px;
         right: 20px;
         padding: 16px 24px;
-        background: ${type === 'error' ? '#f44336' : '#4CAF50'};
+        background: ${type === 'error' ? 'var(--danger)' : 'var(--success)'};
         color: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
         z-index: 10000;
-        animation: slideIn 0.3s ease;
+        animation: slideInRight 0.3s ease;
       `;
       toast.textContent = message;
       document.body.appendChild(toast);
@@ -680,16 +607,5 @@
       return div.innerHTML;
     }
   </script>
-
-  <style>
-    @keyframes slideIn {
-      from { transform: translateX(400px); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes slideOut {
-      from { transform: translateX(0); opacity: 1; }
-      to { transform: translateX(400px); opacity: 0; }
-    }
-  </style>
 </body>
 </html>

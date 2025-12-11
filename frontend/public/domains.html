@@ -1,208 +1,126 @@
-﻿<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewPort" content="width=device-width,initial-scale=1">
-    <title>Nebula Console - Domains</title>
-    <link rel="stylesheet" href="/public/styles.css">
-    <link rel="stylesheet" href="/public/nebula-pro.css">
-    <script src="/public/js/theme.js?v=12" defer></script>
-    <script src="/public/js/api.js?v=12" defer></script>
-    <script src="/public/js/include-partials.js?v=12" defer></script>
-    <script src="/public/js/app.js?v=12" defer></script>
-  </head>
-  <body data-page="domains">
-    <div class="app-shell">
-      <div id="sidebar-placeholder"></div>
-      <div class="app-main">
-        <header class="topbar">
-          <div class="page-heading">
-            <p class="eyebrow">Routing</p>
-            <h1>Domains</h1>
-            <p class="muted">Associate a hostname with a proxy and backend target.</p>
-          </div>
-          <div class="topbar-actions">
-            <button class="btn primary" data-panel-target="domainFormPanel" data-panel-focus="#domainHostname">Add un domaine</button>
-          </div>
-        </header>
-        <section class="page-content">
-          <div class="domains-header">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Domains - Nebula Console</title>
+  <link rel="stylesheet" href="/public/nebula-v2.css">
+  <script src="/public/js/theme.js" defer></script>
+  <script src="/public/js/api.js" defer></script>
+  <script src="/public/js/include-partials.js" defer></script>
+  <script src="/public/js/app.js" defer></script>
+</head>
+
+<body data-page="domains">
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+
+    <div class="app-main">
+      <header class="topbar">
+        <div class="page-heading">
+          <p class="eyebrow">Routing</p>
+          <h1>Domains</h1>
+          <p class="muted">Associate hostnames with proxies and backend targets</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn primary" data-panel-target="domainFormPanel" data-panel-focus="#domainHostname">
+            Add Domain
+          </button>
+        </div>
+      </header>
+
+      <section class="page-content">
+        <div class="card">
+          <div class="card-header">
             <div>
-              <p class="eyebrow">Inventaire</p>
-              <h2>Domains actifs</h2>
+              <p class="card-eyebrow">Inventory</p>
+              <h2 class="card-title">Active Domains</h2>
             </div>
           </div>
-          <div id="domainsGrid" class="domains-grid"></div>
-          <div id="domainsEmpty" class="empty-state" hidden>Aucun domaine configure.</div>
-        </section>
-        <div id="footer-placeholder"></div>
-        <div class="panel-overlay" id="domainFormPanel" hidden>
-          <div class="panel-card">
-            <div class="panel-head">
-              <div>
-                <p class="eyebrow">Mapping</p>
-                <h2>Add un domaine</h2>
-              </div>
-              <button class="btn ghost small" type="button" data-panel-close="domainFormPanel">Close</button>
-            </div>
-            <form id="createDomainForm">
-              <div class="form-grid">
-                <div class="form-field">
-                  <label for="domainHostname">Nom d'hote</label>
-                  <input id="domainHostname" name="hostname" placeholder="app.example.com" required>
-                </div>
-                <div class="form-field">
-                  <label for="createDomainProxySelect">Proxy</label>
-                  <select id="createDomainProxySelect" name="proxyId" required></select>
-                </div>
-                <div class="form-field">
-                  <label for="createDomainBackendSelect">Backend</label>
-                  <select id="createDomainBackendSelect" name="backendId" required>
-                    <option value="">Selectionner</option>
-                  </select>
-                  <p class="form-hint">La selection d'un backend est obligatoire.</p>
-                </div>
-                <div class="form-field">
-                  <label for="domainBotProtection">Protection CAPTCHA</label>
-                  <select id="domainBotProtection" name="botProtection">
-                    <option value="unprotected">Unprotected (free access)</option>
-                    <option value="protected">Protected (CAPTCHA required)</option>
-                  </select>
-                  <p class="form-hint">Controls if this domain requires human verification.</p>
-                </div>
-                <div class="form-field">
-                  <label for="domainGenerateCert">Generate certificate</label>
-                  <div style="display:flex;align-items:center;gap:12px;">
-                    <label class="switch">
-                      <input type="checkbox" id="domainGenerateCert" name="generateCert">
-                      <span class="slider"></span>
-                    </label>
-                    <span id="domainGenerateCertText">Auto-generate a certificate (Let's Encrypt)</span>
-                  </div>
-                  <p class="form-hint">When checked, Nebula will attempt to obtain a certificate for this hostname (skipped for local/IP names).</p>
-                </div>
-                <div class="form-field">
-                  <label for="domainMaintenanceEnabled">Maintenance enabled</label>
-                  <div style="display:flex;align-items:center;gap:12px;">
-                    <label class="switch">
-                      <input type="checkbox" id="domainMaintenanceEnabled" name="maintenanceEnabled">
-                      <span class="slider"></span>
-                    </label>
-                    <span id="domainMaintenanceStatusText">Disabled</span>
-                  </div>
-                  <p class="form-hint">Enable maintenance mode on creation (optional).</p>
-                </div>
-                <div class="form-field">
-                  <label for="domainMaintenancePagePath">Maintenance page path</label>
-                  <input id="domainMaintenancePagePath" name="maintenancePagePath" placeholder="optional-file.html">
-                  <p class="form-hint">Optional custom maintenance page filename to use after upload.</p>
-                </div>
-              </div>
-              <div class="form-actions">
-                <button class="btn ghost" type="button" data-panel-close="domainFormPanel">Cancel</button>
-                <button class="btn primary" type="submit">Creer le domaine</button>
-              </div>
-            </form>
+          <div class="card-body">
+            <div id="domainsGrid" class="domains-grid"></div>
+            <div id="domainsEmpty" class="empty-state" hidden>No domains configured</div>
           </div>
         </div>
+      </section>
 
-        <!-- Maintenance Management Panel -->
-        <div class="panel-overlay" id="maintenancePanel" hidden>
-          <div class="panel-card">
-            <div class="panel-head">
-              <div>
-                <p class="eyebrow">Maintenance Mode</p>
-                <h2 id="maintenancePanelTitle">Manage Maintenance</h2>
-              </div>
-              <button class="btn ghost small" type="button" data-panel-close="maintenancePanel">Close</button>
+      <div id="footer-placeholder"></div>
+
+      <!-- Domain Form Panel -->
+      <div class="panel-overlay" id="domainFormPanel" hidden>
+        <div class="panel-card">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Configuration</p>
+              <h2>Add Domain</h2>
             </div>
-            <div class="panel-body">
-              <div class="form-grid">
-                <div class="form-field">
-                  <label>Domain</label>
-                  <p id="maintenanceDomainName" style="font-weight: bold; padding: 8px 0;"></p>
-                </div>
-
-                <div class="form-field">
-                  <label for="maintenanceToggle">Maintenance Status</label>
-                  <div style="display: flex; align-items: center; gap: 12px;">
-                    <label class="switch">
-                      <input type="checkbox" id="maintenanceToggle">
-                      <span class="slider"></span>
-                    </label>
-                    <span id="maintenanceStatusText">Disabled</span>
-                  </div>
-                  <p class="form-hint">When enabled, visitors will see a maintenance page.</p>
-                </div>
-
-                <div class="form-field" id="customPageSection">
-                  <label for="customMaintenancePage">Custom Maintenance Page (HTML)</label>
-                  <textarea id="customMaintenancePage" rows="8" placeholder="Paste your custom HTML here or leave empty to use default page..."></textarea>
-                  <p class="form-hint">Optional: Upload a custom HTML page or use the default maintenance page.</p>
-                  <div style="margin-top: 8px;">
-                    <button class="btn ghost small" type="button" id="loadCurrentPageBtn">Load Current Page</button>
-                    <button class="btn ghost small" type="button" id="clearCustomPageBtn">Clear Custom Page</button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-actions" style="margin-top: 24px;">
-                <button class="btn ghost" type="button" data-panel-close="maintenancePanel">Cancel</button>
-                <button class="btn primary" type="button" id="saveMaintenanceBtn">Save Changes</button>
-              </div>
-            </div>
+            <button class="btn ghost small" type="button" data-panel-close="domainFormPanel">
+              Close
+            </button>
           </div>
+
+          <form id="createDomainForm">
+            <div class="form-grid">
+              <div class="form-field">
+                <label for="domainHostname">Hostname</label>
+                <input id="domainHostname" name="hostname" placeholder="app.example.com" required>
+              </div>
+
+              <div class="form-field">
+                <label for="createDomainProxySelect">Proxy</label>
+                <select id="createDomainProxySelect" name="proxyId" required></select>
+              </div>
+
+              <div class="form-field">
+                <label for="createDomainBackendSelect">Backend</label>
+                <select id="createDomainBackendSelect" name="backendId" required>
+                  <option value="">Select backend</option>
+                </select>
+                <p class="form-hint">Backend selection is required</p>
+              </div>
+
+              <div class="form-field">
+                <label for="domainBotProtection">Bot Protection</label>
+                <select id="domainBotProtection" name="botProtection">
+                  <option value="unprotected">Unprotected (free access)</option>
+                  <option value="protected">Protected (CAPTCHA required)</option>
+                </select>
+                <p class="form-hint">Controls if this domain requires human verification</p>
+              </div>
+
+              <div class="form-field">
+                <label class="form-check">
+                  <input type="checkbox" id="domainGenerateCert" name="generateCert">
+                  <span>Auto-generate SSL certificate (Let's Encrypt)</span>
+                </label>
+                <p class="form-hint">Automatically obtain a certificate for this hostname</p>
+              </div>
+
+              <div class="form-field">
+                <label class="form-check">
+                  <input type="checkbox" id="domainMaintenanceEnabled" name="maintenanceEnabled">
+                  <span>Enable maintenance mode</span>
+                </label>
+                <p class="form-hint">Enable maintenance mode on creation (optional)</p>
+              </div>
+
+              <div class="form-field">
+                <label for="domainMaintenancePagePath">Maintenance page path</label>
+                <input id="domainMaintenancePagePath" name="maintenancePagePath" placeholder="maintenance.html">
+                <p class="form-hint">Optional custom maintenance page filename</p>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn ghost" type="button" data-panel-close="domainFormPanel">
+                Cancel
+              </button>
+              <button class="btn primary" type="submit">Create Domain</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
-
-    <style>
-      /* Toggle Switch */
-      .switch {
-        position: relative;
-        display: inline-block;
-        width: 50px;
-        height: 24px;
-      }
-
-      .switch input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-      }
-
-      .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #ccc;
-        transition: .3s;
-        border-radius: 24px;
-      }
-
-      .slider:before {
-        position: absolute;
-        content: "";
-        height: 18px;
-        width: 18px;
-        left: 3px;
-        bottom: 3px;
-        background-color: white;
-        transition: .3s;
-        border-radius: 50%;
-      }
-
-      input:checked + .slider {
-        background-color: #4CAF50;
-      }
-
-      input:checked + .slider:before {
-        transform: translateX(26px);
-      }
-    </style>
-  </body>
+  </div>
+</body>
 </html>
-
