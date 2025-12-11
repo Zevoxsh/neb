@@ -1465,6 +1465,129 @@ a:hover {
 }
 
 /* ============================================
+   LOGIN PAGE
+   ============================================ */
+.login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+  padding: var(--space-lg);
+}
+
+[data-theme="dark"] .login-shell {
+  background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-800) 100%);
+}
+
+.login-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2xl);
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow-xl);
+  animation: slideUp var(--transition-base);
+}
+
+.login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.login-brand svg {
+  color: var(--color-primary);
+  width: 48px;
+  height: 48px;
+}
+
+.login-brand h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+.login-description {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-xl);
+}
+
+.login-card .form-field {
+  margin-bottom: var(--space-lg);
+}
+
+.login-card .form-field label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.login-card .form-field input {
+  width: 100%;
+  padding: var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.login-card .form-field input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--color-primary-alpha);
+}
+
+.login-card .form-actions {
+  margin-top: var(--space-xl);
+  margin-bottom: var(--space-lg);
+}
+
+.login-card .form-actions .btn {
+  width: 100%;
+  padding: var(--space-md);
+  font-size: var(--font-size-base);
+}
+
+.login-error {
+  padding: var(--space-md);
+  background: var(--color-danger-alpha);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  margin-top: var(--space-md);
+}
+
+.login-footer {
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-top: var(--space-xl);
+  margin-bottom: 0;
+}
+
+.login-footer code {
+  background: var(--bg-hover);
+  padding: 2px var(--space-xs);
+  border-radius: var(--radius-sm);
+  font-family: 'Courier New', monospace;
+  color: var(--text-secondary);
+}
+
+/* ============================================
    PRINT STYLES
    ============================================ */
 @media print {
