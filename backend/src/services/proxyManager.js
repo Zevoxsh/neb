@@ -320,32 +320,54 @@ class ProxyManager {
       this.servers.set(id, entry);
       return server;
     } else if (listenProtocol === 'udp') {
-      // UDP proxy
+      // UDP proxy - bidirectional packet forwarding
       const serverSocket = dgram.createSocket('udp4');
       const upstreams = new Map();
 
-      serverSocket.on('error', (err) => console.error('UDP proxy server error', err.message));
+      serverSocket.on('error', (err) => console.error(`UDP Proxy ${id} server error:`, err.message));
 
       serverSocket.on('message', (msg, rinfo) => {
-        const key = `${rinfo.address}:${rinfo.port}`;
-        let entry = upstreams.get(key);
-        if (!entry) {
+        const clientKey = `${rinfo.address}:${rinfo.port}`;
+        let upstreamEntry = upstreams.get(clientKey);
+
+        if (!upstreamEntry) {
+          // Create new upstream socket for this client
           const upstream = dgram.createSocket('udp4');
+
           upstream.on('message', (upMsg) => {
-            serverSocket.send(upMsg, rinfo.port, rinfo.address, (err) => { if (err) console.error('UDP forward back error', err); });
+            // Forward response back to original client
+            serverSocket.send(upMsg, rinfo.port, rinfo.address, (err) => {
+              if (err) console.error(`UDP Proxy ${id} - failed to forward response to ${clientKey}:`, err.message);
+              else {
+                try { pm.addMetrics(id, 0, upMsg.length, 0); } catch (e) { }
+              }
+            });
           });
-          upstream.on('error', (e) => console.error('Upstream UDP error', e));
-          entry = { upstream, timeout: null };
-          upstreams.set(key, entry);
+
+          upstream.on('error', (e) => console.error(`UDP Proxy ${id} - upstream error for ${clientKey}:`, e.message));
+
+          upstreamEntry = { upstream, timeout: null };
+          upstreams.set(clientKey, upstreamEntry);
+          console.log(`UDP Proxy ${id} - new client connection from ${clientKey}`);
         }
-        if (entry.timeout) clearTimeout(entry.timeout);
-        entry.timeout = setTimeout(() => { try { entry.upstream.close(); } catch (e) { } upstreams.delete(key); }, 30000);
+
+        // Reset timeout for this client
+        if (upstreamEntry.timeout) clearTimeout(upstreamEntry.timeout);
+        upstreamEntry.timeout = setTimeout(() => {
+          try { upstreamEntry.upstream.close(); } catch (e) { }
+          upstreams.delete(clientKey);
+          console.log(`UDP Proxy ${id} - client ${clientKey} timed out after 30s`);
+        }, 30000);
+
+        // Forward packet to target server
         try { pm.addMetrics(id, msg.length, 0, 1); } catch (e) { }
-        entry.upstream.send(msg, entry.meta.targetPort, entry.meta.targetHost, (err) => { if (err) console.error('UDP send to target failed', err); });
+        upstreamEntry.upstream.send(msg, targetPort, targetHost, (err) => {
+          if (err) console.error(`UDP Proxy ${id} - failed to forward to ${targetHost}:${targetPort}:`, err.message);
+        });
       });
 
-      serverSocket.bind(entry.meta.listenPort, entry.meta.listenHost, () => {
-        console.log(`UDP Proxy ${id} listening ${entry.meta.listenHost}:${entry.meta.listenPort} -> ${entry.meta.targetHost}:${entry.meta.targetPort}`);
+      serverSocket.bind(listenPort, listenHost, () => {
+        console.log(`UDP Proxy ${id} listening on ${listenHost}:${listenPort} -> ${targetHost}:${targetPort}`);
       });
 
       entry.type = 'udp';

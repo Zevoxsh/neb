@@ -19,7 +19,7 @@
         <div class="page-heading">
           <p class="eyebrow">Network</p>
           <h1>Proxies</h1>
-          <p class="muted">TCP Passthrough, HTTP, and HTTPS with Reverse DNS</p>
+          <p class="muted">TCP, UDP, HTTP & HTTPS with Reverse DNS</p>
         </div>
         <div class="topbar-actions">
           <button class="btn primary" onclick="openCreatePanel()">New Proxy</button>
@@ -68,6 +68,10 @@
             <div class="mode-card active" onclick="selectMode('tcp')">
               <h3>TCP</h3>
               <p>Raw passthrough for any port</p>
+            </div>
+            <div class="mode-card" onclick="selectMode('udp')">
+              <h3>UDP</h3>
+              <p>For games & voice chat</p>
             </div>
             <div class="mode-card" onclick="selectMode('http')">
               <h3>HTTP</h3>
@@ -322,6 +326,14 @@
         httpsFields.hidden = true;
         targetProtocolField.hidden = mode !== 'http';
       }
+
+      // Update port placeholder for UDP
+      const listenPortInput = document.getElementById('listen_port');
+      if (mode === 'udp') {
+        listenPortInput.placeholder = '19132 (Minecraft Bedrock)';
+      } else {
+        listenPortInput.placeholder = '8080';
+      }
     }
 
     function openCreatePanel() {
@@ -441,7 +453,7 @@
           protocol: mode,
           target_host: targetHost,
           target_port: parseInt(targetPort),
-          target_protocol: mode === 'tcp' ? 'tcp' : form.target_protocol.value,
+          target_protocol: (mode === 'tcp' || mode === 'udp') ? mode : form.target_protocol.value,
           enabled: form.enabled.checked
         };
       }
@@ -533,7 +545,7 @@
           protocol: mode,
           target_host: targetHost,
           target_port: parseInt(targetPort),
-          target_protocol: mode === 'tcp' ? 'tcp' : form.target_protocol.value,
+          target_protocol: (mode === 'tcp' || mode === 'udp') ? mode : form.target_protocol.value,
           enabled: form.enabled.checked
         };
       }
