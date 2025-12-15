@@ -1,6 +1,8 @@
 const WebSocket = require('ws');
 const http = require('http');
 const https = require('https');
+const net = require('net');
+const tls = require('tls');
 
 /**
  * WebSocket Proxy Service
@@ -22,15 +24,25 @@ class WebSocketProxy {
   async handleUpgrade(req, socket, head, backend) {
     const connectionId = `${req.socket.remoteAddress}:${req.socket.remotePort}`;
 
-    console.log(`[WebSocketProxy] Upgrading connection ${connectionId} to ${backend.target_host}:${backend.target_port}`);
+    console.log(`[WebSocketProxy] Upgrading connection ${connectionId} to ${backend.target_host}:${backend.target_port} (${backend.target_protocol})`);
 
+    // Use TCP tunneling for HTTP/HTTPS backends (proxy-to-proxy)
+    // This allows the WebSocket upgrade to pass through transparently
+    if (backend.target_protocol === 'http' || backend.target_protocol === 'https') {
+      return this.handleUpgradeWithTunnel(req, socket, head, backend, connectionId);
+    }
+
+    // Original WebSocket client method for direct backends
     try {
       // Create WebSocket connection to backend
       const backendProtocol = backend.target_protocol === 'https' ? 'wss' : 'ws';
       const backendUrl = `${backendProtocol}://${backend.target_host}:${backend.target_port}${req.url}`;
 
+      const proxyHeaders = this.buildProxyHeaders(req);
+      console.log(`[WebSocketProxy] Backend URL: ${backendUrl}`);
+
       const backendWs = new WebSocket(backendUrl, {
-        headers: this.buildProxyHeaders(req),
+        headers: proxyHeaders,
         rejectUnauthorized: false // Allow self-signed certificates
       });
 
@@ -135,6 +147,167 @@ class WebSocketProxy {
       socket.destroy();
       this.activeConnections.delete(connectionId);
     }
+  }
+
+  /**
+   * Handle WebSocket upgrade with TCP tunneling (for proxy-to-proxy)
+   * This forwards the raw HTTP upgrade request to the backend without terminating the WebSocket
+   * @param {http.IncomingMessage} req - Incoming request
+   * @param {net.Socket} socket - Client socket
+   * @param {Buffer} head - First packet of upgraded stream
+   * @param {Object} backend - Backend server configuration
+   * @param {string} connectionId - Connection identifier
+   */
+  handleUpgradeWithTunnel(req, socket, head, backend, connectionId) {
+    console.log(`[WebSocketProxy] Using TCP tunnel mode for ${connectionId}`);
+
+    // Create connection to backend (TCP or TLS)
+    const isSecure = backend.target_protocol === 'https';
+    const backendSocket = isSecure
+      ? tls.connect({
+          host: backend.target_host,
+          port: backend.target_port,
+          rejectUnauthorized: false // Allow self-signed certificates
+        })
+      : net.connect({
+          host: backend.target_host,
+          port: backend.target_port
+        });
+
+    let backendConnected = false;
+
+    // Function to send upgrade request once connected
+    const sendUpgradeRequest = () => {
+      backendConnected = true;
+      console.log(`[WebSocketProxy] Backend connected for ${connectionId} (secure: ${isSecure})`);
+
+      // Build and send the HTTP upgrade request to backend
+      const upgradeRequest = this.buildUpgradeRequest(req, backend);
+      backendSocket.write(upgradeRequest);
+
+      // If there's data in head, send it too
+      if (head && head.length > 0) {
+        backendSocket.write(head);
+      }
+    };
+
+    // Handle backend connection
+    if (isSecure) {
+      // For HTTPS backends, wait for TLS handshake to complete
+      backendSocket.on('secureConnect', () => {
+        console.log(`[WebSocketProxy] TLS tunnel established for ${connectionId}`);
+        sendUpgradeRequest();
+      });
+    } else {
+      // For HTTP backends, send on connect
+      backendSocket.on('connect', () => {
+        console.log(`[WebSocketProxy] TCP tunnel connected to backend for ${connectionId}`);
+        sendUpgradeRequest();
+      });
+    }
+
+    // Pipe data bidirectionally
+    backendSocket.on('data', (data) => {
+      if (!socket.destroyed) {
+        socket.write(data);
+      }
+    });
+
+    socket.on('data', (data) => {
+      if (!backendSocket.destroyed) {
+        backendSocket.write(data);
+      }
+    });
+
+    // Handle errors
+    backendSocket.on('error', (error) => {
+      console.error(`[WebSocketProxy] Backend socket error for ${connectionId}:`, error.message);
+      if (!socket.destroyed) {
+        socket.destroy();
+      }
+    });
+
+    socket.on('error', (error) => {
+      console.error(`[WebSocketProxy] Client socket error for ${connectionId}:`, error.message);
+      if (!backendSocket.destroyed) {
+        backendSocket.destroy();
+      }
+    });
+
+    // Handle connection close
+    backendSocket.on('close', () => {
+      console.log(`[WebSocketProxy] Backend socket closed for ${connectionId}`);
+      if (!socket.destroyed) {
+        socket.destroy();
+      }
+      this.activeConnections.delete(connectionId);
+    });
+
+    socket.on('close', () => {
+      console.log(`[WebSocketProxy] Client socket closed for ${connectionId}`);
+      if (!backendSocket.destroyed) {
+        backendSocket.destroy();
+      }
+      this.activeConnections.delete(connectionId);
+    });
+
+    // Connection timeout
+    const timeout = setTimeout(() => {
+      if (!backendConnected) {
+        console.error(`[WebSocketProxy] Backend connection timeout for ${connectionId}`);
+        backendSocket.destroy();
+        socket.destroy();
+      }
+    }, 10000); // 10 second timeout
+
+    // Clear timeout when connection is ready (differs for HTTP vs HTTPS)
+    if (isSecure) {
+      backendSocket.on('secureConnect', () => clearTimeout(timeout));
+    } else {
+      backendSocket.on('connect', () => clearTimeout(timeout));
+    }
+
+    // Track connection
+    this.activeConnections.set(connectionId, {
+      client: socket,
+      backend: backendSocket,
+      startTime: Date.now(),
+      mode: 'tunnel'
+    });
+  }
+
+  /**
+   * Build HTTP upgrade request for backend
+   */
+  buildUpgradeRequest(req, backend) {
+    const lines = [];
+
+    // Request line
+    lines.push(`${req.method} ${req.url} HTTP/1.1`);
+
+    // Headers
+    const headers = { ...req.headers };
+
+    // Update Host header to match backend
+    headers.host = `${backend.target_host}:${backend.target_port}`;
+
+    // Add X-Forwarded headers
+    headers['x-forwarded-for'] = headers['x-forwarded-for'] || req.socket.remoteAddress;
+    headers['x-forwarded-proto'] = req.connection.encrypted ? 'https' : 'http';
+    headers['x-forwarded-host'] = req.headers.host;
+
+    // Add all headers to request
+    for (const [key, value] of Object.entries(headers)) {
+      if (value !== undefined && value !== null) {
+        lines.push(`${key}: ${value}`);
+      }
+    }
+
+    // End of headers
+    lines.push('');
+    lines.push('');
+
+    return lines.join('\r\n');
   }
 
   /**

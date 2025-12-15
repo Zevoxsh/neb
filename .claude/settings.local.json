@@ -23,7 +23,9 @@
       "Bash(node -e:*)",
       "Bash(for file in \"C:\\Users\\wks-torres\\Documents\\neb\\frontend\\public\"/*.html)",
       "Bash(for file in alerts.html analytics.html backend.html backends.html config.html dashboard.html domain.html domains.html ip-management.html login.html proxies.html reports.html requests.html)",
-      "Bash(do sed -i 's|<link rel=\"\"stylesheet\"\" href=\"\"/public/[^\"\"]*\\.css\"\">|<link rel=\"\"stylesheet\"\" href=\"\"/public/nebula-v2.css\"\">|g' \"$file\")"
+      "Bash(do sed -i 's|<link rel=\"\"stylesheet\"\" href=\"\"/public/[^\"\"]*\\.css\"\">|<link rel=\"\"stylesheet\"\" href=\"\"/public/nebula-v2.css\"\">|g' \"$file\")",
+      "Bash(node check-vhosts.js:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []
