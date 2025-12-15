@@ -119,6 +119,91 @@ class ProxyManager {
     });
   }
 
+  /**
+   * Resolve WebSocket backend configuration from request and proxy entry
+   * @param {Object} req - HTTP request object
+   * @param {Object} entry - Proxy entry with meta configuration
+   * @returns {Object} Backend configuration {target_host, target_port, target_protocol}
+   */
+  _resolveWebSocketBackend(req, entry) {
+    // Check for redirect-only proxy
+    if (entry.meta.targetHost === '__REDIRECT__') {
+      throw new Error('WebSocket upgrade not supported for redirect-only proxies');
+    }
+
+    // Extract hostname from request
+    const incomingHost = req.headers && req.headers.host
+      ? req.headers.host.split(':')[0]
+      : null;
+
+    // Start with default backend from proxy config
+    let targetHost = entry.meta.targetHost;
+    let targetPort = entry.meta.targetPort;
+    let targetProtocol = entry.meta.targetProtocol;
+
+    // Check vhost mapping for specific host routing
+    try {
+      if (incomingHost && entry.meta.vhostMap && entry.meta.vhostMap[incomingHost]) {
+        const mapping = entry.meta.vhostMap[incomingHost];
+        targetHost = mapping.targetHost || targetHost;
+        targetPort = mapping.targetPort || targetPort;
+        targetProtocol = (mapping.targetProtocol || targetProtocol).toLowerCase();
+      }
+    } catch (e) {
+      console.error('[ProxyManager] Error resolving vhost mapping for WebSocket:', e.message);
+    }
+
+    return {
+      target_host: targetHost,
+      target_port: targetPort,
+      target_protocol: targetProtocol || 'tcp'
+    };
+  }
+
+  /**
+   * Attach WebSocket upgrade handler to HTTP/HTTPS server
+   * @param {Object} server - HTTP/HTTPS server instance
+   * @param {Object} entry - Proxy entry configuration
+   */
+  _attachWebSocketUpgradeHandler(server, entry) {
+    // Only attach to HTTP/HTTPS servers
+    if (!server || entry.type === 'tcp' || entry.type === 'udp') {
+      return;
+    }
+
+    try {
+      const websocketProxy = require('./websocketProxy');
+
+      server.on('upgrade', (req, socket, head) => {
+        (async () => {
+          try {
+            // Resolve backend configuration
+            const backend = this._resolveWebSocketBackend(req, entry);
+
+            // Log WebSocket upgrade attempt
+            const incomingHost = req.headers && req.headers.host
+              ? req.headers.host.split(':')[0]
+              : 'unknown';
+            console.log(`[ProxyManager] WebSocket upgrade: ${incomingHost} -> ${backend.target_host}:${backend.target_port} (${backend.target_protocol})`);
+
+            // Handle the upgrade using websocketProxy service
+            await websocketProxy.handleUpgrade(req, socket, head, backend);
+          } catch (err) {
+            console.error(`[ProxyManager] WebSocket upgrade failed:`, err.message);
+            try {
+              socket.write('HTTP/1.1 503 Service Unavailable\r\n\r\n');
+              socket.destroy();
+            } catch (e) { }
+          }
+        })();
+      });
+
+      console.log(`[ProxyManager] WebSocket upgrade handler attached to proxy ${entry.id}`);
+    } catch (e) {
+      console.error(`[ProxyManager] Failed to attach WebSocket upgrade handler:`, e.message);
+    }
+  }
+
   backendIsDown(targetInfo) {
     try {
       // signature: backendIsDown(targetInfo, domain)
@@ -444,6 +529,8 @@ class ProxyManager {
       entry.type = 'http_redirect';
       entry.server = server;
       this.servers.set(id, entry);
+      // Attach WebSocket upgrade handler
+      this._attachWebSocketUpgradeHandler(server, entry);
       return server;
     } else if (listenProtocol === 'http' && targetProtocol === 'https') {
       // ACME Challenge + Redirect
@@ -599,6 +686,8 @@ class ProxyManager {
       entry.type = 'http_acme_redirect';
       entry.server = server;
       this.servers.set(id, entry);
+      // Attach WebSocket upgrade handler
+      this._attachWebSocketUpgradeHandler(server, entry);
       return server;
 
     } else if (listenProtocol === 'https' && !entry.meta.tlsPassthrough) {
@@ -1075,41 +1164,8 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
         }
       }, forwardRequest);
       server.on('error', (err) => console.error('HTTPS termination proxy server error', err));
-      // Handle websocket upgrade requests and proxy them to the appropriate backend
-      try {
-        const websocketProxy = require('./websocketProxy');
-        server.on('upgrade', (req, socket, head) => {
-          (async () => {
-            try {
-              const incomingHostHeader = req.headers && req.headers.host ? req.headers.host.split(':')[0] : null;
-              let useTargetHost = entry.meta.targetHost;
-              let useTargetPort = entry.meta.targetPort;
-              let useTargetProto = entry.meta.targetProtocol;
-
-              try {
-                if (incomingHostHeader && entry.meta.vhostMap && entry.meta.vhostMap[incomingHostHeader]) {
-                  const m = entry.meta.vhostMap[incomingHostHeader];
-                  useTargetHost = m.targetHost || useTargetHost;
-                  useTargetPort = m.targetPort || useTargetPort;
-                  useTargetProto = (m.targetProtocol || useTargetProto).toLowerCase();
-                }
-              } catch (e) { }
-
-              const backend = {
-                target_host: useTargetHost,
-                target_port: useTargetPort,
-                target_protocol: useTargetProto || 'tcp'
-              };
-
-              await websocketProxy.handleUpgrade(req, socket, head, backend);
-            } catch (err) {
-              try { socket.destroy(); } catch (e) { }
-            }
-          })();
-        });
-      } catch (e) {
-        console.error('[ProxyManager] Failed to attach websocket upgrade handler:', e && e.message ? e.message : e);
-      }
+      // Attach WebSocket upgrade handler
+      this._attachWebSocketUpgradeHandler(server, entry);
       server.listen(entry.meta.listenPort, entry.meta.listenHost, () => {
         console.log(`HTTPS Termination Proxy ${id} listening ${entry.meta.listenHost}:${entry.meta.listenPort}`);
       });
