@@ -380,9 +380,15 @@
       const simpleFields = document.getElementById('editSimpleFields');
       const httpsFields = document.getElementById('editHttpsFields');
 
+      const editListenPort = document.getElementById('edit_listen_port');
+      const editTargetHost = document.getElementById('edit_target_host');
+      const editTargetPort = document.getElementById('edit_target_port');
       if (protocol === 'https') {
         simpleFields.hidden = true;
         httpsFields.hidden = false;
+        if (editListenPort) editListenPort.disabled = true;
+        if (editTargetHost) editTargetHost.disabled = true;
+        if (editTargetPort) editTargetPort.disabled = true;
 
         const proxyDomains = domains.filter(d => d.proxy_id === proxy.id);
         const domainsList = document.getElementById('edit_domains_list');
@@ -402,9 +408,13 @@
       } else {
         simpleFields.hidden = false;
         httpsFields.hidden = true;
+        if (editListenPort) editListenPort.disabled = false;
+        if (editTargetHost) editTargetHost.disabled = false;
+        if (editTargetPort) editTargetPort.disabled = false;
 
         document.getElementById('edit_listen_port').value = proxy.listen_port;
-        document.getElementById('edit_target_backend').value = `${proxy.target_host}:${proxy.target_port}`;
+        document.getElementById('edit_target_host').value = proxy.target_host || '';
+        document.getElementById('edit_target_port').value = proxy.target_port || '';
         document.getElementById('edit_target_protocol').value = proxy.target_protocol || 'http';
 
         const targetProtocolField = document.getElementById('editTargetProtocolField');
