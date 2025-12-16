@@ -211,6 +211,7 @@
               </div>
 
               <div id="editHttpsFields" hidden>
+
                 <div class="form-field">
                   <label>Configured domains</label>
                   <div id="edit_domains_list" class="domains-list"></div>
@@ -218,8 +219,12 @@
                 </div>
 
                 <div class="form-field">
-                  <label for="edit_https_backend">Default backend (IP:Port)</label>
-                  <input id="edit_https_backend" name="https_backend" placeholder="192.168.1.100:3000">
+                  <label for="edit_https_target_host">Default backend IP</label>
+                  <input id="edit_https_target_host" name="https_target_host" placeholder="192.168.1.100">
+                </div>
+                <div class="form-field">
+                  <label for="edit_https_target_port">Default backend Port</label>
+                  <input id="edit_https_target_port" name="https_target_port" type="number" min="1" max="65535" placeholder="3000">
                 </div>
 
                 <div class="form-field">
@@ -403,7 +408,8 @@
           domainsList.innerHTML = '<p class="empty-state">No domains configured</p>';
         }
 
-        document.getElementById('edit_https_backend').value = `${proxy.target_host}:${proxy.target_port}`;
+        document.getElementById('edit_https_target_host').value = proxy.target_host || '';
+        document.getElementById('edit_https_target_port').value = proxy.target_port || '';
         document.getElementById('edit_https_target_protocol').value = proxy.target_protocol || 'http';
       } else {
         simpleFields.hidden = false;
