@@ -514,14 +514,12 @@
       let data;
 
       if (mode === 'https') {
-        const backendRaw = form.https_backend.value.trim();
-        const [targetHost, targetPort] = backendRaw.split(':');
-
+        const targetHost = form.https_target_host ? form.https_target_host.value.trim() : '';
+        const targetPort = form.https_target_port ? form.https_target_port.value.trim() : '';
         if (!targetHost || !targetPort) {
-          showToast('Invalid backend format (use IP:Port)', 'error');
+          showToast('Backend IP et port requis', 'error');
           return;
         }
-
         data = {
           name: form.name.value,
           listen_host: '0.0.0.0',
@@ -534,14 +532,12 @@
           enabled: form.enabled.checked
         };
       } else {
-        const backendRaw = form.target_backend.value.trim();
-        const [targetHost, targetPort] = backendRaw.split(':');
-
+        const targetHost = form.target_host ? form.target_host.value.trim() : '';
+        const targetPort = form.target_port ? form.target_port.value.trim() : '';
         if (!targetHost || !targetPort) {
-          showToast('Invalid backend format (use IP:Port)', 'error');
+          showToast('Backend IP et port requis', 'error');
           return;
         }
-
         data = {
           name: form.name.value,
           listen_host: '0.0.0.0',
