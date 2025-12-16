@@ -99,9 +99,12 @@
                 </div>
 
                 <div class="form-field">
-                  <label for="target_backend">Backend (IP:Port)</label>
-                  <input id="target_backend" name="target_backend" placeholder="192.168.1.100:3000" required>
-                  <p class="form-hint">Format: address:port</p>
+                  <label for="target_host">Backend IP</label>
+                  <input id="target_host" name="target_host" placeholder="192.168.1.100" required>
+                </div>
+                <div class="form-field">
+                  <label for="target_port">Backend Port</label>
+                  <input id="target_port" name="target_port" type="number" min="1" max="65535" placeholder="3000" required>
                 </div>
 
                 <div class="form-field" id="targetProtocolField" hidden>
@@ -190,8 +193,12 @@
                 </div>
 
                 <div class="form-field">
-                  <label for="edit_target_backend">Backend (IP:Port)</label>
-                  <input id="edit_target_backend" name="target_backend" placeholder="192.168.1.100:3000" required>
+                  <label for="edit_target_host">Backend IP</label>
+                  <input id="edit_target_host" name="target_host" placeholder="192.168.1.100" required>
+                </div>
+                <div class="form-field">
+                  <label for="edit_target_port">Backend Port</label>
+                  <input id="edit_target_port" name="target_port" type="number" min="1" max="65535" placeholder="3000" required>
                 </div>
 
                 <div class="form-field" id="editTargetProtocolField" hidden>
@@ -437,14 +444,12 @@
           domains: domainsList
         };
       } else {
-        const backendRaw = form.target_backend.value.trim();
-        const [targetHost, targetPort] = backendRaw.split(':');
-
+        const targetHost = form.target_host.value.trim();
+        const targetPort = form.target_port.value.trim();
         if (!targetHost || !targetPort) {
-          showToast('Invalid backend format (use IP:Port)', 'error');
+          showToast('Backend IP et port requis', 'error');
           return;
         }
-
         data = {
           name: form.name.value,
           listen_host: '0.0.0.0',
