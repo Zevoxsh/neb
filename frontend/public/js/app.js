@@ -2145,6 +2145,8 @@
       document.getElementById('editProxyListenHost').value = proxy.listen_host || '';
       document.getElementById('editProxyListenPort').value = proxy.listen_port || '';
       document.getElementById('editProxyProtocol').value = proxy.protocol || 'tcp';
+      if (document.getElementById('editTargetHost')) document.getElementById('editTargetHost').value = proxy.target_host || '';
+      if (document.getElementById('editTargetPort')) document.getElementById('editTargetPort').value = proxy.target_port || '';
       const enabledCheckbox = document.getElementById('editEnabled');
       if (enabledCheckbox) {
         enabledCheckbox.checked = proxy.enabled === true;

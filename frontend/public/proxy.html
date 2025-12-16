@@ -51,12 +51,23 @@
                   <option value="https">HTTPS</option>
                 </select>
               </div>
+
               <div class="form-field">
                 <label for="editTargetProtocol">Protocole cible</label>
                 <select id="editTargetProtocol" name="targetProtocol" required>
                   <option value="http">HTTP</option>
                   <option value="https">HTTPS</option>
                 </select>
+              </div>
+
+              <div class="form-field">
+                <label for="editTargetHost">IP backend (target_host)</label>
+                <input id="editTargetHost" name="target_host" required>
+              </div>
+
+              <div class="form-field">
+                <label for="editTargetPort">Port backend (target_port)</label>
+                <input id="editTargetPort" name="target_port" type="number" required>
               </div>
 
               <div class="form-field">
