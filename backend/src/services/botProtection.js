@@ -35,6 +35,21 @@ class BotProtection {
         this.verificationDuration = 6 * 60 * 60 * 1000; // 6 hours by default
         this.protectedDomains = new Set(); // Domains that require verification
         this.unprotectedDomains = new Set(); // Domains that bypass verification
+    // GLOBAL DISABLE: clear all protected/unprotected domains and disable bot protection
+    this.protectedDomains.clear();
+    this.unprotectedDomains.clear();
+    this.enabled = false;
+    this.shouldChallenge = () => false;
+    this.isRateLimited = () => false;
+    this.isBanned = () => false;
+    this.banIP = () => {};
+    this.banIpForDomain = () => {};
+    this.trackRequest = () => {};
+    this.isIpDomainBanned = () => false;
+    this.isVerified = () => true;
+    this.generateChallenge = () => null;
+    this.getActiveChallenge = () => null;
+    this.verifyChallengeAnswer = () => ({ success: true });
 
         // Reset counters every second
         setInterval(() => {
