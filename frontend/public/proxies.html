@@ -325,21 +325,32 @@
       const httpsFields = document.getElementById('httpsFields');
       const targetProtocolField = document.getElementById('targetProtocolField');
 
+      const listenPortInput = document.getElementById('listen_port');
+      const targetHostInput = document.getElementById('target_host');
+      const targetPortInput = document.getElementById('target_port');
       if (mode === 'https') {
         simpleFields.hidden = true;
         httpsFields.hidden = false;
+        // Désactive les champs masqués
+        if (listenPortInput) listenPortInput.disabled = true;
+        if (targetHostInput) targetHostInput.disabled = true;
+        if (targetPortInput) targetPortInput.disabled = true;
       } else {
         simpleFields.hidden = false;
         httpsFields.hidden = true;
         targetProtocolField.hidden = mode !== 'http';
+        // Réactive les champs visibles
+        if (listenPortInput) listenPortInput.disabled = false;
+        if (targetHostInput) targetHostInput.disabled = false;
+        if (targetPortInput) targetPortInput.disabled = false;
       }
-
       // Update port placeholder for UDP
-      const listenPortInput = document.getElementById('listen_port');
-      if (mode === 'udp') {
-        listenPortInput.placeholder = '19132 (Minecraft Bedrock)';
-      } else {
-        listenPortInput.placeholder = '8080';
+      if (listenPortInput) {
+        if (mode === 'udp') {
+          listenPortInput.placeholder = '19132 (Minecraft Bedrock)';
+        } else {
+          listenPortInput.placeholder = '8080';
+        }
       }
     }
 
