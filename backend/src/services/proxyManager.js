@@ -144,10 +144,13 @@ class ProxyManager {
         hostname: host,
         port: port,
         path: '/',
-        method: 'HEAD',
+        method: 'GET', // Use GET instead of HEAD - more widely accepted
         timeout: timeoutMs || 5000,
         headers: {
-          'User-Agent': 'NebulaPro-HealthCheck/1.0'
+          'User-Agent': 'NebulaPro-HealthCheck/1.0',
+          'Host': host, // Add Host header for virtual hosts
+          'Accept': '*/*',
+          'Connection': 'close'
         }
       };
 
@@ -170,13 +173,22 @@ class ProxyManager {
       const req = module.request(options, (res) => {
         // Accept any 2xx, 3xx, 4xx status (backend is responding)
         const ok = res.statusCode >= 200 && res.statusCode < 500;
+
+        // Consume and discard response data to avoid memory buildup
+        res.on('data', () => {}); // Discard data chunks
+        res.on('end', () => {}); // Handle end event
+
+        // Immediately abort and mark success
         onDone(ok);
-        req.abort();
+        try { req.destroy(); } catch (e) {}
       });
 
       req.on('error', (err) => {
-        // Only log non-timeout errors
-        if (err.code !== 'ECONNABORTED' && err.code !== 'ETIMEDOUT') {
+        // Ignore errors if already resolved (from req.destroy())
+        if (resolved) return;
+
+        // Only log non-timeout and non-abort errors
+        if (err.code !== 'ECONNABORTED' && err.code !== 'ETIMEDOUT' && err.code !== 'ECONNRESET') {
           console.warn(`Health check failed for ${host}:${port} (${protocol}):`, err.code || err.message);
         }
         onDone(false);
