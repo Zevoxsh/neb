@@ -146,11 +146,20 @@ class ProxyManager {
         path: '/',
         method: 'HEAD',
         timeout: timeoutMs || 5000,
-        rejectUnauthorized: false, // Accept self-signed certificates
         headers: {
           'User-Agent': 'NebulaPro-HealthCheck/1.0'
         }
       };
+
+      // Configure HTTPS-specific options with agent for SSL/TLS
+      if (protocol === 'https') {
+        options.agent = new https.Agent({
+          rejectUnauthorized: false, // Accept self-signed certificates
+          keepAlive: false,
+          maxSockets: Infinity,
+          servername: host // SNI support for HTTPS backends
+        });
+      }
 
       const req = module.request(options, (res) => {
         // Accept any 2xx, 3xx, 4xx status (backend is responding)
@@ -1092,7 +1101,14 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
           } catch (e) { }
 
           const useHttpsUpstream = (useTargetProto2 === 'https');
-          if (useHttpsUpstream) options.agent = new https.Agent({ rejectUnauthorized: false });
+          if (useHttpsUpstream) {
+            options.agent = new https.Agent({
+              rejectUnauthorized: false, // Accept self-signed certificates
+              keepAlive: false, // Disable keep-alive to avoid connection reuse issues
+              maxSockets: Infinity,
+              servername: useTargetHost2 // SNI support for HTTPS backends
+            });
+          }
           options.hostname = useTargetHost2;
           options.port = useTargetPort2;
 
