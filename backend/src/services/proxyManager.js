@@ -1068,7 +1068,8 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
               maxSockets: Infinity
             };
             // Force servername (SNI) même si c'est une IP
-            agentOptions.servername = useTargetHost2;
+            // Force SNI à la valeur du Host HTTP (panel.paxcia.net)
+            agentOptions.servername = options.headers && options.headers.host ? options.headers.host : useTargetHost2;
             console.log(`[ProxyManager][HTTP] SNI envoyé (servername):`, agentOptions.servername);
             options.agent = new https.Agent(agentOptions);
           }
