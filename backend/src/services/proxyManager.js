@@ -249,10 +249,14 @@ class ProxyManager {
       const t = args[0];
       const domain = args[1];
       if (!t) return;
+      let stateChanged = false;
       if (domain !== undefined && domain !== null) {
         const key = `${t}|@|${domain || ''}`;
         if (this.backendFailures.has(key)) {
           this.backendFailures.delete(key);
+          stateChanged = true;
+        }
+        if (stateChanged) {
           console.log(`ProxyManager: backend ${t} (domain=${domain || '<all>'}) marked UP`);
         }
         return;
@@ -263,9 +267,12 @@ class ProxyManager {
       for (const k of keys) {
         if (k === t || k.startsWith(prefix)) {
           this.backendFailures.delete(k);
+          stateChanged = true;
         }
       }
-      // console.log(`ProxyManager: backend ${t} marked UP`);
+      if (stateChanged) {
+        console.log(`ProxyManager: backend ${t} marked UP`);
+      }
     } catch (e) { }
   }
 

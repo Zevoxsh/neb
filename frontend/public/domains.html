@@ -126,7 +126,31 @@
 
             <div class="form-field">
               <label for="editBackendId">Backend</label>
-              <select id="editBackendId" required></select>
+              <select id="editBackendId" required onchange="onBackendSelectChange()"></select>
+            </div>
+            <div class="form-field">
+              <label for="editBackendHost">Backend IP</label>
+              <input id="editBackendHost" name="editBackendHost" placeholder="192.168.1.100" required>
+            </div>
+            <div class="form-field">
+              <label for="editBackendPort">Backend Port</label>
+              <input id="editBackendPort" name="editBackendPort" type="number" min="1" max="65535" placeholder="3000" required>
+            </div>
+            <div class="form-field">
+              <label for="editBackendProtocol">Backend Protocol</label>
+              <select id="editBackendProtocol" name="editBackendProtocol" required>
+                <option value="http">HTTP</option>
+                <option value="https">HTTPS</option>
+              </select>
+                function onBackendSelectChange() {
+                  const backendId = parseInt(document.getElementById('editBackendId').value);
+                  const backend = backends.find(b => b.id === backendId);
+                  if (backend) {
+                    document.getElementById('editBackendHost').value = backend.target_host || '';
+                    document.getElementById('editBackendPort').value = backend.target_port || '';
+                    document.getElementById('editBackendProtocol').value = backend.target_protocol || 'http';
+                  }
+                }
             </div>
 
             <div class="form-field full-width">
@@ -334,7 +358,11 @@
           ${escapeHtml(b.name)} (${b.target_host}:${b.target_port})
         </option>`
       ).join('');
-
+      // Remplit les champs IP/port/protocole backend
+      const backend = backends.find(b => b.id === domain.backend_id);
+      document.getElementById('editBackendHost').value = backend ? backend.target_host : '';
+      document.getElementById('editBackendPort').value = backend ? backend.target_port : '';
+      document.getElementById('editBackendProtocol').value = backend ? backend.target_protocol : 'http';
       // Show modal
       document.getElementById('editDomainModal').style.display = 'flex';
     }
@@ -351,7 +379,10 @@
         backendId: parseInt(document.getElementById('editBackendId').value),
         botProtection: document.getElementById('editBotProtection').value,
         acmeEnabled: document.getElementById('editAcmeEnabled').checked,
-        maintenanceEnabled: document.getElementById('editMaintenanceEnabled').checked
+        maintenanceEnabled: document.getElementById('editMaintenanceEnabled').checked,
+        backendHost: document.getElementById('editBackendHost').value,
+        backendPort: parseInt(document.getElementById('editBackendPort').value),
+        backendProtocol: document.getElementById('editBackendProtocol').value
       };
 
       try {
