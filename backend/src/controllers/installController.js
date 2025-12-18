@@ -1,3 +1,166 @@
+// Utilitaire pour créer toutes les tables nécessaires
+async function ensureAllTables(pool) {
+        // users
+        await pool.query(`CREATE TABLE IF NOT EXISTS users(
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(191) NOT NULL UNIQUE,
+            password_hash VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+        );`);
+        // proxies
+        await pool.query(`CREATE TABLE IF NOT EXISTS proxies(
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(191) NOT NULL,
+            protocol VARCHAR(10) NOT NULL DEFAULT 'tcp',
+            listen_protocol VARCHAR(10) NOT NULL DEFAULT 'tcp',
+            target_protocol VARCHAR(10) NOT NULL DEFAULT 'tcp',
+            listen_host VARCHAR(100) NOT NULL,
+            listen_port INT NOT NULL,
+            target_host VARCHAR(255) NOT NULL,
+            target_port INT NOT NULL,
+            vhosts JSONB,
+            passthrough_tls BOOLEAN DEFAULT FALSE,
+            enabled BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+        );`);
+        // backends
+        await pool.query(`CREATE TABLE IF NOT EXISTS backends(
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(191) NOT NULL UNIQUE,
+            target_host VARCHAR(255) NOT NULL,
+            target_port INT NOT NULL,
+            target_protocol VARCHAR(10) NOT NULL DEFAULT 'http',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+        );`);
+        // domain_mappings
+        await pool.query(`CREATE TABLE IF NOT EXISTS domain_mappings(
+            id SERIAL PRIMARY KEY,
+            hostname VARCHAR(255) NOT NULL UNIQUE,
+            proxy_id INT NOT NULL REFERENCES proxies(id) ON DELETE CASCADE,
+            backend_id INT NOT NULL REFERENCES backends(id) ON DELETE CASCADE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+        );`);
+        // metrics
+        await pool.query(`CREATE TABLE IF NOT EXISTS metrics(
+            id SERIAL PRIMARY KEY,
+            proxy_id INT REFERENCES proxies(id) ON DELETE CASCADE,
+            ts TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+            bytes_in BIGINT DEFAULT 0,
+            bytes_out BIGINT DEFAULT 0,
+            requests INT DEFAULT 0,
+            latency_ms INT DEFAULT 0,
+            status_code INT DEFAULT 0
+        );`);
+        // settings
+        await pool.query(`CREATE TABLE IF NOT EXISTS settings(
+            key VARCHAR(191) PRIMARY KEY,
+            value TEXT
+        );`);
+        // blocked_ips
+        await pool.query(`CREATE TABLE IF NOT EXISTS blocked_ips(
+            id SERIAL PRIMARY KEY,
+            ip VARCHAR(191) NOT NULL UNIQUE,
+            reason TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+        );`);
+        // trusted_ips
+        await pool.query(`CREATE TABLE IF NOT EXISTS trusted_ips(
+            id SERIAL PRIMARY KEY,
+            ip VARCHAR(191) NOT NULL UNIQUE,
+            label TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+        );`);
+        // request_logs
+        await pool.query(`CREATE TABLE IF NOT EXISTS request_logs(
+            id SERIAL PRIMARY KEY,
+            client_ip VARCHAR(191) NOT NULL,
+            hostname VARCHAR(255),
+            timestamp TIMESTAMP WITH TIME ZONE DEFAULT now()
+        );`);
+        // security_alerts
+        await pool.query(`CREATE TABLE IF NOT EXISTS security_alerts(
+            id SERIAL PRIMARY KEY,
+            alert_type VARCHAR(50) NOT NULL,
+            severity VARCHAR(20) NOT NULL,
+            ip_address VARCHAR(191),
+            hostname VARCHAR(255),
+            message TEXT NOT NULL,
+            details JSONB,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+        );`);
+        // certificates
+        await pool.query(`CREATE TABLE IF NOT EXISTS certificates(
+            id SERIAL PRIMARY KEY,
+            domain VARCHAR(255) NOT NULL UNIQUE,
+            private_key TEXT NOT NULL,
+            certificate TEXT NOT NULL,
+            chain TEXT,
+            expires_at TIMESTAMP WITH TIME ZONE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+        );`);
+        // monthly_reports
+        await pool.query(`CREATE TABLE IF NOT EXISTS monthly_reports (
+            id SERIAL PRIMARY KEY,
+            report_month DATE NOT NULL UNIQUE,
+            generated_at TIMESTAMP DEFAULT NOW(),
+            domains_total INTEGER DEFAULT 0,
+            domains_added INTEGER DEFAULT 0,
+            domains_deleted INTEGER DEFAULT 0,
+            proxies_total INTEGER DEFAULT 0,
+            proxies_added INTEGER DEFAULT 0,
+            proxies_deleted INTEGER DEFAULT 0,
+            backends_total INTEGER DEFAULT 0,
+            backends_added INTEGER DEFAULT 0,
+            backends_deleted INTEGER DEFAULT 0,
+            total_requests BIGINT DEFAULT 0,
+            unique_ips INTEGER DEFAULT 0,
+            unique_domains INTEGER DEFAULT 0,
+            total_alerts INTEGER DEFAULT 0,
+            blocked_ips INTEGER DEFAULT 0,
+            trusted_ips INTEGER DEFAULT 0,
+            active_certificates INTEGER DEFAULT 0,
+            certificates_issued INTEGER DEFAULT 0,
+            certificates_renewed INTEGER DEFAULT 0,
+            total_users INTEGER DEFAULT 0,
+            active_users INTEGER DEFAULT 0,
+            additional_data JSONB DEFAULT '{}'::jsonb
+        );`);
+        // monthly_snapshots
+        await pool.query(`CREATE TABLE IF NOT EXISTS monthly_snapshots (
+            id SERIAL PRIMARY KEY,
+            snapshot_date DATE NOT NULL UNIQUE,
+            domains_count INTEGER DEFAULT 0,
+            proxies_count INTEGER DEFAULT 0,
+            backends_count INTEGER DEFAULT 0,
+            certificates_count INTEGER DEFAULT 0,
+            users_count INTEGER DEFAULT 0
+        );`);
+        // backend_pools
+        await pool.query(`CREATE TABLE IF NOT EXISTS backend_pools(
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(191) NOT NULL UNIQUE,
+            lb_algorithm VARCHAR(50) NOT NULL DEFAULT 'round-robin',
+            health_check_enabled BOOLEAN DEFAULT TRUE,
+            health_check_interval_ms INT DEFAULT 30000,
+            health_check_path VARCHAR(255) DEFAULT '/',
+            health_check_timeout_ms INT DEFAULT 2000,
+            max_failures INT DEFAULT 3,
+            failure_timeout_ms INT DEFAULT 60000,
+            sticky_sessions BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+        )`);
+        // backend_pool_members
+        await pool.query(`CREATE TABLE IF NOT EXISTS backend_pool_members(
+            id SERIAL PRIMARY KEY,
+            pool_id INT NOT NULL REFERENCES backend_pools(id) ON DELETE CASCADE,
+            backend_id INT NOT NULL REFERENCES backends(id) ON DELETE CASCADE,
+            enabled BOOLEAN DEFAULT TRUE,
+            priority INT DEFAULT 100,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+            UNIQUE(pool_id, backend_id)
+        )`);
+}
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const fs = require('fs').promises;
@@ -73,12 +236,12 @@ class InstallController {
             );
 
             if (dbCheckResult.rows.length === 0) {
-                console.log(`📦 Creating database "${dbName}"...`);
+                console.log(`📦 Creating database \"${dbName}\"...`);
                 // Utiliser des identifiants quotés pour gérer les caractères spéciaux
-                await client.query(`CREATE DATABASE "${dbName}"`);
-                console.log(`✅ Database "${dbName}" created successfully`);
+                await client.query(`CREATE DATABASE \"${dbName}\"`);
+                console.log(`✅ Database \"${dbName}\" created successfully`);
             } else {
-                console.log(`ℹ️  Database "${dbName}" already exists`);
+                console.log(`ℹ️  Database \"${dbName}\" already exists`);
             }
 
             client.release();
@@ -95,11 +258,10 @@ class InstallController {
 
             const appClient = await appPool.connect();
 
-            // 4. Exécuter le script d'initialisation SQL
-            console.log('📄 Executing init.sql script...');
-            const initSqlPath = path.join(__dirname, '../../db/init.sql');
-            const initSql = await fs.readFile(initSqlPath, 'utf8');
-            await appClient.query(initSql);
+            // 4. Créer toutes les tables nécessaires
+            console.log('🛠️  Checking/creating all required tables...');
+            await ensureAllTables(appClient);
+            console.log('✅ All tables checked/created.');
 
             // 5. Créer l'utilisateur admin
             console.log('👤 Creating admin user...');

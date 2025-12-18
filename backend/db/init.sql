@@ -18,5 +18,10 @@ CREATE TABLE IF NOT EXISTS proxies (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS settings (
+    key VARCHAR(191) PRIMARY KEY,
+    value TEXT
+);
+
 -- You can create a user with the provided `create-user.js` script:
 -- psql -h <host> -p <port> -U <user> -d <db> -f backend/db/init.sql
