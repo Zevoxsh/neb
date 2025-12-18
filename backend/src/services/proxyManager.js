@@ -1067,13 +1067,13 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
               keepAlive: false, // Disable keep-alive to avoid connection reuse issues
               maxSockets: Infinity
             };
-
-            // Only set servername (SNI) for domain names, not IP addresses (RFC 6066)
-            if (!isIpAddress(useTargetHost2)) {
-              agentOptions.servername = useTargetHost2;
-            }
-
+            // Force servername (SNI) même si c'est une IP
+            agentOptions.servername = useTargetHost2;
+            console.log(`[ProxyManager][HTTP] SNI envoyé (servername):`, agentOptions.servername);
             options.agent = new https.Agent(agentOptions);
+          }
+          if (options.headers && options.headers.host) {
+            console.log(`[ProxyManager][HTTP] Header Host envoyé:`, options.headers.host);
           }
           options.hostname = useTargetHost2;
           options.port = useTargetPort2;
