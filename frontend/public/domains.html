@@ -142,16 +142,6 @@
                 <option value="http">HTTP</option>
                 <option value="https">HTTPS</option>
               </select>
-                // Fix: Move onBackendSelectChange to JS only, not inline in HTML
-                function onBackendSelectChange() {
-                  const backendId = parseInt(document.getElementById('editBackendId').value);
-                  const backend = backends.find(b => b.id === backendId);
-                  if (backend) {
-                    document.getElementById('editBackendHost').value = backend.target_host || '';
-                    document.getElementById('editBackendPort').value = backend.target_port || '';
-                    document.getElementById('editBackendProtocol').value = backend.target_protocol || 'http';
-                  }
-                }
             </div>
 
             <div class="form-field full-width">
