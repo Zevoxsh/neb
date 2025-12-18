@@ -153,12 +153,18 @@ class ProxyManager {
 
       // Configure HTTPS-specific options with agent for SSL/TLS
       if (protocol === 'https') {
-        options.agent = new https.Agent({
+        const agentOptions = {
           rejectUnauthorized: false, // Accept self-signed certificates
           keepAlive: false,
-          maxSockets: Infinity,
-          servername: host // SNI support for HTTPS backends
-        });
+          maxSockets: Infinity
+        };
+
+        // Only set servername (SNI) for domain names, not IP addresses (RFC 6066)
+        if (!isIpAddress(host)) {
+          agentOptions.servername = host;
+        }
+
+        options.agent = new https.Agent(agentOptions);
       }
 
       const req = module.request(options, (res) => {
@@ -1102,12 +1108,18 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
 
           const useHttpsUpstream = (useTargetProto2 === 'https');
           if (useHttpsUpstream) {
-            options.agent = new https.Agent({
+            const agentOptions = {
               rejectUnauthorized: false, // Accept self-signed certificates
               keepAlive: false, // Disable keep-alive to avoid connection reuse issues
-              maxSockets: Infinity,
-              servername: useTargetHost2 // SNI support for HTTPS backends
-            });
+              maxSockets: Infinity
+            };
+
+            // Only set servername (SNI) for domain names, not IP addresses (RFC 6066)
+            if (!isIpAddress(useTargetHost2)) {
+              agentOptions.servername = useTargetHost2;
+            }
+
+            options.agent = new https.Agent(agentOptions);
           }
           options.hostname = useTargetHost2;
           options.port = useTargetPort2;
