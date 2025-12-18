@@ -69,9 +69,10 @@ class ProxyManager {
     this.healthProbeIntervalMs = Number(process.env.BACKEND_HEALTH_INTERVAL_MS) || 30000; // 30s
     this._healthProbeTimer = null;
     // start active health probe (skip in installation mode)
-    if (process.env.INSTALLATION_MODE !== 'true') {
-      try { this._startHealthProbe(); } catch (e) { console.error('ProxyManager: failed to start health probe', e); }
-    }
+    // Désactivation du health probe automatique
+    // if (process.env.INSTALLATION_MODE !== 'true') {
+    //   try { this._startHealthProbe(); } catch (e) { console.error('ProxyManager: failed to start health probe', e); }
+    // }
   }
 
   async _startHealthProbe() {
@@ -296,76 +297,17 @@ class ProxyManager {
     }
   }
 
-  backendIsDown(targetInfo) {
-    try {
-      // signature: backendIsDown(targetInfo, domain)
-      const args = Array.from(arguments);
-      const t = args[0];
-      const domain = args[1] || '';
-      if (!t) return false;
-      const domainKey = `${t}|@|${domain}`;
-      const hostKey = `${t}`;
-      const recDomain = this.backendFailures.get(domainKey);
-      if (recDomain && recDomain.downUntil && Date.now() < recDomain.downUntil) return true;
-      const recHost = this.backendFailures.get(hostKey);
-      if (recHost && recHost.downUntil && Date.now() < recHost.downUntil) return true;
-      return false;
-    } catch (e) { return false; }
+  backendIsDown() {
+    // Toujours considérer le backend comme UP
+    return false;
   }
 
-  markBackendFailure(targetInfo) {
-    try {
-      // signature: markBackendFailure(targetInfo, domain)
-      const args = Array.from(arguments);
-      const t = args[0];
-      const domain = args[1] || '';
-      if (!t) return;
-      const key = `${t}|@|${domain}`;
-      const now = Date.now();
-      const rec = this.backendFailures.get(key) || { count: 0, downUntil: 0 };
-      rec.count = (rec.count || 0) + 1;
-      if (rec.count >= (this.failureThreshold || 3)) {
-        rec.downUntil = now + (this.failureCooldownMs || 60000);
-        console.warn(`ProxyManager: marking backend ${t} (domain=${domain || '<all>'}) as DOWN until ${new Date(rec.downUntil).toISOString()} (failures=${rec.count})`);
-        // reset count to avoid overflow
-        rec.count = 0;
-      }
-      this.backendFailures.set(key, rec);
-    } catch (e) { }
+  markBackendFailure() {
+    // Ne rien faire : on ne marque jamais un backend comme down
   }
 
-  markBackendSuccess(targetInfo) {
-    try {
-      // signature: markBackendSuccess(targetInfo, domain)
-      const args = Array.from(arguments);
-      const t = args[0];
-      const domain = args[1];
-      if (!t) return;
-      let stateChanged = false;
-      if (domain !== undefined && domain !== null) {
-        const key = `${t}|@|${domain || ''}`;
-        if (this.backendFailures.has(key)) {
-          this.backendFailures.delete(key);
-          stateChanged = true;
-        }
-        if (stateChanged) {
-          console.log(`ProxyManager: backend ${t} (domain=${domain || '<all>'}) marked UP`);
-        }
-        return;
-      }
-      // no domain provided: clear all entries for this host (host-only and domain-specific)
-      const prefix = `${t}|@|`;
-      const keys = Array.from(this.backendFailures.keys());
-      for (const k of keys) {
-        if (k === t || k.startsWith(prefix)) {
-          this.backendFailures.delete(k);
-          stateChanged = true;
-        }
-      }
-      if (stateChanged) {
-        console.log(`ProxyManager: backend ${t} marked UP`);
-      }
-    } catch (e) { }
+  markBackendSuccess() {
+    // Ne rien faire : on ne marque jamais un backend comme up/down
   }
 
   // Add metrics sample. For streaming bytes, requests=0. For a completed request/response, requests=1 and provide latency/status.
