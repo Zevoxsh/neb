@@ -27,7 +27,8 @@
       "Bash(node check-vhosts.js:*)",
       "Bash(node:*)",
       "Bash(npm run dev:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(sqlite3:*)"
     ],
     "deny": [],
     "ask": []

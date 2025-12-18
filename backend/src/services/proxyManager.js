@@ -63,9 +63,9 @@ class ProxyManager {
     };
     // backend failure tracking: Map<targetInfo, { count, downUntil }>
     this.backendFailures = new Map();
-    this.failureThreshold = Number(process.env.BACKEND_FAILURE_THRESHOLD) || 3;
-    this.failureCooldownMs = Number(process.env.BACKEND_FAILURE_COOLDOWN_MS) || 60 * 1000; // 1 minute
-    this.backendConnectTimeoutMs = Number(process.env.BACKEND_CONNECT_TIMEOUT_MS) || 2000; // 2s
+    this.failureThreshold = Number(process.env.BACKEND_FAILURE_THRESHOLD) || 5;
+    this.failureCooldownMs = Number(process.env.BACKEND_FAILURE_COOLDOWN_MS) || 30 * 1000; // 30 seconds
+    this.backendConnectTimeoutMs = Number(process.env.BACKEND_CONNECT_TIMEOUT_MS) || 10000; // 10s
     this.healthProbeIntervalMs = Number(process.env.BACKEND_HEALTH_INTERVAL_MS) || 30000; // 30s
     this._healthProbeTimer = null;
     // start active health probe (skip in installation mode)
@@ -92,9 +92,17 @@ class ProxyManager {
         try {
           const host = b.target_host;
           const port = Number(b.target_port) || 0;
+          const protocol = (b.target_protocol || 'tcp').toLowerCase();
           const targetInfo = `${host}:${port}`;
-          // attempt TCP connect with timeout
-          const ok = await this._tcpConnectCheck(host, port, this.backendConnectTimeoutMs);
+
+          // Use protocol-specific health check
+          let ok = false;
+          if (protocol === 'https' || protocol === 'http') {
+            ok = await this._httpHealthCheck(host, port, protocol, this.backendConnectTimeoutMs);
+          } else {
+            ok = await this._tcpConnectCheck(host, port, this.backendConnectTimeoutMs);
+          }
+
           if (ok) {
             if (this.markBackendSuccess) this.markBackendSuccess(targetInfo);
           } else {
@@ -116,6 +124,63 @@ class ProxyManager {
       try { sock.connect(port, host); } catch (e) { onDone(false); }
       // safety timeout
       setTimeout(() => onDone(resolved ? false : false), (timeoutMs || 2000) + 100);
+    });
+  }
+
+  _httpHealthCheck(host, port, protocol, timeoutMs) {
+    return new Promise((resolve) => {
+      const http = require('http');
+      const https = require('https');
+      const module = protocol === 'https' ? https : http;
+
+      let resolved = false;
+      const onDone = (ok) => {
+        if (resolved) return;
+        resolved = true;
+        resolve(ok);
+      };
+
+      const options = {
+        hostname: host,
+        port: port,
+        path: '/',
+        method: 'HEAD',
+        timeout: timeoutMs || 5000,
+        rejectUnauthorized: false, // Accept self-signed certificates
+        headers: {
+          'User-Agent': 'NebulaPro-HealthCheck/1.0'
+        }
+      };
+
+      const req = module.request(options, (res) => {
+        // Accept any 2xx, 3xx, 4xx status (backend is responding)
+        const ok = res.statusCode >= 200 && res.statusCode < 500;
+        onDone(ok);
+        req.abort();
+      });
+
+      req.on('error', (err) => {
+        // Only log non-timeout errors
+        if (err.code !== 'ECONNABORTED' && err.code !== 'ETIMEDOUT') {
+          console.warn(`Health check failed for ${host}:${port} (${protocol}):`, err.code || err.message);
+        }
+        onDone(false);
+      });
+
+      req.on('timeout', () => {
+        req.abort();
+        onDone(false);
+      });
+
+      req.end();
+
+      // Safety timeout
+      setTimeout(() => {
+        if (!resolved) {
+          try { req.abort(); } catch (e) { }
+          onDone(false);
+        }
+      }, (timeoutMs || 5000) + 100);
     });
   }
 
