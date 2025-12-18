@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Domain - Nebula Console</title>
+  <link rel="stylesheet" href="/public/nebula-v2.css">
+  <script src="/public/js/theme.js" defer></script>
+  <script src="/public/js/api.js" defer></script>
+  <script src="/public/js/include-partials.js" defer></script>
+  <script src="/public/js/app.js" defer></script>
+</head>
+
+<body data-page="domains">
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+
+    <div class="app-main">
+      <header class="topbar">
+        <div class="page-heading">
+          <p class="eyebrow">Configuration</p>
+          <h1>Add New Domain</h1>
+          <p class="muted">Configure your domain with automatic SSL and security</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn ghost" onclick="window.location.href='/domains'">
+            ← Cancel
+          </button>
+        </div>
+      </header>
+
+      <section class="page-content">
+        <form id="addDomainForm">
+          <!-- Step 1: Domain Configuration -->
+          <article class="card">
+            <header>
+              <div class="card-icon">🌐</div>
+              <div>
+                <p class="eyebrow">Step 1</p>
+                <h2>Domain Configuration</h2>
+                <p class="muted">Enter your domain name and choose the proxy type</p>
+              </div>
+            </header>
+            <section>
+              <div class="form-grid">
+                <div class="form-field full-width">
+                  <label for="domainName">
+                    Domain Name
+                    <span class="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="domainName"
+                    placeholder="example.com or *.example.com"
+                    required
+                    autocomplete="off"
+                  >
+                  <p class="form-hint">
+                    💡 Use wildcard (*.domain.com) to match all subdomains. Example: *.plumsy.dev matches api.plumsy.dev, www.plumsy.dev, etc.
+                  </p>
+                </div>
+
+                <div class="form-field full-width">
+                  <label for="proxyType">
+                    Proxy Type
+                    <span class="required">*</span>
+                  </label>
+                  <div class="radio-group">
+                    <label class="radio-card" data-selected="true">
+                      <input type="radio" name="proxyType" value="http" checked>
+                      <div class="radio-card-content">
+                        <div class="radio-card-icon">🌐</div>
+                        <div class="radio-card-info">
+                          <strong>HTTP/HTTPS Proxy</strong>
+                          <p>For web applications (recommended)</p>
+                          <small>Supports SSL/TLS, HTTP/2, and virtual hosts</small>
+                        </div>
+                      </div>
+                    </label>
+                    <label class="radio-card">
+                      <input type="radio" name="proxyType" value="tcp">
+                      <div class="radio-card-content">
+                        <div class="radio-card-icon">🔌</div>
+                        <div class="radio-card-info">
+                          <strong>TCP Proxy</strong>
+                          <p>For custom protocols and services</p>
+                          <small>Direct TCP forwarding (SSH, databases, etc.)</small>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </article>
+
+          <!-- Step 2: Backend Configuration -->
+          <article class="card">
+            <header>
+              <div class="card-icon">🎯</div>
+              <div>
+                <p class="eyebrow">Step 2</p>
+                <h2>Target Backend Server</h2>
+                <p class="muted">Enter any IP or hostname - the backend will be created automatically</p>
+              </div>
+            </header>
+            <section>
+              <div class="info-banner" id="backendInfoBanner">
+                <span class="info-icon">💡</span>
+                <p id="backendInfoText">You can enter <strong>any backend address</strong> - it doesn't need to exist in the system. A backend configuration will be created automatically.</p>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-field" id="backendUrlField">
+                  <label for="backendUrl">
+                    <span id="backendUrlLabel">Backend URL</span>
+                    <span class="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="backendUrl"
+                    placeholder="http://192.168.1.100"
+                    required
+                  >
+                  <p class="form-hint" id="backendUrlHint">Protocol (http:// or https://) + IP address or hostname</p>
+                </div>
+
+                <div class="form-field">
+                  <label for="backendPort">
+                    Backend Port
+                    <span class="required">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    id="backendPort"
+                    placeholder="8080"
+                    min="1"
+                    max="65535"
+                    required
+                  >
+                  <p class="form-hint">Any port number (1-65535)</p>
+                </div>
+
+                <div class="form-field full-width">
+                  <label for="description">Label (Optional)</label>
+                  <input
+                    type="text"
+                    id="description"
+                    placeholder="e.g., Production API, MySQL Server, SSH Gateway..."
+                  >
+                  <p class="form-hint">Optional label to identify this backend (will be visible in backend list)</p>
+                </div>
+              </div>
+            </section>
+          </article>
+
+          <!-- Step 3: Security & Features -->
+          <article class="card">
+            <header>
+              <div class="card-icon">🔒</div>
+              <div>
+                <p class="eyebrow">Step 3</p>
+                <h2>Security & Features</h2>
+                <p class="muted">Configure SSL/TLS and protection settings</p>
+              </div>
+            </header>
+            <section>
+              <div class="feature-toggles">
+                <div class="feature-toggle" id="sslToggle">
+                  <div class="feature-toggle-icon">🔐</div>
+                  <div class="feature-toggle-content">
+                    <label class="feature-toggle-label">
+                      <input type="checkbox" id="sslEnabled">
+                      <div class="feature-toggle-info">
+                        <strong>SSL/TLS Certificate</strong>
+                        <p class="feature-toggle-desc">Automatically generate Let's Encrypt certificate</p>
+                      </div>
+                    </label>
+                    <div class="feature-toggle-details">
+                      <ul>
+                        <li>✓ Automatic certificate generation and renewal</li>
+                        <li>✓ HTTPS on port 443 (port 80 when disabled)</li>
+                        <li>⚠️ DNS must point to this server</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="feature-toggle" id="antiBotToggle">
+                  <div class="feature-toggle-icon">🛡️</div>
+                  <div class="feature-toggle-content">
+                    <label class="feature-toggle-label">
+                      <input type="checkbox" id="antiBotEnabled">
+                      <div class="feature-toggle-info">
+                        <strong>Anti-Bot Protection</strong>
+                        <p class="feature-toggle-desc">Add verification challenge to prevent bots</p>
+                      </div>
+                    </label>
+                    <div class="feature-toggle-details">
+                      <ul>
+                        <li>✓ Interactive CAPTCHA verification</li>
+                        <li>✓ Blocks automated scrapers and bots</li>
+                        <li>✓ Human visitors see a challenge page first</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </article>
+
+          <!-- Summary Card -->
+          <article class="card summary-card" id="summaryCard" style="display: none;">
+            <header>
+              <div class="card-icon">📋</div>
+              <div>
+                <p class="eyebrow">Summary</p>
+                <h2>Configuration Overview</h2>
+              </div>
+            </header>
+            <section>
+              <div class="summary-grid">
+                <div class="summary-item">
+                  <span class="summary-label">Domain</span>
+                  <span class="summary-value" id="summaryDomain">-</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Type</span>
+                  <span class="summary-value" id="summaryType">-</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Backend</span>
+                  <span class="summary-value" id="summaryBackend">-</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Port</span>
+                  <span class="summary-value" id="summaryPort">-</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">SSL</span>
+                  <span class="summary-value" id="summarySSL">-</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Protection</span>
+                  <span class="summary-value" id="summaryBot">-</span>
+                </div>
+              </div>
+            </section>
+          </article>
+
+          <!-- Form Actions -->
+          <div class="form-actions-sticky">
+            <button type="button" class="btn ghost" onclick="window.location.href='/domains'">
+              Cancel
+            </button>
+            <button type="submit" class="btn primary" id="submitBtn">
+              Create Domain
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <div id="footer-placeholder"></div>
+    </div>
+  </div>
+
+  <script>
+    console.log('[add-domain.html] Script is loading...');
+
+    // Wait for DOM to be fully ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAddDomainPage);
+    } else {
+      initAddDomainPage();
+    }
+
+    function initAddDomainPage() {
+      console.log('[add-domain.html] Initializing add domain page...');
+
+      setupRadioCards();
+      setupFeatureToggles();
+      setupSummaryUpdates();
+      setupFormSubmission();
+
+      // Initialize backend field based on default proxy type
+      updateBackendFieldForProxyType();
+    }
+
+    function setupRadioCards() {
+      console.log('[add-domain.html] Setting up radio cards...');
+      // Radio card selection visual feedback
+      document.querySelectorAll('.radio-card input[type="radio"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        document.querySelectorAll('.radio-card').forEach(card => {
+          card.removeAttribute('data-selected');
+        });
+        radio.closest('.radio-card').setAttribute('data-selected', 'true');
+        updateBackendFieldForProxyType();
+        updateSummary();
+      });
+      });
+    }
+
+    function updateBackendFieldForProxyType() {
+      const proxyType = document.querySelector('input[name="proxyType"]:checked').value;
+      const label = document.getElementById('backendUrlLabel');
+      const input = document.getElementById('backendUrl');
+      const hint = document.getElementById('backendUrlHint');
+      const infoText = document.getElementById('backendInfoText');
+
+      // SSL and Anti-Bot toggles
+      const sslToggle = document.getElementById('sslToggle');
+      const antiBotToggle = document.getElementById('antiBotToggle');
+      const sslCheckbox = document.getElementById('sslEnabled');
+      const antiBotCheckbox = document.getElementById('antiBotEnabled');
+
+      if (proxyType === 'tcp') {
+        // TCP mode: no protocol needed
+        label.textContent = 'Backend IP/Host';
+        input.placeholder = '192.168.1.100 or internal.server';
+        hint.textContent = 'IP address or hostname (no protocol needed for TCP forwarding)';
+        infoText.innerHTML = 'For <strong>TCP proxy</strong>, enter the destination IP/hostname. Traffic will be forwarded at TCP level to any service (SSH, MySQL, etc.).';
+
+        // Disable SSL and Anti-Bot for TCP
+        sslToggle.style.opacity = '0.5';
+        sslToggle.style.pointerEvents = 'none';
+        antiBotToggle.style.opacity = '0.5';
+        antiBotToggle.style.pointerEvents = 'none';
+        sslCheckbox.disabled = true;
+        antiBotCheckbox.disabled = true;
+        sslCheckbox.checked = false;
+        antiBotCheckbox.checked = false;
+      } else {
+        // HTTP mode: protocol required
+        label.textContent = 'Backend URL';
+        input.placeholder = 'http://192.168.1.100 or https://82.54.45.45';
+        hint.textContent = 'Protocol (http:// or https://) + IP address or hostname';
+        infoText.innerHTML = 'For <strong>HTTP/HTTPS proxy</strong>, enter the backend URL with protocol. A backend configuration will be created automatically.';
+
+        // Enable SSL and Anti-Bot for HTTP
+        sslToggle.style.opacity = '1';
+        sslToggle.style.pointerEvents = 'auto';
+        antiBotToggle.style.opacity = '1';
+        antiBotToggle.style.pointerEvents = 'auto';
+        sslCheckbox.disabled = false;
+        antiBotCheckbox.disabled = false;
+      }
+    }
+
+    function setupFeatureToggles() {
+      console.log('[add-domain.html] Setting up feature toggles...');
+      // Feature toggle expand/collapse
+      document.querySelectorAll('.feature-toggle-label input[type="checkbox"]').forEach(checkbox => {
+      checkbox.addEventListener('change', (e) => {
+        const toggle = e.target.closest('.feature-toggle');
+        if (e.target.checked) {
+          toggle.setAttribute('data-active', 'true');
+        } else {
+          toggle.removeAttribute('data-active');
+        }
+        updateSummary();
+      });
+      });
+    }
+
+    function setupSummaryUpdates() {
+      console.log('[add-domain.html] Setting up summary updates...');
+      // Update summary on input
+      ['domainName', 'backendUrl', 'backendPort'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', updateSummary);
+        }
+      });
+    }
+
+    // Live summary update
+    function updateSummary() {
+      const domainName = document.getElementById('domainName').value.trim();
+      const proxyType = document.querySelector('input[name="proxyType"]:checked').value;
+      const backendUrl = document.getElementById('backendUrl').value.trim();
+      const backendPort = document.getElementById('backendPort').value;
+      const sslEnabled = document.getElementById('sslEnabled').checked;
+      const antiBotEnabled = document.getElementById('antiBotEnabled').checked;
+
+      const summaryCard = document.getElementById('summaryCard');
+
+      if (domainName || backendUrl || backendPort) {
+        summaryCard.style.display = 'block';
+
+        document.getElementById('summaryDomain').textContent = domainName || '-';
+        document.getElementById('summaryType').textContent = proxyType === 'http' ? '🌐 HTTP/HTTPS' : '🔌 TCP';
+        document.getElementById('summaryBackend').textContent = backendUrl || '-';
+        document.getElementById('summaryPort').textContent = backendPort || '-';
+        document.getElementById('summarySSL').textContent = sslEnabled ? '✓ Enabled' : '✗ Disabled';
+        document.getElementById('summaryBot').textContent = antiBotEnabled ? '🛡️ Protected' : '🌍 Open';
+      } else {
+        summaryCard.style.display = 'none';
+      }
+    }
+
+    function setupFormSubmission() {
+      console.log('[add-domain.html] Setting up form submission...');
+      const form = document.getElementById('addDomainForm');
+      if (!form) {
+        console.error('[add-domain.html] Form not found!');
+        return;
+      }
+
+      // Form submission
+      form.addEventListener('submit', async (e) => {
+        console.log('[add-domain.html] Form submit event fired!');
+        e.preventDefault();
+        e.stopPropagation();
+
+      const proxyType = document.querySelector('input[name="proxyType"]:checked').value;
+        const domainName = document.getElementById('domainName').value.trim();
+        const backendUrl = document.getElementById('backendUrl').value.trim();
+        const backendPort = document.getElementById('backendPort').value;
+        const description = document.getElementById('description').value.trim();
+        const sslEnabled = document.getElementById('sslEnabled').checked;
+        const antiBotEnabled = document.getElementById('antiBotEnabled').checked;
+
+        console.log('[add-domain.html] Form data:', {
+          proxyType,
+          domainName,
+          backendUrl,
+          backendPort,
+          description,
+          sslEnabled,
+          antiBotEnabled
+        });
+
+        // Extract protocol and host based on proxy type
+        let backendProtocol;
+        let backendHost;
+
+        if (proxyType === 'tcp') {
+          // TCP mode: no protocol in URL, just host
+          backendProtocol = 'tcp';
+          backendHost = backendUrl.trim();
+
+          // Validate it's not an HTTP URL
+          if (backendHost.startsWith('http://') || backendHost.startsWith('https://')) {
+            alert('❌ For TCP proxy, enter only the IP/hostname without http:// or https://\nExample: 192.168.1.100');
+            return;
+          }
+        } else {
+          // HTTP mode: validate and extract protocol
+          if (!backendUrl.startsWith('http://') && !backendUrl.startsWith('https://')) {
+            alert('❌ For HTTP/HTTPS proxy, backend URL must start with http:// or https://');
+            return;
+          }
+
+          const urlMatch = backendUrl.match(/^(https?):\/\/(.+)$/);
+          if (!urlMatch) {
+            alert('❌ Invalid backend URL format');
+            return;
+          }
+          backendProtocol = urlMatch[1];
+          backendHost = urlMatch[2];
+        }
+
+        console.log('[add-domain.html] Sending request...');
+
+        // Show loading state
+        const submitBtn = document.getElementById('submitBtn');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner"></span> Creating domain...';
+
+        try {
+          const response = await fetch('/api/domains/create-complete', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              proxyType,
+              domainName,
+              backendHost,
+              backendPort: parseInt(backendPort),
+              backendProtocol,
+              description,
+              sslEnabled,
+              antiBotEnabled
+            })
+          });
+
+          console.log('[add-domain.html] Response status:', response.status);
+          const result = await response.json();
+          console.log('[add-domain.html] Response data:', result);
+
+          if (response.ok) {
+            // Show success message
+            showToast('✓ Domain created successfully!', 'success');
+
+            // Redirect after short delay
+            setTimeout(() => {
+              window.location.href = '/domains';
+            }, 1000);
+          } else {
+            showToast('❌ ' + (result.error || 'Unknown error'), 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+          }
+        } catch (error) {
+          console.error('[add-domain.html] Error:', error);
+          showToast('❌ Failed to create domain: ' + error.message, 'error');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+        }
+      });
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add('toast-show');
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.remove('toast-show');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+  </script>
+
+  <style>
+    .required {
+      color: var(--color-error);
+      margin-left: 2px;
+    }
+
+    .info-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-md);
+      padding: var(--space-lg);
+      background: var(--color-info-alpha);
+      border: 1px solid var(--color-info);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-xl);
+    }
+
+    .info-icon {
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .info-banner p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+      line-height: 1.6;
+    }
+
+    .info-banner strong {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .card-icon {
+      font-size: 2rem;
+      margin-right: var(--space-lg);
+    }
+
+    .card header {
+      display: flex;
+      align-items: center;
+      padding: var(--space-2xl);
+      border-bottom: 1px solid var(--border-primary);
+    }
+
+    .card header .eyebrow {
+      color: var(--color-primary);
+      font-weight: var(--font-weight-semibold);
+      text-transform: uppercase;
+      font-size: var(--font-size-xs);
+      letter-spacing: 0.05em;
+      margin-bottom: var(--space-xs);
+    }
+
+    .card header h2 {
+      margin: 0 0 var(--space-xs) 0;
+      font-size: var(--font-size-xl);
+    }
+
+    .card section {
+      padding: var(--space-2xl);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--space-xl);
+    }
+
+    .form-field.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .radio-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--space-lg);
+    }
+
+    .radio-card {
+      cursor: pointer;
+      display: block;
+      padding: var(--space-xl);
+      border: 2px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      background: var(--bg-surface);
+      transition: all var(--transition-fast);
+    }
+
+    .radio-card:hover {
+      background: var(--bg-hover);
+      border-color: var(--color-primary-alpha);
+    }
+
+    .radio-card[data-selected="true"] {
+      background: var(--color-primary-alpha);
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-alpha);
+    }
+
+    .radio-card input[type="radio"] {
+      display: none;
+    }
+
+    .radio-card-content {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-md);
+    }
+
+    .radio-card-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+
+    .radio-card-info strong {
+      display: block;
+      font-size: var(--font-size-md);
+      color: var(--text-primary);
+      margin-bottom: var(--space-xs);
+    }
+
+    .radio-card-info p {
+      margin: 0 0 var(--space-xs) 0;
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+    }
+
+    .radio-card-info small {
+      color: var(--text-muted);
+      font-size: var(--font-size-xs);
+    }
+
+    .feature-toggles {
+      display: grid;
+      gap: var(--space-lg);
+    }
+
+    .feature-toggle {
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
+      background: var(--bg-surface);
+      display: flex;
+      gap: var(--space-lg);
+      transition: all var(--transition-fast);
+    }
+
+    .feature-toggle:hover {
+      background: var(--bg-hover);
+    }
+
+    .feature-toggle[data-active="true"] {
+      background: var(--color-success-alpha);
+      border-color: var(--color-success);
+    }
+
+    .feature-toggle-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+
+    .feature-toggle-content {
+      flex: 1;
+    }
+
+    .feature-toggle-label {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-md);
+      cursor: pointer;
+    }
+
+    .feature-toggle-label input[type="checkbox"] {
+      margin-top: 2px;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .feature-toggle-info strong {
+      display: block;
+      font-size: var(--font-size-md);
+      color: var(--text-primary);
+      margin-bottom: var(--space-xs);
+    }
+
+    .feature-toggle-desc {
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+      margin: 0;
+    }
+
+    .feature-toggle-details {
+      margin-top: var(--space-md);
+      padding-top: var(--space-md);
+      border-top: 1px solid var(--border-primary);
+      display: none;
+    }
+
+    .feature-toggle[data-active="true"] .feature-toggle-details {
+      display: block;
+    }
+
+    .feature-toggle-details ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .feature-toggle-details li {
+      padding: var(--space-xs) 0;
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+    }
+
+    .summary-card {
+      background: var(--bg-hover);
+      border-left: 3px solid var(--color-primary);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-lg);
+    }
+
+    .summary-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+
+    .summary-label {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0.05em;
+    }
+
+    .summary-value {
+      font-size: var(--font-size-md);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .form-actions-sticky {
+      position: sticky;
+      bottom: 0;
+      background: var(--bg-surface);
+      padding: var(--space-2xl);
+      border-top: 1px solid var(--border-primary);
+      display: flex;
+      gap: var(--space-md);
+      justify-content: flex-end;
+      margin-top: var(--space-2xl);
+      box-shadow: var(--shadow-lg);
+      z-index: 10;
+    }
+
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: var(--space-lg) var(--space-2xl);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-xl);
+      z-index: 9999;
+      transform: translateX(400px);
+      opacity: 0;
+      transition: all var(--transition-normal);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .toast-show {
+      transform: translateX(0);
+      opacity: 1;
+    }
+
+    .toast-success {
+      background: var(--color-success);
+      color: white;
+    }
+
+    .toast-error {
+      background: var(--color-error);
+      color: white;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</body>
+</html>

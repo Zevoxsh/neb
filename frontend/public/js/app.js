@@ -165,7 +165,15 @@
         await prepareProxyFormPanel();
       }
       if (panelId === 'domainFormPanel') {
-        populateDomainSelects().catch(() => { });
+        // Check if panel exists (old domains page)
+        const panel = document.getElementById('domainFormPanel');
+        if (panel) {
+          populateDomainSelects().catch(() => { });
+        } else {
+          // New domains page - redirect to add-domain page
+          window.location.href = '/add-domain';
+          return;
+        }
       }
       togglePanel(panelId, true, focusSel);
       return;
@@ -736,6 +744,16 @@
 
   async function initDomainsPage() {
     console.log('[DEBUG] ====== initDomainsPage CALLED ======');
+
+    // Check if the new domains page with built-in JS is loaded
+    // The new page has its own initialization, so we skip the old logic
+    const newDomainsPage = document.getElementById('domainsContainer');
+    if (newDomainsPage) {
+      console.log('[DEBUG] New domains page detected, skipping old initialization');
+      return;
+    }
+
+    // Old domains page logic (for backwards compatibility)
     await populateDomainSelects();
     console.log('[DEBUG] populateDomainSelects done');
     await loadDomains();

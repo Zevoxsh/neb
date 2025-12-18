@@ -18,109 +18,816 @@
     <div class="app-main">
       <header class="topbar">
         <div class="page-heading">
-          <p class="eyebrow">Routing</p>
-          <h1>Domains</h1>
-          <p class="muted">Associate hostnames with proxies and backend targets</p>
+          <p class="eyebrow">Routing & Configuration</p>
+          <h1>Domain Management</h1>
+          <p class="muted">Manage your domains, SSL certificates, and routing configuration</p>
         </div>
         <div class="topbar-actions">
-          <button class="btn primary" data-panel-target="domainFormPanel" data-panel-focus="#domainHostname">
-            Add Domain
+          <button class="btn secondary" onclick="refreshDomains()">
+            🔄 Refresh
+          </button>
+          <button class="btn primary" onclick="window.location.href='/add-domain'">
+            + Add Domain
           </button>
         </div>
       </header>
 
       <section class="page-content">
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">🌐</div>
+            <div class="stat-content">
+              <div class="stat-value" id="totalDomains">-</div>
+              <div class="stat-label">Total Domains</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🔒</div>
+            <div class="stat-content">
+              <div class="stat-value" id="sslDomains">-</div>
+              <div class="stat-label">SSL Enabled</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🛡️</div>
+            <div class="stat-content">
+              <div class="stat-value" id="protectedDomains">-</div>
+              <div class="stat-label">Protected</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⚙️</div>
+            <div class="stat-content">
+              <div class="stat-value" id="maintenanceDomains">-</div>
+              <div class="stat-label">Maintenance Mode</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Domains List -->
         <div class="card">
           <div class="card-header">
             <div>
-              <p class="card-eyebrow">Inventory</p>
               <h2 class="card-title">Active Domains</h2>
+              <p class="card-subtitle">Configure routing, SSL, and security for your domains</p>
+            </div>
+            <div class="card-actions">
+              <input type="text" id="searchInput" placeholder="🔍 Search domains..." class="search-input">
             </div>
           </div>
           <div class="card-body">
-            <div id="domainsGrid" class="domains-grid"></div>
-            <div id="domainsEmpty" class="empty-state" hidden>No domains configured</div>
+            <div id="domainsContainer">
+              <div class="loading-state">
+                <div class="spinner-large"></div>
+                <p>Loading domains...</p>
+              </div>
+            </div>
+            <div id="emptyState" class="empty-state" style="display: none;">
+              <div class="empty-icon">🌐</div>
+              <h3>No domains configured</h3>
+              <p>Get started by adding your first domain</p>
+              <button class="btn primary" onclick="window.location.href='/add-domain'">
+                + Add Domain
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
       <div id="footer-placeholder"></div>
+    </div>
+  </div>
 
-      <!-- Domain Form Panel -->
-      <div class="panel-overlay" id="domainFormPanel" hidden>
-        <div class="panel-card">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Configuration</p>
-              <h2>Add Domain</h2>
+  <!-- Edit Domain Modal -->
+  <div class="modal-overlay" id="editDomainModal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2>Edit Domain</h2>
+          <p class="muted">Update domain configuration</p>
+        </div>
+        <button class="btn ghost small" onclick="closeEditModal()">✕ Close</button>
+      </div>
+      <div class="modal-body">
+        <form id="editDomainForm">
+          <input type="hidden" id="editDomainId">
+
+          <div class="form-grid">
+            <div class="form-field full-width">
+              <label for="editHostname">Domain Name</label>
+              <input type="text" id="editHostname" required>
             </div>
-            <button class="btn ghost small" type="button" data-panel-close="domainFormPanel">
-              Close
-            </button>
+
+            <div class="form-field">
+              <label for="editProxyId">Proxy</label>
+              <select id="editProxyId" required></select>
+            </div>
+
+            <div class="form-field">
+              <label for="editBackendId">Backend</label>
+              <select id="editBackendId" required></select>
+            </div>
+
+            <div class="form-field full-width">
+              <label for="editBotProtection">Bot Protection</label>
+              <select id="editBotProtection">
+                <option value="unprotected">🌍 Unprotected</option>
+                <option value="protected">🛡️ Protected</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label class="form-check">
+                <input type="checkbox" id="editAcmeEnabled">
+                <span>🔒 SSL/TLS Certificate</span>
+              </label>
+            </div>
+
+            <div class="form-field">
+              <label class="form-check">
+                <input type="checkbox" id="editMaintenanceEnabled">
+                <span>⚙️ Maintenance Mode</span>
+              </label>
+            </div>
           </div>
 
-          <form id="createDomainForm">
-            <div class="form-grid">
-              <div class="form-field">
-                <label for="domainHostname">Hostname</label>
-                <input id="domainHostname" name="hostname" placeholder="app.example.com" required>
-              </div>
-
-              <div class="form-field">
-                <label for="createDomainProxySelect">Proxy</label>
-                <select id="createDomainProxySelect" name="proxyId" required></select>
-              </div>
-
-              <div class="form-field">
-                <label for="createDomainBackendSelect">Backend</label>
-                <select id="createDomainBackendSelect" name="backendId" required>
-                  <option value="">Select backend</option>
-                </select>
-                <p class="form-hint">Backend selection is required</p>
-              </div>
-
-              <div class="form-field">
-                <label for="domainBotProtection">Bot Protection</label>
-                <select id="domainBotProtection" name="botProtection">
-                  <option value="unprotected">Unprotected (free access)</option>
-                  <option value="protected">Protected (CAPTCHA required)</option>
-                </select>
-                <p class="form-hint">Controls if this domain requires human verification</p>
-              </div>
-
-              <div class="form-field">
-                <label class="form-check">
-                  <input type="checkbox" id="domainGenerateCert" name="generateCert">
-                  <span>Auto-generate SSL certificate (Let's Encrypt)</span>
-                </label>
-                <p class="form-hint">Automatically obtain a certificate for this hostname</p>
-              </div>
-
-              <div class="form-field">
-                <label class="form-check">
-                  <input type="checkbox" id="domainMaintenanceEnabled" name="maintenanceEnabled">
-                  <span>Enable maintenance mode</span>
-                </label>
-                <p class="form-hint">Enable maintenance mode on creation (optional)</p>
-              </div>
-
-              <div class="form-field">
-                <label for="domainMaintenancePagePath">Maintenance page path</label>
-                <input id="domainMaintenancePagePath" name="maintenancePagePath" placeholder="maintenance.html">
-                <p class="form-hint">Optional custom maintenance page filename</p>
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <button class="btn ghost" type="button" data-panel-close="domainFormPanel">
-                Cancel
-              </button>
-              <button class="btn primary" type="submit">Create Domain</button>
-            </div>
-          </form>
-        </div>
+          <div class="form-actions">
+            <button type="button" class="btn ghost" onclick="closeEditModal()">Cancel</button>
+            <button type="submit" class="btn primary">Save Changes</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
+
+  <script>
+    let allDomains = [];
+    let proxies = [];
+    let backends = [];
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('[domains.html] Initializing...');
+      loadDomains();
+      setupSearch();
+      setupEditForm();
+    });
+
+    async function loadDomains() {
+      try {
+        console.log('[domains.html] Loading domains...');
+
+        // Load all data in parallel
+        const [domainsRes, proxiesRes, backendsRes] = await Promise.all([
+          fetch('/api/domains'),
+          fetch('/api/proxies'),
+          fetch('/api/backends')
+        ]);
+
+        allDomains = await domainsRes.json();
+        proxies = await proxiesRes.json();
+        backends = await backendsRes.json();
+
+        console.log('[domains.html] Loaded:', { domains: allDomains.length, proxies: proxies.length, backends: backends.length });
+
+        updateStats();
+        renderDomains(allDomains);
+      } catch (error) {
+        console.error('[domains.html] Error loading domains:', error);
+        document.getElementById('domainsContainer').innerHTML = `
+          <div class="error-state">
+            <div class="error-icon">⚠️</div>
+            <h3>Failed to load domains</h3>
+            <p>${error.message}</p>
+            <button class="btn secondary" onclick="loadDomains()">Retry</button>
+          </div>
+        `;
+      }
+    }
+
+    function updateStats() {
+      document.getElementById('totalDomains').textContent = allDomains.length;
+      document.getElementById('sslDomains').textContent = allDomains.filter(d => d.acme_enabled).length;
+      document.getElementById('protectedDomains').textContent = allDomains.filter(d => d.bot_protection === 'protected').length;
+      document.getElementById('maintenanceDomains').textContent = allDomains.filter(d => d.maintenance_enabled).length;
+    }
+
+    function renderDomains(domains) {
+      const container = document.getElementById('domainsContainer');
+      const emptyState = document.getElementById('emptyState');
+
+      if (!domains || domains.length === 0) {
+        container.style.display = 'none';
+        emptyState.style.display = 'flex';
+        return;
+      }
+
+      container.style.display = 'block';
+      emptyState.style.display = 'none';
+
+      container.innerHTML = `
+        <div class="domains-list">
+          ${domains.map(domain => createDomainCard(domain)).join('')}
+        </div>
+      `;
+    }
+
+    function createDomainCard(domain) {
+      const sslBadge = domain.acme_enabled
+        ? '<span class="badge badge-success">🔒 SSL</span>'
+        : '<span class="badge badge-neutral">HTTP</span>';
+
+      const botBadge = domain.bot_protection === 'protected'
+        ? '<span class="badge badge-primary">🛡️ Protected</span>'
+        : '<span class="badge badge-neutral">🌍 Open</span>';
+
+      const maintenanceBadge = domain.maintenance_enabled
+        ? '<span class="badge badge-warning">⚙️ Maintenance</span>'
+        : '';
+
+      return `
+        <div class="domain-card">
+          <div class="domain-card-header">
+            <div class="domain-info">
+              <h3 class="domain-name">${escapeHtml(domain.hostname)}</h3>
+              <div class="domain-badges">
+                ${sslBadge}
+                ${botBadge}
+                ${maintenanceBadge}
+              </div>
+            </div>
+            <div class="domain-actions">
+              <button class="btn-icon" onclick="editDomain(${domain.id})" title="Edit">
+                ✏️
+              </button>
+              <button class="btn-icon danger" onclick="deleteDomain(${domain.id}, '${escapeHtml(domain.hostname)}')" title="Delete">
+                🗑️
+              </button>
+            </div>
+          </div>
+          <div class="domain-card-body">
+            <div class="domain-detail">
+              <span class="detail-label">Backend</span>
+              <span class="detail-value">${escapeHtml(domain.target_host)}:${domain.target_port}</span>
+            </div>
+            <div class="domain-detail">
+              <span class="detail-label">Protocol</span>
+              <span class="detail-value">${escapeHtml(domain.target_protocol || 'http')}</span>
+            </div>
+            <div class="domain-detail">
+              <span class="detail-label">Proxy ID</span>
+              <span class="detail-value">#${domain.proxy_id}</span>
+            </div>
+            <div class="domain-detail">
+              <span class="detail-label">Backend ID</span>
+              <span class="detail-value">#${domain.backend_id}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function setupSearch() {
+      const searchInput = document.getElementById('searchInput');
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const filtered = allDomains.filter(d =>
+          d.hostname.toLowerCase().includes(query) ||
+          d.target_host.toLowerCase().includes(query)
+        );
+        renderDomains(filtered);
+      });
+    }
+
+    function setupEditForm() {
+      const form = document.getElementById('editDomainForm');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await saveDomain();
+      });
+    }
+
+    async function editDomain(id) {
+      const domain = allDomains.find(d => d.id === id);
+      if (!domain) return;
+
+      // Populate form
+      document.getElementById('editDomainId').value = domain.id;
+      document.getElementById('editHostname').value = domain.hostname;
+      document.getElementById('editBotProtection').value = domain.bot_protection || 'unprotected';
+      document.getElementById('editAcmeEnabled').checked = domain.acme_enabled || false;
+      document.getElementById('editMaintenanceEnabled').checked = domain.maintenance_enabled || false;
+
+      // Populate proxy dropdown
+      const proxySelect = document.getElementById('editProxyId');
+      proxySelect.innerHTML = proxies.map(p =>
+        `<option value="${p.id}" ${p.id === domain.proxy_id ? 'selected' : ''}>
+          ${escapeHtml(p.name)} (${p.protocol}:${p.listen_port})
+        </option>`
+      ).join('');
+
+      // Populate backend dropdown
+      const backendSelect = document.getElementById('editBackendId');
+      backendSelect.innerHTML = backends.map(b =>
+        `<option value="${b.id}" ${b.id === domain.backend_id ? 'selected' : ''}>
+          ${escapeHtml(b.name)} (${b.target_host}:${b.target_port})
+        </option>`
+      ).join('');
+
+      // Show modal
+      document.getElementById('editDomainModal').style.display = 'flex';
+    }
+
+    function closeEditModal() {
+      document.getElementById('editDomainModal').style.display = 'none';
+    }
+
+    async function saveDomain() {
+      const id = document.getElementById('editDomainId').value;
+      const data = {
+        hostname: document.getElementById('editHostname').value,
+        proxyId: parseInt(document.getElementById('editProxyId').value),
+        backendId: parseInt(document.getElementById('editBackendId').value),
+        botProtection: document.getElementById('editBotProtection').value,
+        acmeEnabled: document.getElementById('editAcmeEnabled').checked,
+        maintenanceEnabled: document.getElementById('editMaintenanceEnabled').checked
+      };
+
+      try {
+        const response = await fetch(`/api/domains/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+          showToast('✓ Domain updated successfully', 'success');
+          closeEditModal();
+          loadDomains();
+        } else {
+          const result = await response.json();
+          showToast('❌ ' + (result.error || 'Failed to update domain'), 'error');
+        }
+      } catch (error) {
+        console.error('Error updating domain:', error);
+        showToast('❌ Failed to update domain: ' + error.message, 'error');
+      }
+    }
+
+    async function deleteDomain(id, hostname) {
+      if (!confirm(`Are you sure you want to delete "${hostname}"?\n\nThis action cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/domains/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok || response.status === 204) {
+          showToast('✓ Domain deleted successfully', 'success');
+          loadDomains();
+        } else {
+          const result = await response.json();
+          showToast('❌ ' + (result.error || 'Failed to delete domain'), 'error');
+        }
+      } catch (error) {
+        console.error('Error deleting domain:', error);
+        showToast('❌ Failed to delete domain: ' + error.message, 'error');
+      }
+    }
+
+    function refreshDomains() {
+      loadDomains();
+      showToast('🔄 Refreshing domains...', 'info');
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => toast.classList.add('toast-show'), 10);
+      setTimeout(() => {
+        toast.classList.remove('toast-show');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+  </script>
+
+  <style>
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-lg);
+      margin-bottom: var(--space-2xl);
+    }
+
+    .stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
+      display: flex;
+      align-items: center;
+      gap: var(--space-lg);
+      transition: all var(--transition-fast);
+    }
+
+    .stat-card:hover {
+      background: var(--bg-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-icon {
+      font-size: 2.5rem;
+      flex-shrink: 0;
+    }
+
+    .stat-value {
+      font-size: var(--font-size-2xl);
+      font-weight: var(--font-weight-bold);
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: var(--space-xs);
+    }
+
+    .stat-label {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-2xl);
+      border-bottom: 1px solid var(--border-primary);
+      gap: var(--space-xl);
+      flex-wrap: wrap;
+    }
+
+    .card-title {
+      margin: 0 0 var(--space-xs) 0;
+      font-size: var(--font-size-xl);
+    }
+
+    .card-subtitle {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+    }
+
+    .card-actions {
+      display: flex;
+      gap: var(--space-md);
+    }
+
+    .search-input {
+      padding: var(--space-md) var(--space-lg);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      font-size: var(--font-size-sm);
+      min-width: 250px;
+      transition: all var(--transition-fast);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-alpha);
+    }
+
+    .domains-list {
+      display: grid;
+      gap: var(--space-lg);
+      padding: var(--space-2xl);
+    }
+
+    .domain-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: all var(--transition-fast);
+    }
+
+    .domain-card:hover {
+      background: var(--bg-hover);
+      box-shadow: var(--shadow-md);
+    }
+
+    .domain-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: var(--space-xl);
+      border-bottom: 1px solid var(--border-primary);
+    }
+
+    .domain-info {
+      flex: 1;
+    }
+
+    .domain-name {
+      margin: 0 0 var(--space-md) 0;
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      font-family: 'Courier New', monospace;
+    }
+
+    .domain-badges {
+      display: flex;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--space-xs) var(--space-md);
+      border-radius: var(--radius-full);
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-medium);
+      white-space: nowrap;
+    }
+
+    .badge-success {
+      background: var(--color-success-alpha);
+      color: var(--color-success);
+      border: 1px solid var(--color-success);
+    }
+
+    .badge-primary {
+      background: var(--color-primary-alpha);
+      color: var(--color-primary);
+      border: 1px solid var(--color-primary);
+    }
+
+    .badge-warning {
+      background: var(--color-warning-alpha);
+      color: var(--color-warning);
+      border: 1px solid var(--color-warning);
+    }
+
+    .badge-neutral {
+      background: var(--bg-hover);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-primary);
+    }
+
+    .domain-actions {
+      display: flex;
+      gap: var(--space-sm);
+    }
+
+    .btn-icon {
+      padding: var(--space-sm) var(--space-md);
+      background: transparent;
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-size: var(--font-size-md);
+      transition: all var(--transition-fast);
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-hover);
+      transform: scale(1.1);
+    }
+
+    .btn-icon.danger:hover {
+      background: var(--color-error-alpha);
+      border-color: var(--color-error);
+    }
+
+    .domain-card-body {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: var(--space-lg);
+      padding: var(--space-xl);
+    }
+
+    .domain-detail {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+
+    .detail-label {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0.05em;
+    }
+
+    .detail-value {
+      font-size: var(--font-size-sm);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      font-family: 'Courier New', monospace;
+    }
+
+    .loading-state, .error-state, .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-4xl);
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    .spinner-large {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--border-primary);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: var(--space-xl);
+    }
+
+    .empty-icon, .error-icon {
+      font-size: 4rem;
+      margin-bottom: var(--space-xl);
+      opacity: 0.5;
+    }
+
+    .empty-state h3, .error-state h3 {
+      margin: 0 0 var(--space-md) 0;
+      color: var(--text-primary);
+    }
+
+    .empty-state p, .error-state p {
+      margin: 0 0 var(--space-xl) 0;
+      color: var(--text-secondary);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: var(--space-xl);
+    }
+
+    .modal-card {
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-2xl);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: var(--space-2xl);
+      border-bottom: 1px solid var(--border-primary);
+    }
+
+    .modal-header h2 {
+      margin: 0 0 var(--space-xs) 0;
+      font-size: var(--font-size-xl);
+    }
+
+    .modal-body {
+      padding: var(--space-2xl);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--space-lg);
+      margin-bottom: var(--space-xl);
+    }
+
+    .form-field.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .form-field label {
+      display: block;
+      margin-bottom: var(--space-sm);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      font-size: var(--font-size-sm);
+    }
+
+    .form-field input[type="text"],
+    .form-field input[type="number"],
+    .form-field select {
+      width: 100%;
+      padding: var(--space-md);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      font-size: var(--font-size-sm);
+      transition: all var(--transition-fast);
+    }
+
+    .form-field input:focus,
+    .form-field select:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-alpha);
+    }
+
+    .form-check {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      cursor: pointer;
+      padding: var(--space-md);
+      background: var(--bg-hover);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-primary);
+    }
+
+    .form-check:hover {
+      background: var(--bg-active);
+    }
+
+    .form-check input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: var(--space-md);
+      justify-content: flex-end;
+    }
+
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: var(--space-lg) var(--space-2xl);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-xl);
+      z-index: 9999;
+      transform: translateX(400px);
+      opacity: 0;
+      transition: all var(--transition-normal);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .toast-show {
+      transform: translateX(0);
+      opacity: 1;
+    }
+
+    .toast-success {
+      background: var(--color-success);
+      color: white;
+    }
+
+    .toast-error {
+      background: var(--color-error);
+      color: white;
+    }
+
+    .toast-info {
+      background: var(--color-info);
+      color: white;
+    }
+  </style>
 </body>
 </html>

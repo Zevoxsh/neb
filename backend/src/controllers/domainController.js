@@ -299,4 +299,163 @@ const refreshAllScreenshots = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { list, create, update, remove, listForProxy, getScreenshot, refreshScreenshot, refreshAllScreenshots };
+/**
+ * Create complete domain configuration (proxy + backend + domain mapping)
+ */
+const createComplete = asyncHandler(async (req, res) => {
+  const {
+    proxyType,
+    domainName,
+    backendHost,
+    backendPort,
+    backendProtocol,
+    description,
+    sslEnabled,
+    antiBotEnabled
+  } = req.body;
+
+  logger.debug('Creating complete domain configuration', {
+    proxyType,
+    domainName,
+    sslEnabled,
+    antiBotEnabled
+  });
+
+  // Validate required fields
+  if (!proxyType || !domainName || !backendHost || !backendPort) {
+    throw new AppError('Missing required fields: proxyType, domainName, backendHost, backendPort', 400);
+  }
+
+  // Validate proxy type
+  if (!['http', 'tcp'].includes(proxyType)) {
+    throw new AppError('Invalid proxy type. Must be "http" or "tcp"', 400);
+  }
+
+  // Validate backend protocol
+  const validBackendProtocol = backendProtocol || 'http';
+  if (!['http', 'https', 'tcp'].includes(validBackendProtocol)) {
+    throw new AppError('Invalid backend protocol. Must be "http", "https", or "tcp"', 400);
+  }
+
+  try {
+    // Check if domain already exists
+    const domainAlreadyExists = await domainModel.domainExists(domainName);
+    if (domainAlreadyExists) {
+      throw new AppError(`Domain "${domainName}" already exists`, 400);
+    }
+
+    // Step 1: Create backend (always create a new one, even if same host:port exists)
+    // This allows flexibility - each domain can have its own backend configuration
+    logger.info('Creating backend', { backendHost, backendPort, backendProtocol: validBackendProtocol });
+
+    const backendName = description
+      ? `${description}-backend`
+      : `${domainName}-backend-${Date.now()}`;
+
+    const backend = await backendModel.createBackend({
+      name: backendName,
+      targetHost: backendHost,
+      targetPort: parseInt(backendPort, 10),
+      targetProtocol: validBackendProtocol
+    });
+
+    logger.info('Backend created', { backendId: backend.id, name: backendName });
+
+    // Step 2: Find or create proxy
+    // Determine listen port based on proxy type and SSL
+    let listenPort;
+    let listenProtocol;
+    let targetProtocol;
+    let protocol;
+
+    if (proxyType === 'http') {
+      // HTTP/HTTPS proxy
+      listenPort = sslEnabled ? 443 : 80;
+      listenProtocol = sslEnabled ? 'https' : 'http';
+      targetProtocol = validBackendProtocol;
+      protocol = 'http';
+    } else {
+      // TCP proxy
+      listenPort = parseInt(backendPort, 10); // Use backend port for TCP
+      listenProtocol = 'tcp';
+      targetProtocol = 'tcp';
+      protocol = 'tcp';
+    }
+
+    // For HTTP/HTTPS, try to reuse existing proxy on the same port
+    let proxy;
+    if (proxyType === 'http') {
+      proxy = await proxyModel.findProxyByPort(listenPort, protocol);
+      if (proxy) {
+        logger.info('Reusing existing HTTP/HTTPS proxy', { proxyId: proxy.id, listenPort });
+      }
+    }
+
+    // If no existing proxy found, create a new one
+    if (!proxy) {
+      logger.info('Creating new proxy', {
+        protocol,
+        listenProtocol,
+        listenPort,
+        targetProtocol
+      });
+
+      proxy = await proxyModel.createProxy({
+        name: proxyType === 'http' ? `HTTP Proxy :${listenPort}` : `TCP Proxy for ${domainName}`,
+        protocol,
+        listen_protocol: listenProtocol,
+        target_protocol: targetProtocol,
+        listen_host: '0.0.0.0',
+        listen_port: listenPort,
+        target_host: backendHost,
+        target_port: parseInt(backendPort, 10),
+        enabled: true
+      });
+      logger.info('Proxy created', { proxyId: proxy.id });
+    }
+
+    // Step 3: Create domain mapping
+    logger.info('Creating domain mapping', { domainName, proxyId: proxy.id, backendId: backend.id });
+    const mapping = await domainModel.createDomainMapping({
+      hostname: domainName,
+      proxyId: proxy.id,
+      backendId: backend.id,
+      botProtection: antiBotEnabled ? 'protected' : 'unprotected',
+      maintenanceEnabled: false,
+      maintenancePagePath: null,
+      acmeEnabled: sslEnabled && proxyType === 'http' // Only enable ACME for HTTP/HTTPS with SSL
+    });
+    logger.info('Domain mapping created', { mappingId: mapping.id });
+
+    // Step 4: Reload proxies in background
+    setImmediate(() => {
+      proxyManager.reloadAllProxies().catch(err => {
+        logger.error('Failed to reload proxies', { error: err.message });
+      });
+    });
+
+    // Step 5: If SSL enabled and HTTP proxy, trigger certificate generation
+    if (sslEnabled && proxyType === 'http') {
+      logger.info('SSL enabled, certificate will be generated automatically by ProxyManager');
+      // Note: The ProxyManager will automatically generate the certificate
+      // when it detects a domain with acme_enabled = true
+    }
+
+    res.status(201).json({
+      success: true,
+      backend: backend,
+      proxy: proxy,
+      domain: mapping,
+      message: 'Domain configuration created successfully'
+    });
+
+  } catch (error) {
+    logger.error('Failed to create complete domain configuration', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw new AppError('Failed to create domain: ' + error.message, 500);
+  }
+});
+
+module.exports = { list, create, update, remove, listForProxy, getScreenshot, refreshScreenshot, refreshAllScreenshots, createComplete };

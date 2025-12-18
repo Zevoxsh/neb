@@ -7,7 +7,8 @@ async function createProxy(data) {
   }
   const res = await pool.query(
     `INSERT INTO proxies (name, protocol, listen_protocol, target_protocol, listen_host, listen_port, target_host, target_port, vhosts, passthrough_tls, enabled, error_page_html)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+     RETURNING id, name, protocol, listen_protocol, target_protocol, listen_host, listen_port, target_host, target_port, vhosts, passthrough_tls, enabled, error_page_html, created_at`,
     [
       data.name,
       data.protocol || 'tcp',
@@ -90,6 +91,14 @@ async function getProxyById(id) {
   return res.rows[0];
 }
 
+async function findProxyByPort(listenPort, protocol = 'http') {
+  const res = await pool.query(
+    'SELECT id, name, protocol, listen_protocol, target_protocol, listen_host, listen_port, target_host, target_port, vhosts, passthrough_tls, enabled, error_page_html FROM proxies WHERE listen_port = $1 AND protocol = $2 AND enabled = true LIMIT 1',
+    [listenPort, protocol]
+  );
+  return res.rows[0];
+}
+
 async function getErrorPage(id) {
   const res = await pool.query('SELECT error_page_html FROM proxies WHERE id = $1', [id]);
   return res.rows[0] ? res.rows[0].error_page_html : null;
@@ -107,6 +116,7 @@ module.exports = {
   deleteProxy,
   updateProxy,
   getProxyById,
+  findProxyByPort,
   getErrorPage,
   updateErrorPage
 };

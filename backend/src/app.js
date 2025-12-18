@@ -31,6 +31,7 @@ const { botChallengeMiddleware } = require('./middleware/botChallenge');
 const { cacheMiddleware } = require('./middleware/cacheMiddleware');
 const { ddosProtectionMiddleware } = require('./middleware/ddosMiddleware');
 const debugRoutes = require('./routes/debugRoutes');
+const { errorHandler } = require('./middleware/errorHandler');
 
 function createApp() {
   const app = express();
@@ -159,6 +160,7 @@ function createApp() {
     '/proxies': 'proxies.html',
     '/backends': 'backends.html',
     '/domains': 'domains.html',
+    '/add-domain': 'add-domain.html',
     '/security': 'security.html',
     '/analytics': 'analytics.html',
     '/certificates': 'certificates.html',
@@ -247,6 +249,9 @@ function createApp() {
     // Default to dashboard
     res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'public', 'dashboard.html'));
   });
+
+  // Error handling middleware (must be last)
+  app.use(errorHandler);
 
   return app;
 }
