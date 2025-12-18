@@ -1081,39 +1081,47 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
           const targetInfo = `${useTargetHost2}:${useTargetPort2}`;
           const hostOnly = req.headers && req.headers.host ? req.headers.host.split(':')[0] : null;
 
+          console.log(`[ProxyManager][HTTP] Début du proxying pour ${req.method} ${req.url} -> ${useTargetHost2}:${useTargetPort2} (${useTargetProto2})`);
+          console.log(`[ProxyManager][HTTP] Headers reçus:`, req.headers);
           // Suppression du blocage sur backendIsDown : on laisse toujours passer
 
           const upstream = (useHttpsUpstream ? https : http).request(options, (pres) => {
+            console.log(`[ProxyManager][HTTP] Réponse du backend ${useTargetHost2}:${useTargetPort2} status=${pres.statusCode}`);
             const outHeaders = Object.assign({}, pres.headers);
+            console.log(`[ProxyManager][HTTP] Headers backend:`, outHeaders);
             // Location rewrite logic...
-            if (outHeaders.location) { /* ... same as before ... */ }
+            if (outHeaders.location) { console.log('[ProxyManager][HTTP] Header Location détecté:', outHeaders.location); }
             // Cookie rewrite logic...
-            if (outHeaders['set-cookie']) { /* ... same as before ... */ }
+            if (outHeaders['set-cookie']) { console.log('[ProxyManager][HTTP] Header Set-Cookie détecté'); }
 
             try {
               const len = parseInt(pres.headers['content-length']) || 0;
               // Record metrics on response
               const lat = Date.now() - startTime;
               pm.addMetrics(id, 0, len, 1, lat, pres.statusCode, hostname);
-            } catch (e) { }
+            } catch (e) { console.warn('[ProxyManager][HTTP] Erreur metrics:', e); }
 
             try { if (pm.markBackendSuccess) pm.markBackendSuccess(targetInfo, hostOnly); } catch (e) { }
             res.writeHead(pres.statusCode, outHeaders);
             pres.pipe(res);
+            pres.on('end', () => { console.log('[ProxyManager][HTTP] Fin de la réponse backend'); });
           });
 
           upstream.setTimeout(pm.backendConnectTimeoutMs, () => {
+            console.warn(`[ProxyManager][HTTP] Timeout de connexion vers ${useTargetHost2}:${useTargetPort2}`);
             try { if (pm.markBackendFailure) pm.markBackendFailure(targetInfo, hostOnly); } catch (e) { }
             try { upstream.destroy(new Error('connect timeout')); } catch (e) { }
-            try { pm.sendBackendUnavailableResponse(res, entry, targetInfo, hostOnly); } catch (e) { }
+            // Suppression du blocage, on laisse la requête échouer naturellement
             try { pm.addMetrics(id, 0, 0, 1, Date.now() - startTime, 504, hostname); } catch (e) { }
           });
 
           upstream.on('error', (e) => {
+            console.error(`[ProxyManager][HTTP] Erreur lors de la connexion au backend ${useTargetHost2}:${useTargetPort2}:`, e);
             try { if (pm.markBackendFailure) pm.markBackendFailure(targetInfo, hostOnly); } catch (ee) { }
-            try { pm.sendBackendUnavailableResponse(res, entry, targetInfo, hostOnly); } catch (err) { try { res.writeHead(502); res.end('Bad gateway'); } catch (e) { } }
+            // Suppression du blocage, on laisse la requête échouer naturellement
             try { pm.addMetrics(id, 0, 0, 1, Date.now() - startTime, 502, hostname); } catch (e) { }
           });
+          console.log('[ProxyManager][HTTP] Pipe requête client -> backend');
           req.pipe(upstream);
         } catch (e) {
           console.error(`Proxy ${id} - forward exception`, e);
