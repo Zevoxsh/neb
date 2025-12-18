@@ -270,6 +270,18 @@
         ? '<span class="badge badge-warning">⚙️ Maintenance</span>'
         : '';
 
+      // Health status badge
+      let healthBadge = '';
+      if (typeof domain.health_status !== 'undefined') {
+        if (domain.health_status === 'up' || domain.health_status === 1 || domain.health_status === true) {
+          healthBadge = '<span class="badge badge-success">🟢 Backend UP</span>';
+        } else if (domain.health_status === 'down' || domain.health_status === 0 || domain.health_status === false) {
+          healthBadge = '<span class="badge badge-danger">🔴 Backend DOWN</span>';
+        } else {
+          healthBadge = `<span class="badge badge-neutral">⚪ Unknown</span>`;
+        }
+      }
+
       return `
         <div class="domain-card">
           <div class="domain-card-header">
@@ -279,6 +291,7 @@
                 ${sslBadge}
                 ${botBadge}
                 ${maintenanceBadge}
+                ${healthBadge}
               </div>
             </div>
             <div class="domain-actions">

@@ -23,7 +23,9 @@ async function listDomainMappings() {
     return [];
   }
   try {
-    const res = await pool.query(`SELECT dm.id, dm.hostname, dm.proxy_id, dm.backend_id, dm.bot_protection, dm.maintenance_enabled, dm.maintenance_page_path, dm.acme_enabled, b.target_host, b.target_port, b.target_protocol
+    const res = await pool.query(`
+      SELECT dm.id, dm.hostname, dm.proxy_id, dm.backend_id, dm.bot_protection, dm.maintenance_enabled, dm.maintenance_page_path, dm.acme_enabled,
+             b.target_host, b.target_port, b.target_protocol, b.health_status
       FROM domain_mappings dm JOIN backends b ON dm.backend_id = b.id ORDER BY dm.id`);
     return res.rows.map(r => ({
       id: r.id,
@@ -36,7 +38,8 @@ async function listDomainMappings() {
       acme_enabled: r.acme_enabled || false,
       target_host: r.target_host,
       target_port: r.target_port,
-      target_protocol: r.target_protocol
+      target_protocol: r.target_protocol,
+      health_status: r.health_status
     }));
   } catch (error) {
     console.error('[domainModel] listDomainMappings failed:', error.message);
