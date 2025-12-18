@@ -1081,13 +1081,7 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
           const targetInfo = `${useTargetHost2}:${useTargetPort2}`;
           const hostOnly = req.headers && req.headers.host ? req.headers.host.split(':')[0] : null;
 
-          try {
-            if (pm.backendIsDown && pm.backendIsDown(targetInfo, hostOnly)) {
-              pm.sendBackendUnavailableResponse(res, entry, targetInfo, hostOnly);
-              try { pm.addMetrics(id, 0, 0, 1, Date.now() - startTime, 503, hostname); } catch (e) { }
-              return;
-            }
-          } catch (e) { }
+          // Suppression du blocage sur backendIsDown : on laisse toujours passer
 
           const upstream = (useHttpsUpstream ? https : http).request(options, (pres) => {
             const outHeaders = Object.assign({}, pres.headers);
@@ -1273,12 +1267,7 @@ h1{color:#ff4444}p{color:#888;line-height:1.6}</style></head><body><div class="b
             pm.trackIpTraffic(remoteIp, prebuffer.length, 1);
           }
           const targetInfoKey = `${selHost}:${selPort}`;
-          try {
-            if (pm.backendIsDown && pm.backendIsDown(targetInfoKey, resolvedDomain)) {
-              if (!sendCustomErrorPage(clientSocket)) try { clientSocket.destroy(); } catch (e) { }
-              return;
-            }
-          } catch (e) { }
+          // Suppression du blocage sur backendIsDown : on laisse toujours passer
 
           const targetSocket = net.connect({ host: selHost, port: selPort }, () => {
             try {
